@@ -396,8 +396,8 @@ Clustering::Cluster Clustering::ComputePositionClean(std::vector<Digit> &preclus
   Float_t stepX = 0.00001; // cm
   Float_t stepY = 0.00001; // cm
     Double_t Kx3 = 0.5085;
- //   Double_t Ky3 = 0.5840;
-    Double_t Ky3 = 0.2; //Compare with Alberto
+    Double_t Ky3 = 0.5840;
+  //  Double_t Ky3 = 0.2; //Compare with Alberto
     
     MyObjectDigits digits;
 
