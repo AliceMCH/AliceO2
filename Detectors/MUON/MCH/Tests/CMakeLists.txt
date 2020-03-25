@@ -10,7 +10,7 @@
 
 o2_add_executable(clusterizer-test
                   COMPONENT_NAME mch
-                  SOURCES src/ClusterizerTest.cxx src/DigitsFileReader.cxx
+                  SOURCES src/ClusterizerTest.cxx src/PreClusterSerializer.cxx src/DigitsFileReader.cxx
                   PUBLIC_LINK_LIBRARIES O2::MCHBase O2::MCHPreClustering O2::MCHClustering)
                   
 o2_add_executable(clusterizer-test-tb
