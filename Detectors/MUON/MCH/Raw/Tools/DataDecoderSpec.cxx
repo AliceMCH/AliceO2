@@ -81,7 +81,8 @@ public:
       //std::cout<<"raw:     "<<(void*)raw<<std::endl;
       //std::cout<<"payload: "<<(void*)payload<<std::endl;
 
-      std::vector<uint8_t> buffer((uint8_t*)raw, ((uint8_t*)raw)+payloadSize+sizeof(o2::header::RAWDataHeaderV4));
+     //  std::vector<uint8_t> buffer((uint8_t*)raw, ((uint8_t*)raw)+payloadSize+sizeof(o2::header::RAWDataHeaderV4));
+      gsl::span<uint8_t> buffer(const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(raw)), payloadSize+sizeof(o2::header::RAWDataHeaderV4));
       decoder.decodeBuffer(buffer, digits);
     }
 

@@ -77,10 +77,9 @@ public:
     cruLink2solar = o2::mch::raw::createCruLink2SolarMapper<ElectronicMapperGenerated>();
   }
 
-  void decodeBuffer(std::vector<uint8_t> &buffer, std::vector<o2::mch::Digit> &digits)
+  void decodeBuffer(gsl::span<uint8_t> sbuffer, std::vector<o2::mch::Digit> &digits)
   {
     //bool verbose = false;
-    gsl::span<uint8_t> sbuffer(buffer);
 
     size_t ndigits{0};
 
