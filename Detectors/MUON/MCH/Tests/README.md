@@ -49,6 +49,6 @@ ClusterizerTestTB is a direct adaptation of ClusterizerTest. The only difference
 In this case, it means that contrary to ClusterizerTest using the digits.in from Laurent's CERNBox, we have an idea of where we should find our clusters thanks to the positions taken by the SiTracker.
 So the difference with ClusterizerTest is that we can directly plot the residuals distribution for the TB data and see also the residuals with respect to the hit coordinate y and see if there is any bias.
 
-The file used is a file made by Andrea called digits-2.bin
+The file used is a file made by Andrea called [digits-TB-run1036.bin](https://cernbox.cern.ch/index.php/s/N5jOVO9sphIQRnW)
 
-    o2-mch-clusterizer-test-tb digits-2.bin
+    o2-mch-clusterizer-test-tb digits-TB-run1036.bin
