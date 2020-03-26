@@ -43,11 +43,11 @@ int main(int argc, char** argv){
     // Declaration of arrays. The size of the arrays is hardcoded (it wouldn't accept an initialisation using a variable)
     // The size of the arrays should be the number of events you wish to simulate
     
-    double xarray[200]{0};
-    double yarray[200]{0};
-    double chg[200]{0};
-    double resyfound[200]{0};
-    double eyfound[200]{0};
+    double xarray[50]{0};
+    double yarray[50]{0};
+    double chg[50]{0};
+    double resyfound[50]{0};
+    double eyfound[50]{0};
     
     Validation validation;
     std::vector<Clustering::Cluster> clusters;
@@ -102,7 +102,7 @@ int main(int argc, char** argv){
     cout << "\n\n==========\nGetting info for Non-Bending plane\n\n" << endl;
    validation.InfoDE819nb();
 
-    for(int i=0; i<200 ; i++){
+    for(int i=0; i<50 ; i++){
     cout << "\n\n==========\nHit generation, histograms plotting and digitization\n\n" << endl;
    validation.PlotMathieson2D(xarray[i], yarray[i], chg[i]);
     cout << "\n\n==========\nTesting the (pre)clustering\n\n" << endl;
@@ -115,7 +115,7 @@ int main(int argc, char** argv){
     cout << "\n\n==========\nValidation procedure terminated\n\n" << endl;
 
     // If want to plot the residual dependency wrt y and/or the residuals distribution for this run of events
-   ResidualsPlot(yarray, resyfound, eyfound, 200);
+   ResidualsPlot(yarray, resyfound, eyfound, 50);
 
     
     //Useless
