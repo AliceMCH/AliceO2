@@ -64,9 +64,11 @@ int main(int argc, char** argv)
       
       printf("\n\n==========\nRunning Clustering\n\n");
       
+      //Uncomment the method you wish to use to clusterize
+      
     //Runs the clustering of preClusters following a CenterOfGravity algorithm. Fills clusters.
-//    clustering.runFinderCOG(preClusters, clusters);
-//    printf("Number of clusters obtained and saved: %lu\n", clusters.size());
+ //   clustering.runFinderCOG(preClusters, clusters);
+ //   printf("Number of clusters obtained and saved: %lu\n", clusters.size());
       
       // Fit Mathieson
    clustering.runFinderSimpleFit(preClusters, clusters);

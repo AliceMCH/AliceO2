@@ -67,7 +67,7 @@ void Clustering::runFinderCOG(std::vector<PreClusterStruct>& preClusters, std::v
     int jete = 0;
     Digit digittmp;
     Cluster clustertmp;
-    int gPrintLevel = 0;
+    int gPrintLevel = 2;
     
     for (Int_t i = 0; i < preClusters.size(); i++)   //On boucle sur les preclusters identifiés
     {
@@ -121,7 +121,7 @@ Clustering::Cluster Clustering::FinderCOG(std::vector<Digit> &precluster)
     Double_t charge[2] = { 0.0, 0.0 };
     Double_t multiplicity[2] = { 0.0, 0.0 };
     Cluster cluster;
-    int gPrintLevel = 0;
+    int gPrintLevel = 2;
     
     Double_t x[] = { 0.0, 0.0 };
     Double_t y[] = { 0.0, 0.0 };
@@ -288,7 +288,7 @@ void Clustering::runFinderSimpleFit(std::vector<PreClusterStruct>& preClusters, 
     Digit digittmp;
     Cluster clustertmpCOG;
     Cluster clustertmp;
-    int gPrintLevel = 0;
+    int gPrintLevel = 2;
     
     for (Int_t i = 0; i < preClusters.size(); i++)   //On boucle sur les preclusters identifiés
     {

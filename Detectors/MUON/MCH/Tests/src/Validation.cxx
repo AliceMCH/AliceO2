@@ -35,6 +35,8 @@ Validation::Validation(){};
 
 //PART WITH DEFINITION OF THE MATHIESON AND THE IMPACT POINTS
 
+// A single Mathieson distribution
+
 Double_t myMathieson2D(Double_t *x, Double_t *par){
     Double_t pitch = 0.25;
     Float_t xx = x[0]-par[2];
@@ -50,6 +52,9 @@ Double_t myMathieson2D(Double_t *x, Double_t *par){
 }
 
 //________________________________________________________________________________________
+
+//2 superimposed Mathieson distributions, defined by their respective centers.
+
 Double_t myMathieson2D2hits(Double_t *x, Double_t *par){
     Double_t pitch = 0.25;
     Float_t xx1 = x[0]-par[2];
@@ -71,7 +76,7 @@ Double_t myMathieson2D2hits(Double_t *x, Double_t *par){
 //________________________________________________________________________________________
 void myMath1hit(Double_t x, Double_t y){
 
-    // ONE HIT
+    // Function generating a ONE HIT Mathieson histogram
     
     TF2 *f1 = new TF2("myMath",myMathieson2D,-10,10,-10,10,4);
     f1->SetParameters(0.5085, 0.5840, x, y);
@@ -81,7 +86,7 @@ void myMath1hit(Double_t x, Double_t y){
 //________________________________________________________________________________________
 void myMath2hits(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Double_t chg1, Double_t chg2){
     
-    // TWO HITS
+    // Function generating a TWO HITS Mathieson histogram
     
     TF2 *f1 = new TF2("myMath",myMathieson2D2hits,-10,10,-10,10,8);
     f1->SetParameters(0.5085, 0.5840, x1, y1, x2, y2, chg1, chg2);
@@ -93,7 +98,7 @@ void myMath2hits(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Double_t ch
 
 
 
-//PART WITH: - PLOTTING OF THE MATHIESON FOLLOWING DEFINITION AND MAPPING OF A GIVEN DETECTOR (819)
+//PART WITH: - PLOTTING OF THE MATHIESON FOLLOWING THE DEFINITION WE USE (ONE OR TWO HITS) AND MAPPING OF A GIVEN DETECTOR (DE819)
 //           - DIGIT CREATION
 
 //________________________________________________________________________________________
@@ -283,7 +288,7 @@ void Validation::PlotMathieson2D(Double_t x, Double_t y, int nsamples){
 
 
 
-//PART GETTING THE MAPPING INFO FOR THE TWO CATHODES OF A DETECTOR
+//PART GETTING THE MAPPING INFO FOR THE TWO CATHODES OF DETECTOR 819 TO MAKE NICE HISTOGRAMS BASED ON SIZE AND POSITION OF PADS
 
 //________________________________________________________________________________________
 void Validation::InfoDE819b(){
@@ -529,23 +534,27 @@ std::vector<Clustering::Cluster> Validation::TestClustering(){
         preClusterBlock.readPreClusters(preClusters, preClustersBuffer, preClustersSize);
           
           printf("\n\n==========\nRunning Clustering\n\n");
+    
+    
+    
+    // Uncomment the desired clustering method
           
     
     //To run COG Clustering
-       clustering.runFinderCOG(preClusters, clusters);
+//       clustering.runFinderCOG(preClusters, clusters);
 //        printf("Number of clusters obtained and saved: %lu\n", clusters.size());
     
     
     //To run Mathieson fit Clustering
- //      clustering.runFinderSimpleFit(preClusters, clusters);
+       clustering.runFinderSimpleFit(preClusters, clusters);
           
     
     //To run Gaussian fit Clustering
- //         clustering.runFinderGaussianFit(preClusters, clusters);
+  //        clustering.runFinderGaussianFit(preClusters, clusters);
     
     
     //To run Double Gaussian fit Clustering
-  //  clustering.runFinderDoubleGaussianFit(preClusters, clusters);
+ //   clustering.runFinderDoubleGaussianFit(preClusters, clusters);
     
     delete digitsBuffer;
     delete preClustersBuffer;
@@ -677,6 +686,8 @@ void ResidualsCompare(){
     
 }
 
+// Function plotting the residuals as a function of the position y of the hit and the residuals distribution
+
 void ResidualsPlot(double yarray[], double resyfound[], double eyfound[], int size){
     
     const int n = size;
@@ -714,6 +725,8 @@ void ResidualsPlot(double yarray[], double resyfound[], double eyfound[], int si
     
 }
 
+// Function plotting the width of the residuals distribution with respect to charge of the clusters for different clustering methods. Hardcoded vectors found by simulations.
+
 void PlotWidthWrtCharge(){
     
     const Int_t n = 8;
@@ -724,6 +737,10 @@ void PlotWidthWrtCharge(){
     Double_t ewidthMathieson[n] = {0.00823728, 0.00253988, 0.000958042, 0.000588419, 0.000349494, 0.000168508, 0.0000935699, 0.0000546348};
     Double_t widthDoubleGauss[n]  = {0.0809867, 0.0405142, 0.0245105, 0.0198315, 0.0130453, 0.00867564, 0.00585070, 0.00422690};
     Double_t ewidthDoubleGauss[n] = {0.0110478, 0.00196554, 0.000973368, 0.000605342, 0.000327329, 0.000196655, 0.0000988013, 0.0000564364};
+    Double_t widthGauss[n]  = {0.115848, 0.0386573, 0.0268345, 0.0240388, 0.0184959, 0.0164656, 0.0157473, 0.0171971};
+    Double_t ewidthGauss[n] = {0.0261366, 0.00189652, 0.00106311, 0.000851333, 0.000518058, 0.000461726, 0.000396683, 0.000548232};
+    Double_t widthCOG[n]  = {0.111975, 0.0470066, 0.0272162, 0.0258470, 0.0250620, 0.0212521, 0.0182168, 0.0266299};
+    Double_t ewidthCOG[n] = {0.0234304, 0.00250890, 0.00103235, 0.000912423, 0.000890655, 0.000643082, 0.000500731, 0.00143591};
     
     TCanvas *cerr = new TCanvas("cerr","width wrt charge",0,0,600,600);
     
@@ -742,10 +759,24 @@ void PlotWidthWrtCharge(){
      gr3->SetMarkerStyle(8);
     gr3->Draw("P SAME");
     
+    TGraphErrors *gr4 = new TGraphErrors(n, chginput, widthCOG, echginput, ewidthCOG);
+     gr4->SetMarkerColor(3);
+     gr4->SetLineColor(3);
+     gr4->SetMarkerStyle(8);
+    gr4->Draw("P SAME");
+    
+    TGraphErrors *gr5 = new TGraphErrors(n, chginput, widthGauss, echginput, ewidthGauss);
+     gr5->SetMarkerColor(1);
+     gr5->SetLineColor(1);
+     gr5->SetMarkerStyle(8);
+    gr5->Draw("P SAME");
+    
     auto legend = new TLegend(0.7,0.7,0.9,0.9);
                     legend->SetHeader("Clustering procedures"); // option "C" allows to center the header
                     legend->AddEntry(gr2,"Mathieson fit, K3 AliRoot","lep");
                     legend->AddEntry(gr3, "Double Gaussian fit, K3 AliRoot","lep");
+                    legend->AddEntry(gr5, "Simple Gaussian fit, K3 AliRoot","lep");
+                    legend->AddEntry(gr4, "Center of Gravity","lep");
                     legend->Draw();
     
     cerr->SetLogx(true);

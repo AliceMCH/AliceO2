@@ -12,6 +12,7 @@
 #include "TCanvas.h"
 #include "TH1F.h"
 #include "TApplication.h"
+#include "TGraphErrors.h"
 
 #include "MCHBase/Digit.h"
 //#include "MCHBase/DigitBlock.h"
@@ -30,7 +31,9 @@ int main(int argc, char** argv)
   PreClusterFinder preClusterFinder;
   PreClusterBlock preClusterBlock;
   Clustering clustering;
-  std::vector<float> residuals;
+  float residuals[1000];
+    float ytrks[1000];
+    int count = 0;
     
     TApplication app ("app",&argc,argv);
     
@@ -79,26 +82,66 @@ int main(int argc, char** argv)
       
       printf("\n\n==========\nRunning Clustering\n\n");
 
-      // Fit Mathieson
-      clustering.runFinderSimpleFit(preClusters, clusters);
+      
+      
+       //Uncomment the method you wish to use to clusterize
+            
+          //Runs the clustering of preClusters following a CenterOfGravity algorithm. Fills clusters.
+//          clustering.runFinderCOG(preClusters, clusters);
+//          printf("Number of clusters obtained and saved: %lu\n", clusters.size());
+            
+            // Fit Mathieson
+         clustering.runFinderSimpleFit(preClusters, clusters);
+            
+            // Fit Simple Gaussienne
+       //     clustering.runFinderGaussianFit(preClusters, clusters);
+            
+            // Fit Double Gaussienne
+      //     clustering.runFinderDoubleGaussianFit(preClusters, clusters);
 
+      
+      
+      
+      
+      // Choose to only look at nice events, where we have one precluster reconstructed as a single cluster, which are a majority (972 out of roughly 1000). This helps us get rid of pathological events.
       
       if(preClusters.size()==1){
           float yobtenu = clusters[0].gety();
           float difference = ytrk-yobtenu;
+          ytrks[count] = ytrk;
+          residuals[count] = difference;
+          
+          // Look at the distribution of residuals from this TestBeam data
+          
           h1->Fill(difference);
             h1->GetXaxis()->SetTitle("Residual y (cm)");
             h1->GetYaxis()->SetTitle("Count");
             h1->Draw();
           cout << "RESIDUAL y: " << difference <<endl;
-
+          count++;
       }
-
+      
     //break;
   }
     
     cbell->Update();
     cbell->Draw();
+    
+    // Look at the residuals wrt coordinate y of the hit, to see if there is a bias
+    
+    TCanvas *cerr = new TCanvas("cerr","Graph example",0,0,600,600);
+       
+       TGraph *gr1 = new TGraph(count, ytrks, residuals);
+       gr1->SetTitle("Residuals wrt input y");
+       gr1->SetMarkerColor(4);
+       gr1->SetLineColor(4);
+       gr1->SetMarkerStyle(8);
+       gr1->GetXaxis()->SetTitle("y input (cm)");
+       gr1->GetYaxis()->SetTitle("Residual (cm)");
+       gr1->Draw("AP");
+    
+    cerr->Update();
+    cerr->Draw();
               app.Run(kTRUE);
 
   return 0;

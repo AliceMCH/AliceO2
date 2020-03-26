@@ -1,0 +1,1191 @@
+[WARN] mpDEs.size()=156  SNDEs=156
+
+[INFO] Read mapping in: 2926.09 ms
+
+fNrecords: 96  size: 768
+nDigits: 96
+  pad ID 20142  DE=100  area=(0.315000,22.890001) -> (0.945000,23.310001)
+  pad ID 21894  DE=100  area=(79.695000,37.170002) -> (80.325005,38.850002)
+  pad ID 5791  DE=100  area=(0.630000,26.459999) -> (1.260000,26.879999)
+  pad ID 11470  DE=100  area=(7.560000,52.920002) -> (8.190000,53.340000)
+  pad ID 14648  DE=101  area=(55.755001,0.210000) -> (56.384998,1.050000)
+  pad ID 3424  DE=101  area=(36.539997,13.440000) -> (37.169998,13.860000)
+  pad ID 6491  DE=102  area=(38.430000,31.499998) -> (39.059998,31.919998)
+  pad ID 11795  DE=102  area=(68.040001,55.019997) -> (70.559998,55.439999)
+  pad ID 14497  DE=102  area=(77.805000,1.890000) -> (78.435005,3.570000)
+  pad ID 1190  DE=102  area=(21.420000,2.520000) -> (22.049999,2.940000)
+  pad ID 13761  DE=102  area=(30.240000,75.180000) -> (32.759998,75.599998)
+  pad ID 23953  DE=203  area=(33.075001,40.949997) -> (33.704998,41.369999)
+  pad ID 20891  DE=201  area=(32.445000,31.709999) -> (33.075001,32.130001)
+  pad ID 1022  DE=201  area=(29.609999,5.880000) -> (30.240000,6.300000)
+  pad ID 6226  DE=202  area=(48.510002,27.719999) -> (49.139999,28.139999)
+  pad ID 11505  DE=202  area=(9.450000,47.459999) -> (10.080000,47.880001)
+  pad ID 14718  DE=202  area=(52.605000,6.090000) -> (53.235001,6.510000)
+  pad ID 2019  DE=202  area=(39.059998,7.980000) -> (39.689999,8.400000)
+  pad ID 15636  DE=300  area=(53.375000,8.500000) -> (54.125000,9.500000)
+  pad ID 18183  DE=300  area=(66.875000,23.500000) -> (67.625000,24.500000)
+  pad ID 19420  DE=301  area=(0.875000,28.000000) -> (1.625000,28.500000)
+  pad ID 26452  DE=301  area=(51.125000,79.500000) -> (51.875000,81.500000)
+  pad ID 189  DE=301  area=(83.000000,5.750000) -> (84.500000,6.250000)
+  pad ID 24257  DE=301  area=(27.125000,60.500000) -> (27.875000,61.500000)
+  pad ID 5453  DE=301  area=(-1.000000,27.750000) -> (-0.250000,28.250000)
+  pad ID 5471  DE=301  area=(-0.250000,28.750000) -> (0.500000,29.250000)
+  pad ID 5708  DE=301  area=(71.000000,35.250000) -> (72.500000,35.750000)
+  pad ID 18255  DE=400  area=(61.625000,23.500000) -> (62.375000,24.500000)
+  pad ID 18256  DE=400  area=(61.625000,24.500000) -> (62.375000,25.500000)
+  pad ID 18264  DE=400  area=(62.375000,24.500000) -> (63.125000,25.500000)
+  pad ID 18272  DE=400  area=(63.125000,24.500000) -> (63.875000,25.500000)
+  pad ID 18249  DE=400  area=(60.875000,25.500000) -> (61.625000,26.500000)
+  pad ID 18265  DE=400  area=(62.375000,25.500000) -> (63.125000,26.500000)
+  pad ID 18257  DE=400  area=(61.625000,25.500000) -> (62.375000,26.500000)
+  pad ID 18248  DE=400  area=(60.875000,24.500000) -> (61.625000,25.500000)
+  pad ID 18271  DE=400  area=(63.125000,23.500000) -> (63.875000,24.500000)
+  pad ID 18263  DE=400  area=(62.375000,23.500000) -> (63.125000,24.500000)
+  pad ID 18247  DE=400  area=(60.875000,23.500000) -> (61.625000,24.500000)
+  pad ID 5519  DE=403  area=(95.000000,36.750000) -> (98.000000,37.250000)
+  pad ID 7838  DE=403  area=(23.750000,44.250000) -> (24.500000,44.750000)
+  pad ID 4312  DE=400  area=(60.500000,23.250000) -> (62.000000,23.750000)
+  pad ID 4329  DE=400  area=(62.000000,23.750000) -> (63.500000,24.250000)
+  pad ID 4330  DE=400  area=(62.000000,24.250000) -> (63.500000,24.750000)
+  pad ID 4316  DE=400  area=(60.500000,25.250000) -> (62.000000,25.750000)
+  pad ID 4333  DE=400  area=(62.000000,25.750000) -> (63.500000,26.250000)
+  pad ID 4298  DE=400  area=(59.000000,24.250000) -> (60.500000,24.750000)
+  pad ID 4332  DE=400  area=(62.000000,25.250000) -> (63.500000,25.750000)
+  pad ID 4331  DE=400  area=(62.000000,24.750000) -> (63.500000,25.250000)
+  pad ID 4346  DE=400  area=(63.500000,24.250000) -> (65.000000,24.750000)
+  pad ID 4317  DE=400  area=(60.500000,25.750000) -> (62.000000,26.250000)
+  pad ID 4345  DE=400  area=(63.500000,23.750000) -> (65.000000,24.250000)
+  pad ID 4344  DE=400  area=(63.500000,23.250000) -> (65.000000,23.750000)
+  pad ID 4315  DE=400  area=(60.500000,24.750000) -> (62.000000,25.250000)
+  pad ID 4313  DE=400  area=(60.500000,23.750000) -> (62.000000,24.250000)
+  pad ID 4296  DE=400  area=(59.000000,23.250000) -> (60.500000,23.750000)
+  pad ID 5975  DE=402  area=(48.500000,32.750000) -> (50.000000,33.250000)
+  pad ID 17647  DE=402  area=(22.625000,15.500000) -> (23.375000,16.000000)
+  pad ID 1279  DE=506  area=(25.000000,11.500000) -> (30.000000,12.000000)
+  pad ID 27  DE=604  area=(0.000000,-6.500000) -> (5.000000,-6.000000)
+  pad ID 5111  DE=510  area=(5.714286,17.500000) -> (6.428572,20.000000)
+  pad ID 1707  DE=513  area=(6.428572,5.000000) -> (7.142858,10.000000)
+  pad ID 2076  DE=513  area=(-15.000000,0.000000) -> (-14.285714,5.000000)
+  pad ID 2112  DE=513  area=(-10.000000,0.000000) -> (-9.285714,5.000000)
+  pad ID 2962  DE=516  area=(-70.000000,5.000000) -> (-67.500000,5.500000)
+  pad ID 1575  DE=515  area=(-20.000000,19.500000) -> (-15.000000,20.000000)
+  pad ID 1974  DE=725  area=(-70.000000,15.000000) -> (-60.000000,15.500000)
+  pad ID 920  DE=809  area=(70.000000,0.000000) -> (80.000000,0.500000)
+  pad ID 4444  DE=812  area=(47.857143,-10.000000) -> (48.571430,-7.500000)
+  pad ID 800  DE=824  area=(-50.000000,-20.000000) -> (-47.500000,-19.500000)
+  pad ID 2236  DE=823  area=(-95.000000,10.000000) -> (-90.000000,10.500000)
+  pad ID 1480  DE=908  area=(51.428574,-20.000000) -> (52.142857,-10.000000)
+  pad ID 1481  DE=908  area=(51.428574,-10.000000) -> (52.142857,0.000000)
+  pad ID 1482  DE=908  area=(52.142857,-20.000000) -> (52.857143,-10.000000)
+  pad ID 1476  DE=908  area=(50.000000,-20.000000) -> (50.714287,-10.000000)
+  pad ID 1478  DE=908  area=(50.714287,-20.000000) -> (51.428574,-10.000000)
+  pad ID 1479  DE=908  area=(50.714287,-10.000000) -> (51.428574,0.000000)
+  pad ID 224  DE=908  area=(50.000000,-20.000000) -> (60.000000,-19.500000)
+  pad ID 225  DE=908  area=(50.000000,-19.500000) -> (60.000000,-19.000000)
+  pad ID 226  DE=908  area=(50.000000,-19.000000) -> (60.000000,-18.500000)
+  pad ID 227  DE=908  area=(50.000000,-18.500000) -> (60.000000,-18.000000)
+  pad ID 228  DE=908  area=(50.000000,-18.000000) -> (60.000000,-17.500000)
+  pad ID 229  DE=908  area=(50.000000,-17.500000) -> (60.000000,-17.000000)
+  pad ID 6368  DE=915  area=(14.285714,0.000000) -> (15.000000,5.000000)
+  pad ID 1952  DE=918  area=(-40.000000,0.000000) -> (-39.285713,10.000000)
+  pad ID 1153  DE=920  area=(-11.428572,-10.000000) -> (-10.714286,0.000000)
+  pad ID 743  DE=1010  area=(-30.000000,-8.500000) -> (-25.000000,-8.000000)
+  pad ID 742  DE=1010  area=(-30.000000,-9.000000) -> (-25.000000,-8.500000)
+  pad ID 741  DE=1010  area=(-30.000000,-9.500000) -> (-25.000000,-9.000000)
+  pad ID 740  DE=1010  area=(-30.000000,-10.000000) -> (-25.000000,-9.500000)
+  pad ID 3554  DE=1010  area=(-25.714285,-10.000000) -> (-25.000000,-5.000000)
+  pad ID 3549  DE=1010  area=(-26.428572,-10.000000) -> (-25.714285,-5.000000)
+  pad ID 5036  DE=1015  area=(-47.857140,-10.000000) -> (-47.142857,-7.500000)
+  pad ID 2002  DE=1016  area=(-95.000000,5.000000) -> (-90.000000,5.500000)
+  pad ID 1531  DE=1006  area=(-56.428570,10.000000) -> (-55.714287,20.000000)
+  pad ID 5733  DE=1002  area=(95.714287,-10.000000) -> (96.428574,0.000000)
+  pad ID 6200  DE=1002  area=(54.285713,0.000000) -> (55.000000,10.000000)
+preClustersSize: 2728
+[PreClusterBlock::storePreClusters] nDEWithPreClusters=31 -> 0x7f8c26a8a000
+[PreClusterBlock::storePreClusters] totalBytesUsed: 8
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a00c
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a00e
+[PreClusterBlock::startPreCluster] *mNPreClusters=1 -> 0x7f8c26a8a00c
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a028
+[PreClusterBlock::startPreCluster] *mNPreClusters=2 -> 0x7f8c26a8a00c
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a042
+[PreClusterBlock::startPreCluster] *mNPreClusters=3 -> 0x7f8c26a8a00c
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a05c
+[PreClusterBlock::startPreCluster] *mNPreClusters=4 -> 0x7f8c26a8a00c
+[PreClusterBlock::storePreClusters] bytesUsed: 106 -> 0x7f8c26a8a008
+[PreClusterBlock::storePreClusters] totalBytesUsed: 122
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a07e
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a080
+[PreClusterBlock::startPreCluster] *mNPreClusters=1 -> 0x7f8c26a8a07e
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a09a
+[PreClusterBlock::startPreCluster] *mNPreClusters=2 -> 0x7f8c26a8a07e
+[PreClusterBlock::storePreClusters] bytesUsed: 54 -> 0x7f8c26a8a07a
+[PreClusterBlock::storePreClusters] totalBytesUsed: 184
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a0bc
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a0be
+[PreClusterBlock::startPreCluster] *mNPreClusters=1 -> 0x7f8c26a8a0bc
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a0d8
+[PreClusterBlock::startPreCluster] *mNPreClusters=2 -> 0x7f8c26a8a0bc
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a0f2
+[PreClusterBlock::startPreCluster] *mNPreClusters=3 -> 0x7f8c26a8a0bc
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a10c
+[PreClusterBlock::startPreCluster] *mNPreClusters=4 -> 0x7f8c26a8a0bc
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a126
+[PreClusterBlock::startPreCluster] *mNPreClusters=5 -> 0x7f8c26a8a0bc
+[PreClusterBlock::storePreClusters] bytesUsed: 132 -> 0x7f8c26a8a0b8
+[PreClusterBlock::storePreClusters] totalBytesUsed: 324
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a148
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a14a
+[PreClusterBlock::startPreCluster] *mNPreClusters=1 -> 0x7f8c26a8a148
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a164
+[PreClusterBlock::startPreCluster] *mNPreClusters=2 -> 0x7f8c26a8a148
+[PreClusterBlock::storePreClusters] bytesUsed: 54 -> 0x7f8c26a8a144
+[PreClusterBlock::storePreClusters] totalBytesUsed: 386
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a186
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a188
+[PreClusterBlock::startPreCluster] *mNPreClusters=1 -> 0x7f8c26a8a186
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a1a2
+[PreClusterBlock::startPreCluster] *mNPreClusters=2 -> 0x7f8c26a8a186
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a1bc
+[PreClusterBlock::startPreCluster] *mNPreClusters=3 -> 0x7f8c26a8a186
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a1d6
+[PreClusterBlock::startPreCluster] *mNPreClusters=4 -> 0x7f8c26a8a186
+[PreClusterBlock::storePreClusters] bytesUsed: 106 -> 0x7f8c26a8a182
+[PreClusterBlock::storePreClusters] totalBytesUsed: 500
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a1f8
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a1fa
+[PreClusterBlock::startPreCluster] *mNPreClusters=1 -> 0x7f8c26a8a1f8
+[PreClusterBlock::storePreClusters] bytesUsed: 28 -> 0x7f8c26a8a1f4
+[PreClusterBlock::storePreClusters] totalBytesUsed: 536
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a21c
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a21e
+[PreClusterBlock::startPreCluster] *mNPreClusters=1 -> 0x7f8c26a8a21c
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a238
+[PreClusterBlock::startPreCluster] *mNPreClusters=2 -> 0x7f8c26a8a21c
+[PreClusterBlock::storePreClusters] bytesUsed: 54 -> 0x7f8c26a8a218
+[PreClusterBlock::storePreClusters] totalBytesUsed: 598
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a25a
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a25c
+[PreClusterBlock::startPreCluster] *mNPreClusters=1 -> 0x7f8c26a8a25a
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a276
+[PreClusterBlock::startPreCluster] *mNPreClusters=2 -> 0x7f8c26a8a25a
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a290
+[PreClusterBlock::startPreCluster] *mNPreClusters=3 -> 0x7f8c26a8a25a
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a2aa
+[PreClusterBlock::startPreCluster] *mNPreClusters=4 -> 0x7f8c26a8a25a
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a2c4
+[PreClusterBlock::startPreCluster] *mNPreClusters=5 -> 0x7f8c26a8a25a
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a2de
+[PreClusterBlock::startPreCluster] *mNPreClusters=6 -> 0x7f8c26a8a25a
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a2f8
+[PreClusterBlock::startPreCluster] *mNPreClusters=7 -> 0x7f8c26a8a25a
+[PreClusterBlock::storePreClusters] bytesUsed: 184 -> 0x7f8c26a8a256
+[PreClusterBlock::storePreClusters] totalBytesUsed: 790
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a31a
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 26
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a31c
+[PreClusterBlock::startPreCluster] *mNPreClusters=1 -> 0x7f8c26a8a31a
+[PreClusterBlock::addDigit] *mLastNDigits=2 -> 0x7f8c26a8a31c
+[PreClusterBlock::addDigit] *mLastNDigits=3 -> 0x7f8c26a8a31c
+[PreClusterBlock::addDigit] *mLastNDigits=4 -> 0x7f8c26a8a31c
+[PreClusterBlock::addDigit] *mLastNDigits=5 -> 0x7f8c26a8a31c
+[PreClusterBlock::addDigit] *mLastNDigits=6 -> 0x7f8c26a8a31c
+[PreClusterBlock::addDigit] *mLastNDigits=7 -> 0x7f8c26a8a31c
+[PreClusterBlock::addDigit] *mLastNDigits=8 -> 0x7f8c26a8a31c
+[PreClusterBlock::addDigit] *mLastNDigits=9 -> 0x7f8c26a8a31c
+[PreClusterBlock::addDigit] *mLastNDigits=10 -> 0x7f8c26a8a31c
+[PreClusterBlock::addDigit] *mLastNDigits=11 -> 0x7f8c26a8a31c
+[PreClusterBlock::addDigit] *mLastNDigits=12 -> 0x7f8c26a8a31c
+[PreClusterBlock::addDigit] *mLastNDigits=13 -> 0x7f8c26a8a31c
+[PreClusterBlock::addDigit] *mLastNDigits=14 -> 0x7f8c26a8a31c
+[PreClusterBlock::addDigit] *mLastNDigits=15 -> 0x7f8c26a8a31c
+[PreClusterBlock::addDigit] *mLastNDigits=16 -> 0x7f8c26a8a31c
+[PreClusterBlock::addDigit] *mLastNDigits=17 -> 0x7f8c26a8a31c
+[PreClusterBlock::addDigit] *mLastNDigits=18 -> 0x7f8c26a8a31c
+[PreClusterBlock::addDigit] *mLastNDigits=19 -> 0x7f8c26a8a31c
+[PreClusterBlock::addDigit] *mLastNDigits=20 -> 0x7f8c26a8a31c
+[PreClusterBlock::addDigit] *mLastNDigits=21 -> 0x7f8c26a8a31c
+[PreClusterBlock::addDigit] *mLastNDigits=22 -> 0x7f8c26a8a31c
+[PreClusterBlock::addDigit] *mLastNDigits=23 -> 0x7f8c26a8a31c
+[PreClusterBlock::addDigit] *mLastNDigits=24 -> 0x7f8c26a8a31c
+[PreClusterBlock::addDigit] *mLastNDigits=25 -> 0x7f8c26a8a31c
+[PreClusterBlock::addDigit] *mLastNDigits=26 -> 0x7f8c26a8a31c
+[PreClusterBlock::storePreClusters] bytesUsed: 628 -> 0x7f8c26a8a316
+[PreClusterBlock::storePreClusters] totalBytesUsed: 1426
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a596
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a598
+[PreClusterBlock::startPreCluster] *mNPreClusters=1 -> 0x7f8c26a8a596
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a5b2
+[PreClusterBlock::startPreCluster] *mNPreClusters=2 -> 0x7f8c26a8a596
+[PreClusterBlock::storePreClusters] bytesUsed: 54 -> 0x7f8c26a8a592
+[PreClusterBlock::storePreClusters] totalBytesUsed: 1488
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a5d4
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a5d6
+[PreClusterBlock::startPreCluster] *mNPreClusters=1 -> 0x7f8c26a8a5d4
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a5f0
+[PreClusterBlock::startPreCluster] *mNPreClusters=2 -> 0x7f8c26a8a5d4
+[PreClusterBlock::storePreClusters] bytesUsed: 54 -> 0x7f8c26a8a5d0
+[PreClusterBlock::storePreClusters] totalBytesUsed: 1550
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a612
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a614
+[PreClusterBlock::startPreCluster] *mNPreClusters=1 -> 0x7f8c26a8a612
+[PreClusterBlock::storePreClusters] bytesUsed: 28 -> 0x7f8c26a8a60e
+[PreClusterBlock::storePreClusters] totalBytesUsed: 1586
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a636
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a638
+[PreClusterBlock::startPreCluster] *mNPreClusters=1 -> 0x7f8c26a8a636
+[PreClusterBlock::storePreClusters] bytesUsed: 28 -> 0x7f8c26a8a632
+[PreClusterBlock::storePreClusters] totalBytesUsed: 1622
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a65a
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a65c
+[PreClusterBlock::startPreCluster] *mNPreClusters=1 -> 0x7f8c26a8a65a
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a676
+[PreClusterBlock::startPreCluster] *mNPreClusters=2 -> 0x7f8c26a8a65a
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a690
+[PreClusterBlock::startPreCluster] *mNPreClusters=3 -> 0x7f8c26a8a65a
+[PreClusterBlock::storePreClusters] bytesUsed: 80 -> 0x7f8c26a8a656
+[PreClusterBlock::storePreClusters] totalBytesUsed: 1710
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a6b2
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a6b4
+[PreClusterBlock::startPreCluster] *mNPreClusters=1 -> 0x7f8c26a8a6b2
+[PreClusterBlock::storePreClusters] bytesUsed: 28 -> 0x7f8c26a8a6ae
+[PreClusterBlock::storePreClusters] totalBytesUsed: 1746
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a6d6
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a6d8
+[PreClusterBlock::startPreCluster] *mNPreClusters=1 -> 0x7f8c26a8a6d6
+[PreClusterBlock::storePreClusters] bytesUsed: 28 -> 0x7f8c26a8a6d2
+[PreClusterBlock::storePreClusters] totalBytesUsed: 1782
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a6fa
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a6fc
+[PreClusterBlock::startPreCluster] *mNPreClusters=1 -> 0x7f8c26a8a6fa
+[PreClusterBlock::storePreClusters] bytesUsed: 28 -> 0x7f8c26a8a6f6
+[PreClusterBlock::storePreClusters] totalBytesUsed: 1818
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a71e
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a720
+[PreClusterBlock::startPreCluster] *mNPreClusters=1 -> 0x7f8c26a8a71e
+[PreClusterBlock::storePreClusters] bytesUsed: 28 -> 0x7f8c26a8a71a
+[PreClusterBlock::storePreClusters] totalBytesUsed: 1854
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a742
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a744
+[PreClusterBlock::startPreCluster] *mNPreClusters=1 -> 0x7f8c26a8a742
+[PreClusterBlock::storePreClusters] bytesUsed: 28 -> 0x7f8c26a8a73e
+[PreClusterBlock::storePreClusters] totalBytesUsed: 1890
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a766
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a768
+[PreClusterBlock::startPreCluster] *mNPreClusters=1 -> 0x7f8c26a8a766
+[PreClusterBlock::storePreClusters] bytesUsed: 28 -> 0x7f8c26a8a762
+[PreClusterBlock::storePreClusters] totalBytesUsed: 1926
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a78a
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a78c
+[PreClusterBlock::startPreCluster] *mNPreClusters=1 -> 0x7f8c26a8a78a
+[PreClusterBlock::storePreClusters] bytesUsed: 28 -> 0x7f8c26a8a786
+[PreClusterBlock::storePreClusters] totalBytesUsed: 1962
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a7ae
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a7b0
+[PreClusterBlock::startPreCluster] *mNPreClusters=1 -> 0x7f8c26a8a7ae
+[PreClusterBlock::storePreClusters] bytesUsed: 28 -> 0x7f8c26a8a7aa
+[PreClusterBlock::storePreClusters] totalBytesUsed: 1998
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a7d2
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 12
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a7d4
+[PreClusterBlock::startPreCluster] *mNPreClusters=1 -> 0x7f8c26a8a7d2
+[PreClusterBlock::addDigit] *mLastNDigits=2 -> 0x7f8c26a8a7d4
+[PreClusterBlock::addDigit] *mLastNDigits=3 -> 0x7f8c26a8a7d4
+[PreClusterBlock::addDigit] *mLastNDigits=4 -> 0x7f8c26a8a7d4
+[PreClusterBlock::addDigit] *mLastNDigits=5 -> 0x7f8c26a8a7d4
+[PreClusterBlock::addDigit] *mLastNDigits=6 -> 0x7f8c26a8a7d4
+[PreClusterBlock::addDigit] *mLastNDigits=7 -> 0x7f8c26a8a7d4
+[PreClusterBlock::addDigit] *mLastNDigits=8 -> 0x7f8c26a8a7d4
+[PreClusterBlock::addDigit] *mLastNDigits=9 -> 0x7f8c26a8a7d4
+[PreClusterBlock::addDigit] *mLastNDigits=10 -> 0x7f8c26a8a7d4
+[PreClusterBlock::addDigit] *mLastNDigits=11 -> 0x7f8c26a8a7d4
+[PreClusterBlock::addDigit] *mLastNDigits=12 -> 0x7f8c26a8a7d4
+[PreClusterBlock::storePreClusters] bytesUsed: 292 -> 0x7f8c26a8a7ce
+[PreClusterBlock::storePreClusters] totalBytesUsed: 2298
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a8fe
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a900
+[PreClusterBlock::startPreCluster] *mNPreClusters=1 -> 0x7f8c26a8a8fe
+[PreClusterBlock::storePreClusters] bytesUsed: 28 -> 0x7f8c26a8a8fa
+[PreClusterBlock::storePreClusters] totalBytesUsed: 2334
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a922
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a924
+[PreClusterBlock::startPreCluster] *mNPreClusters=1 -> 0x7f8c26a8a922
+[PreClusterBlock::storePreClusters] bytesUsed: 28 -> 0x7f8c26a8a91e
+[PreClusterBlock::storePreClusters] totalBytesUsed: 2370
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a946
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a948
+[PreClusterBlock::startPreCluster] *mNPreClusters=1 -> 0x7f8c26a8a946
+[PreClusterBlock::storePreClusters] bytesUsed: 28 -> 0x7f8c26a8a942
+[PreClusterBlock::storePreClusters] totalBytesUsed: 2406
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a96a
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a96c
+[PreClusterBlock::startPreCluster] *mNPreClusters=1 -> 0x7f8c26a8a96a
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a986
+[PreClusterBlock::startPreCluster] *mNPreClusters=2 -> 0x7f8c26a8a96a
+[PreClusterBlock::storePreClusters] bytesUsed: 54 -> 0x7f8c26a8a966
+[PreClusterBlock::storePreClusters] totalBytesUsed: 2468
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a9a8
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a9aa
+[PreClusterBlock::startPreCluster] *mNPreClusters=1 -> 0x7f8c26a8a9a8
+[PreClusterBlock::storePreClusters] bytesUsed: 28 -> 0x7f8c26a8a9a4
+[PreClusterBlock::storePreClusters] totalBytesUsed: 2504
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a9cc
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 6
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8a9ce
+[PreClusterBlock::startPreCluster] *mNPreClusters=1 -> 0x7f8c26a8a9cc
+[PreClusterBlock::addDigit] *mLastNDigits=2 -> 0x7f8c26a8a9ce
+[PreClusterBlock::addDigit] *mLastNDigits=3 -> 0x7f8c26a8a9ce
+[PreClusterBlock::addDigit] *mLastNDigits=4 -> 0x7f8c26a8a9ce
+[PreClusterBlock::addDigit] *mLastNDigits=5 -> 0x7f8c26a8a9ce
+[PreClusterBlock::addDigit] *mLastNDigits=6 -> 0x7f8c26a8a9ce
+[PreClusterBlock::storePreClusters] bytesUsed: 148 -> 0x7f8c26a8a9c8
+[PreClusterBlock::storePreClusters] totalBytesUsed: 2660
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8aa68
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8aa6a
+[PreClusterBlock::startPreCluster] *mNPreClusters=1 -> 0x7f8c26a8aa68
+[PreClusterBlock::storePreClusters] bytesUsed: 28 -> 0x7f8c26a8aa64
+[PreClusterBlock::storePreClusters] totalBytesUsed: 2696
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8aa8c
+[PreClusterBlock::storePreClusters] adding pre-cluster of size 1
+[PreClusterBlock::startPreCluster] *mLastNDigits=1 -> 0x7f8c26a8aa8e
+[PreClusterBlock::startPreCluster] *mNPreClusters=1 -> 0x7f8c26a8aa8c
+[PreClusterBlock::storePreClusters] bytesUsed: 28 -> 0x7f8c26a8aa88
+
+
+==========
+Reading clusters
+
+[PreClusterBlock::readPreClusters] nDEWithPreClusters: 31 -> 0x7f8c26a8a000
+[PreClusterBlock::readPreClusters] bytesUsed: 106 -> 0x7f8c26a8a008, totalBytesUsed: 4
+[PreClusterBlock::readPreClusters] totalBytesUsed: 8
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a00c
+*mNPreClusters: 4
+[PreClusterBlock::readBuffer] pre-cluster 0  *nDigits=1
+[PreClusterBlock::readBuffer] pre-cluster 1  *nDigits=1
+[PreClusterBlock::readBuffer] pre-cluster 2  *nDigits=1
+[PreClusterBlock::readBuffer] pre-cluster 3  *nDigits=1
+[PreClusterBlock::readPreClusters] bytesUsed: 54 -> 0x7f8c26a8a07a, totalBytesUsed: 118
+[PreClusterBlock::readPreClusters] totalBytesUsed: 122
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a07e
+*mNPreClusters: 2
+[PreClusterBlock::readBuffer] pre-cluster 0  *nDigits=1
+[PreClusterBlock::readBuffer] pre-cluster 1  *nDigits=1
+[PreClusterBlock::readPreClusters] bytesUsed: 132 -> 0x7f8c26a8a0b8, totalBytesUsed: 180
+[PreClusterBlock::readPreClusters] totalBytesUsed: 184
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a0bc
+*mNPreClusters: 5
+[PreClusterBlock::readBuffer] pre-cluster 0  *nDigits=1
+[PreClusterBlock::readBuffer] pre-cluster 1  *nDigits=1
+[PreClusterBlock::readBuffer] pre-cluster 2  *nDigits=1
+[PreClusterBlock::readBuffer] pre-cluster 3  *nDigits=1
+[PreClusterBlock::readBuffer] pre-cluster 4  *nDigits=1
+[PreClusterBlock::readPreClusters] bytesUsed: 54 -> 0x7f8c26a8a144, totalBytesUsed: 320
+[PreClusterBlock::readPreClusters] totalBytesUsed: 324
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a148
+*mNPreClusters: 2
+[PreClusterBlock::readBuffer] pre-cluster 0  *nDigits=1
+[PreClusterBlock::readBuffer] pre-cluster 1  *nDigits=1
+[PreClusterBlock::readPreClusters] bytesUsed: 106 -> 0x7f8c26a8a182, totalBytesUsed: 382
+[PreClusterBlock::readPreClusters] totalBytesUsed: 386
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a186
+*mNPreClusters: 4
+[PreClusterBlock::readBuffer] pre-cluster 0  *nDigits=1
+[PreClusterBlock::readBuffer] pre-cluster 1  *nDigits=1
+[PreClusterBlock::readBuffer] pre-cluster 2  *nDigits=1
+[PreClusterBlock::readBuffer] pre-cluster 3  *nDigits=1
+[PreClusterBlock::readPreClusters] bytesUsed: 28 -> 0x7f8c26a8a1f4, totalBytesUsed: 496
+[PreClusterBlock::readPreClusters] totalBytesUsed: 500
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a1f8
+*mNPreClusters: 1
+[PreClusterBlock::readBuffer] pre-cluster 0  *nDigits=1
+[PreClusterBlock::readPreClusters] bytesUsed: 54 -> 0x7f8c26a8a218, totalBytesUsed: 532
+[PreClusterBlock::readPreClusters] totalBytesUsed: 536
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a21c
+*mNPreClusters: 2
+[PreClusterBlock::readBuffer] pre-cluster 0  *nDigits=1
+[PreClusterBlock::readBuffer] pre-cluster 1  *nDigits=1
+[PreClusterBlock::readPreClusters] bytesUsed: 184 -> 0x7f8c26a8a256, totalBytesUsed: 594
+[PreClusterBlock::readPreClusters] totalBytesUsed: 598
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a25a
+*mNPreClusters: 7
+[PreClusterBlock::readBuffer] pre-cluster 0  *nDigits=1
+[PreClusterBlock::readBuffer] pre-cluster 1  *nDigits=1
+[PreClusterBlock::readBuffer] pre-cluster 2  *nDigits=1
+[PreClusterBlock::readBuffer] pre-cluster 3  *nDigits=1
+[PreClusterBlock::readBuffer] pre-cluster 4  *nDigits=1
+[PreClusterBlock::readBuffer] pre-cluster 5  *nDigits=1
+[PreClusterBlock::readBuffer] pre-cluster 6  *nDigits=1
+[PreClusterBlock::readPreClusters] bytesUsed: 628 -> 0x7f8c26a8a316, totalBytesUsed: 786
+[PreClusterBlock::readPreClusters] totalBytesUsed: 790
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a31a
+*mNPreClusters: 1
+[PreClusterBlock::readBuffer] pre-cluster 0  *nDigits=26
+[PreClusterBlock::readPreClusters] bytesUsed: 54 -> 0x7f8c26a8a592, totalBytesUsed: 1422
+[PreClusterBlock::readPreClusters] totalBytesUsed: 1426
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a596
+*mNPreClusters: 2
+[PreClusterBlock::readBuffer] pre-cluster 0  *nDigits=1
+[PreClusterBlock::readBuffer] pre-cluster 1  *nDigits=1
+[PreClusterBlock::readPreClusters] bytesUsed: 54 -> 0x7f8c26a8a5d0, totalBytesUsed: 1484
+[PreClusterBlock::readPreClusters] totalBytesUsed: 1488
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a5d4
+*mNPreClusters: 2
+[PreClusterBlock::readBuffer] pre-cluster 0  *nDigits=1
+[PreClusterBlock::readBuffer] pre-cluster 1  *nDigits=1
+[PreClusterBlock::readPreClusters] bytesUsed: 28 -> 0x7f8c26a8a60e, totalBytesUsed: 1546
+[PreClusterBlock::readPreClusters] totalBytesUsed: 1550
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a612
+*mNPreClusters: 1
+[PreClusterBlock::readBuffer] pre-cluster 0  *nDigits=1
+[PreClusterBlock::readPreClusters] bytesUsed: 28 -> 0x7f8c26a8a632, totalBytesUsed: 1582
+[PreClusterBlock::readPreClusters] totalBytesUsed: 1586
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a636
+*mNPreClusters: 1
+[PreClusterBlock::readBuffer] pre-cluster 0  *nDigits=1
+[PreClusterBlock::readPreClusters] bytesUsed: 80 -> 0x7f8c26a8a656, totalBytesUsed: 1618
+[PreClusterBlock::readPreClusters] totalBytesUsed: 1622
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a65a
+*mNPreClusters: 3
+[PreClusterBlock::readBuffer] pre-cluster 0  *nDigits=1
+[PreClusterBlock::readBuffer] pre-cluster 1  *nDigits=1
+[PreClusterBlock::readBuffer] pre-cluster 2  *nDigits=1
+[PreClusterBlock::readPreClusters] bytesUsed: 28 -> 0x7f8c26a8a6ae, totalBytesUsed: 1706
+[PreClusterBlock::readPreClusters] totalBytesUsed: 1710
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a6b2
+*mNPreClusters: 1
+[PreClusterBlock::readBuffer] pre-cluster 0  *nDigits=1
+[PreClusterBlock::readPreClusters] bytesUsed: 28 -> 0x7f8c26a8a6d2, totalBytesUsed: 1742
+[PreClusterBlock::readPreClusters] totalBytesUsed: 1746
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a6d6
+*mNPreClusters: 1
+[PreClusterBlock::readBuffer] pre-cluster 0  *nDigits=1
+[PreClusterBlock::readPreClusters] bytesUsed: 28 -> 0x7f8c26a8a6f6, totalBytesUsed: 1778
+[PreClusterBlock::readPreClusters] totalBytesUsed: 1782
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a6fa
+*mNPreClusters: 1
+[PreClusterBlock::readBuffer] pre-cluster 0  *nDigits=1
+[PreClusterBlock::readPreClusters] bytesUsed: 28 -> 0x7f8c26a8a71a, totalBytesUsed: 1814
+[PreClusterBlock::readPreClusters] totalBytesUsed: 1818
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a71e
+*mNPreClusters: 1
+[PreClusterBlock::readBuffer] pre-cluster 0  *nDigits=1
+[PreClusterBlock::readPreClusters] bytesUsed: 28 -> 0x7f8c26a8a73e, totalBytesUsed: 1850
+[PreClusterBlock::readPreClusters] totalBytesUsed: 1854
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a742
+*mNPreClusters: 1
+[PreClusterBlock::readBuffer] pre-cluster 0  *nDigits=1
+[PreClusterBlock::readPreClusters] bytesUsed: 28 -> 0x7f8c26a8a762, totalBytesUsed: 1886
+[PreClusterBlock::readPreClusters] totalBytesUsed: 1890
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a766
+*mNPreClusters: 1
+[PreClusterBlock::readBuffer] pre-cluster 0  *nDigits=1
+[PreClusterBlock::readPreClusters] bytesUsed: 28 -> 0x7f8c26a8a786, totalBytesUsed: 1922
+[PreClusterBlock::readPreClusters] totalBytesUsed: 1926
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a78a
+*mNPreClusters: 1
+[PreClusterBlock::readBuffer] pre-cluster 0  *nDigits=1
+[PreClusterBlock::readPreClusters] bytesUsed: 28 -> 0x7f8c26a8a7aa, totalBytesUsed: 1958
+[PreClusterBlock::readPreClusters] totalBytesUsed: 1962
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a7ae
+*mNPreClusters: 1
+[PreClusterBlock::readBuffer] pre-cluster 0  *nDigits=1
+[PreClusterBlock::readPreClusters] bytesUsed: 292 -> 0x7f8c26a8a7ce, totalBytesUsed: 1994
+[PreClusterBlock::readPreClusters] totalBytesUsed: 1998
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a7d2
+*mNPreClusters: 1
+[PreClusterBlock::readBuffer] pre-cluster 0  *nDigits=12
+[PreClusterBlock::readPreClusters] bytesUsed: 28 -> 0x7f8c26a8a8fa, totalBytesUsed: 2294
+[PreClusterBlock::readPreClusters] totalBytesUsed: 2298
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a8fe
+*mNPreClusters: 1
+[PreClusterBlock::readBuffer] pre-cluster 0  *nDigits=1
+[PreClusterBlock::readPreClusters] bytesUsed: 28 -> 0x7f8c26a8a91e, totalBytesUsed: 2330
+[PreClusterBlock::readPreClusters] totalBytesUsed: 2334
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a922
+*mNPreClusters: 1
+[PreClusterBlock::readBuffer] pre-cluster 0  *nDigits=1
+[PreClusterBlock::readPreClusters] bytesUsed: 28 -> 0x7f8c26a8a942, totalBytesUsed: 2366
+[PreClusterBlock::readPreClusters] totalBytesUsed: 2370
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a946
+*mNPreClusters: 1
+[PreClusterBlock::readBuffer] pre-cluster 0  *nDigits=1
+[PreClusterBlock::readPreClusters] bytesUsed: 54 -> 0x7f8c26a8a966, totalBytesUsed: 2402
+[PreClusterBlock::readPreClusters] totalBytesUsed: 2406
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a96a
+*mNPreClusters: 2
+[PreClusterBlock::readBuffer] pre-cluster 0  *nDigits=1
+[PreClusterBlock::readBuffer] pre-cluster 1  *nDigits=1
+[PreClusterBlock::readPreClusters] bytesUsed: 28 -> 0x7f8c26a8a9a4, totalBytesUsed: 2464
+[PreClusterBlock::readPreClusters] totalBytesUsed: 2468
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a9a8
+*mNPreClusters: 1
+[PreClusterBlock::readBuffer] pre-cluster 0  *nDigits=1
+[PreClusterBlock::readPreClusters] bytesUsed: 148 -> 0x7f8c26a8a9c8, totalBytesUsed: 2500
+[PreClusterBlock::readPreClusters] totalBytesUsed: 2504
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8a9cc
+*mNPreClusters: 1
+[PreClusterBlock::readBuffer] pre-cluster 0  *nDigits=6
+[PreClusterBlock::readPreClusters] bytesUsed: 28 -> 0x7f8c26a8aa64, totalBytesUsed: 2656
+[PreClusterBlock::readPreClusters] totalBytesUsed: 2660
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8aa68
+*mNPreClusters: 1
+[PreClusterBlock::readBuffer] pre-cluster 0  *nDigits=1
+[PreClusterBlock::readPreClusters] bytesUsed: 28 -> 0x7f8c26a8aa88, totalBytesUsed: 2692
+[PreClusterBlock::readPreClusters] totalBytesUsed: 2696
+[PreClusterBlock::reset] mNPreClusters=0x7f8c26a8aa8c
+*mNPreClusters: 1
+[PreClusterBlock::readBuffer] pre-cluster 0  *nDigits=1
+
+
+==========
+Running Clustering
+
+preClusters.size():55
+Precluster avec 26 digits.
+Digit numero:0
+digittmp.getADC():296
+digittmp.getDetID():400
+digittmp.getPadID():4312
+Digit numero:1
+digittmp.getADC():239
+digittmp.getDetID():400
+digittmp.getPadID():4296
+Digit numero:2
+digittmp.getADC():292
+digittmp.getDetID():400
+digittmp.getPadID():4313
+Digit numero:3
+digittmp.getADC():278
+digittmp.getDetID():400
+digittmp.getPadID():4298
+Digit numero:4
+digittmp.getADC():2602
+digittmp.getDetID():400
+digittmp.getPadID():4315
+Digit numero:5
+digittmp.getADC():636
+digittmp.getDetID():400
+digittmp.getPadID():4316
+Digit numero:6
+digittmp.getADC():227
+digittmp.getDetID():400
+digittmp.getPadID():4317
+Digit numero:7
+digittmp.getADC():893
+digittmp.getDetID():400
+digittmp.getPadID():4332
+Digit numero:8
+digittmp.getADC():3330
+digittmp.getDetID():400
+digittmp.getPadID():4331
+Digit numero:9
+digittmp.getADC():248
+digittmp.getDetID():400
+digittmp.getPadID():4346
+Digit numero:10
+digittmp.getADC():173
+digittmp.getDetID():400
+digittmp.getPadID():4345
+Digit numero:11
+digittmp.getADC():289
+digittmp.getDetID():400
+digittmp.getPadID():4344
+Digit numero:12
+digittmp.getADC():336
+digittmp.getDetID():400
+digittmp.getPadID():4329
+Digit numero:13
+digittmp.getADC():671
+digittmp.getDetID():400
+digittmp.getPadID():4330
+Digit numero:14
+digittmp.getADC():183
+digittmp.getDetID():400
+digittmp.getPadID():4333
+Digit numero:15
+digittmp.getADC():162
+digittmp.getDetID():400
+digittmp.getPadID():18255
+Digit numero:16
+digittmp.getADC():260
+digittmp.getDetID():400
+digittmp.getPadID():18247
+Digit numero:17
+digittmp.getADC():938
+digittmp.getDetID():400
+digittmp.getPadID():18248
+Digit numero:18
+digittmp.getADC():237
+digittmp.getDetID():400
+digittmp.getPadID():18249
+Digit numero:19
+digittmp.getADC():3847
+digittmp.getDetID():400
+digittmp.getPadID():18256
+Digit numero:20
+digittmp.getADC():308
+digittmp.getDetID():400
+digittmp.getPadID():18257
+Digit numero:21
+digittmp.getADC():1412
+digittmp.getDetID():400
+digittmp.getPadID():18264
+Digit numero:22
+digittmp.getADC():362
+digittmp.getDetID():400
+digittmp.getPadID():18271
+Digit numero:23
+digittmp.getADC():188
+digittmp.getDetID():400
+digittmp.getPadID():18272
+Digit numero:24
+digittmp.getADC():272
+digittmp.getDetID():400
+digittmp.getPadID():18263
+Digit numero:25
+digittmp.getADC():342
+digittmp.getDetID():400
+digittmp.getPadID():18265
+
+
+==========
+Running COG Algorithm
+
+
+
+DetID:400 PadID:4312
+PadPosition: 61.25 23.5
+PadSize: 1.5 0.5
+Cathode:1
+
+DetID:400 PadID:4296
+PadPosition: 59.75 23.5
+PadSize: 1.5 0.5
+Cathode:1
+
+DetID:400 PadID:4313
+PadPosition: 61.25 24
+PadSize: 1.5 0.5
+Cathode:1
+
+DetID:400 PadID:4298
+PadPosition: 59.75 24.5
+PadSize: 1.5 0.5
+Cathode:1
+
+DetID:400 PadID:4315
+PadPosition: 61.25 25
+PadSize: 1.5 0.5
+Cathode:1
+
+DetID:400 PadID:4316
+PadPosition: 61.25 25.5
+PadSize: 1.5 0.5
+Cathode:1
+
+DetID:400 PadID:4317
+PadPosition: 61.25 26
+PadSize: 1.5 0.5
+Cathode:1
+
+DetID:400 PadID:4332
+PadPosition: 62.75 25.5
+PadSize: 1.5 0.5
+Cathode:1
+
+DetID:400 PadID:4331
+PadPosition: 62.75 25
+PadSize: 1.5 0.5
+Cathode:1
+
+DetID:400 PadID:4346
+PadPosition: 64.25 24.5
+PadSize: 1.5 0.5
+Cathode:1
+
+DetID:400 PadID:4345
+PadPosition: 64.25 24
+PadSize: 1.5 0.5
+Cathode:1
+
+DetID:400 PadID:4344
+PadPosition: 64.25 23.5
+PadSize: 1.5 0.5
+Cathode:1
+
+DetID:400 PadID:4329
+PadPosition: 62.75 24
+PadSize: 1.5 0.5
+Cathode:1
+
+DetID:400 PadID:4330
+PadPosition: 62.75 24.5
+PadSize: 1.5 0.5
+Cathode:1
+
+DetID:400 PadID:4333
+PadPosition: 62.75 26
+PadSize: 1.5 0.5
+Cathode:1
+
+DetID:400 PadID:18255
+PadPosition: 62 24
+PadSize: 0.75 1
+Cathode:0
+
+DetID:400 PadID:18247
+PadPosition: 61.25 24
+PadSize: 0.75 1
+Cathode:0
+
+DetID:400 PadID:18248
+PadPosition: 61.25 25
+PadSize: 0.75 1
+Cathode:0
+
+DetID:400 PadID:18249
+PadPosition: 61.25 26
+PadSize: 0.75 1
+Cathode:0
+
+DetID:400 PadID:18256
+PadPosition: 62 25
+PadSize: 0.75 1
+Cathode:0
+
+DetID:400 PadID:18257
+PadPosition: 62 26
+PadSize: 0.75 1
+Cathode:0
+
+DetID:400 PadID:18264
+PadPosition: 62.75 25
+PadSize: 0.75 1
+Cathode:0
+
+DetID:400 PadID:18271
+PadPosition: 63.5 24
+PadSize: 0.75 1
+Cathode:0
+
+DetID:400 PadID:18272
+PadPosition: 63.5 25
+PadSize: 0.75 1
+Cathode:0
+
+DetID:400 PadID:18263
+PadPosition: 62.75 24
+PadSize: 0.75 1
+Cathode:0
+
+DetID:400 PadID:18265
+PadPosition: 62.75 26
+PadSize: 0.75 1
+Cathode:0
+
+Post-calcul cathode:0
+x:62.1523
+y:24.9797
+Charge:8328
+xsize:0.00821847
+ysize:0.010958
+Multiplicity:11
+
+Post-calcul cathode:1
+x:62.136
+y:24.8634
+Charge:10693
+xsize:0.0145058
+ysize:0.00483526
+Multiplicity:15
+
+
+Cluster multiplicity 26 
+(x,y)=(6.215229e+01,2.486337e+01) 
+boundaries=(xmin,ymin,xmax,ymax)=(5.900000e+01,2.325000e+01,6.500000e+01,2.650000e+01) 
+precision=(ex,ey)=(8.218469e-03,4.835264e-03) 
+timestamp = 0.000000 
+
+
+
+==========
+Running MinuitDoubleGaussian Algorithm.
+
+
+On va set digits
+296 est ADC du premier digit
+On va set les params
+ MINUIT WARNING IN HESSE   
+ ============== Negative diagonal element 1 in Error Matrix
+ MINUIT WARNING IN HESSE   
+ ============== 116425 added to diagonal of error matrix
+ EIGENVALUES OF SECOND-DERIVATIVE MATRIX:
+        -3.0237e+01  3.2237e+01
+ MINUIT WARNING IN HESSE   
+ ============== MATRIX FORCED POS-DEF BY ADDING 30.269528 TO DIAGONAL.
+ MINUIT WARNING IN HESSE   
+ ============== Negative diagonal element 1 in Error Matrix
+ MINUIT WARNING IN HESSE   
+ ============== 116425 added to diagonal of error matrix
+ EIGENVALUES OF SECOND-DERIVATIVE MATRIX:
+        -3.0248e+01  3.2248e+01
+ MINUIT WARNING IN HESSE   
+ ============== MATRIX FORCED POS-DEF BY ADDING 30.280378 TO DIAGONAL.
+ MINUIT WARNING IN HESSE   
+ ============== Negative diagonal element 1 in Error Matrix
+ MINUIT WARNING IN HESSE   
+ ============== 116437 added to diagonal of error matrix
+ EIGENVALUES OF SECOND-DERIVATIVE MATRIX:
+        -3.0249e+01  3.2249e+01
+ MINUIT WARNING IN HESSE   
+ ============== MATRIX FORCED POS-DEF BY ADDING 30.280816 TO DIAGONAL.
+ MINUIT WARNING IN HESSE   
+ ============== Negative diagonal element 1 in Error Matrix
+ MINUIT WARNING IN HESSE   
+ ============== 116423 added to diagonal of error matrix
+ EIGENVALUES OF SECOND-DERIVATIVE MATRIX:
+        -3.0250e+01  3.2250e+01
+ MINUIT WARNING IN HESSE   
+ ============== MATRIX FORCED POS-DEF BY ADDING 30.281918 TO DIAGONAL.
+Fit failed on viable cathode. Using COG results for cluster.
+Precluster avec 12 digits.
+Digit numero:0
+digittmp.getADC():754
+digittmp.getDetID():908
+digittmp.getPadID():224
+Digit numero:1
+digittmp.getADC():4095
+digittmp.getDetID():908
+digittmp.getPadID():225
+Digit numero:2
+digittmp.getADC():4095
+digittmp.getDetID():908
+digittmp.getPadID():226
+Digit numero:3
+digittmp.getADC():4095
+digittmp.getDetID():908
+digittmp.getPadID():227
+Digit numero:4
+digittmp.getADC():4095
+digittmp.getDetID():908
+digittmp.getPadID():228
+Digit numero:5
+digittmp.getADC():840
+digittmp.getDetID():908
+digittmp.getPadID():229
+Digit numero:6
+digittmp.getADC():4095
+digittmp.getDetID():908
+digittmp.getPadID():1480
+Digit numero:7
+digittmp.getADC():4095
+digittmp.getDetID():908
+digittmp.getPadID():1478
+Digit numero:8
+digittmp.getADC():2662
+digittmp.getDetID():908
+digittmp.getPadID():1476
+Digit numero:9
+digittmp.getADC():354
+digittmp.getDetID():908
+digittmp.getPadID():1479
+Digit numero:10
+digittmp.getADC():711
+digittmp.getDetID():908
+digittmp.getPadID():1481
+Digit numero:11
+digittmp.getADC():4092
+digittmp.getDetID():908
+digittmp.getPadID():1482
+
+
+==========
+Running COG Algorithm
+
+
+
+DetID:908 PadID:224
+PadPosition: 55 -19.75
+PadSize: 10 0.5
+Cathode:1
+
+DetID:908 PadID:225
+PadPosition: 55 -19.25
+PadSize: 10 0.5
+Cathode:1
+
+DetID:908 PadID:226
+PadPosition: 55 -18.75
+PadSize: 10 0.5
+Cathode:1
+
+DetID:908 PadID:227
+PadPosition: 55 -18.25
+PadSize: 10 0.5
+Cathode:1
+
+DetID:908 PadID:228
+PadPosition: 55 -17.75
+PadSize: 10 0.5
+Cathode:1
+
+DetID:908 PadID:229
+PadPosition: 55 -17.25
+PadSize: 10 0.5
+Cathode:1
+
+DetID:908 PadID:1480
+PadPosition: 51.7857 -15
+PadSize: 0.714286 10
+Cathode:0
+
+DetID:908 PadID:1478
+PadPosition: 51.0714 -15
+PadSize: 0.714286 10
+Cathode:0
+
+DetID:908 PadID:1476
+PadPosition: 50.3571 -15
+PadSize: 0.714286 10
+Cathode:0
+
+DetID:908 PadID:1479
+PadPosition: 51.0714 -5
+PadSize: 0.714286 10
+Cathode:0
+
+DetID:908 PadID:1481
+PadPosition: 51.7857 -5
+PadSize: 0.714286 10
+Cathode:0
+
+DetID:908 PadID:1482
+PadPosition: 52.5 -15
+PadSize: 0.714286 10
+Cathode:0
+
+Post-calcul cathode:0
+x:51.5322
+y:-14.3347
+Charge:16009
+xsize:0.00564534
+ysize:0.0790347
+Multiplicity:6
+
+Post-calcul cathode:1
+x:55
+y:-18.494
+Charge:17974
+xsize:0.0745895
+ysize:0.00372947
+Multiplicity:6
+
+
+Cluster multiplicity 12 
+(x,y)=(5.153224e+01,-1.849402e+01) 
+boundaries=(xmin,ymin,xmax,ymax)=(5.000000e+01,-2.000000e+01,6.000000e+01,0.000000e+00) 
+precision=(ex,ey)=(5.645337e-03,3.729474e-03) 
+timestamp = 0.000000 
+
+
+
+==========
+Running MinuitDoubleGaussian Algorithm.
+
+
+On va set digits
+754 est ADC du premier digit
+On va set les params
+ MINUIT WARNING IN HESSE   
+ ============== Negative diagonal element 2 in Error Matrix
+ MINUIT WARNING IN HESSE   
+ ============== 10.222 added to diagonal of error matrix
+Cluster fitted to (x,y)=(5.142857e+01,-1.999306e+01) (xerr,yerr)=(2.450023e-03,2.552928e-03) 
+ chi2=7.757292e+03 ndf=2On va set les params
+ MINUIT WARNING IN HESSE   
+ ============== Negative diagonal element 1 in Error Matrix
+ MINUIT WARNING IN HESSE   
+ ============== 2.1694 added to diagonal of error matrix
+ MINUIT WARNING IN MIGRAD  
+ ============== Negative diagonal element 1 in Error Matrix
+ MINUIT WARNING IN MIGRAD  
+ ============== 1.00378 added to diagonal of error matrix
+Cluster fitted to (x,y)=(5.000000e+01,-1.850000e+01) (xerr,yerr)=(3.925221e-04,2.502708e-03) 
+ chi2=9.266559e+03 ndf=2
+
+Cluster par double gaussian fit:
+Cluster multiplicity 12 
+(x,y)=(5.142857e+01,-1.850000e+01) 
+precision=(ex,ey)=(2.450023e-03,2.502708e-03) 
+timestamp = 0.000000 
+
+Precluster avec 6 digits.
+Digit numero:0
+digittmp.getADC():344
+digittmp.getDetID():1010
+digittmp.getPadID():743
+Digit numero:1
+digittmp.getADC():453
+digittmp.getDetID():1010
+digittmp.getPadID():742
+Digit numero:2
+digittmp.getADC():487
+digittmp.getDetID():1010
+digittmp.getPadID():741
+Digit numero:3
+digittmp.getADC():340
+digittmp.getDetID():1010
+digittmp.getPadID():740
+Digit numero:4
+digittmp.getADC():574
+digittmp.getDetID():1010
+digittmp.getPadID():3554
+Digit numero:5
+digittmp.getADC():387
+digittmp.getDetID():1010
+digittmp.getPadID():3549
+
+
+==========
+Running COG Algorithm
+
+
+
+DetID:1010 PadID:743
+PadPosition: -27.5 -8.25
+PadSize: 5 0.5
+Cathode:1
+
+DetID:1010 PadID:742
+PadPosition: -27.5 -8.75
+PadSize: 5 0.5
+Cathode:1
+
+DetID:1010 PadID:741
+PadPosition: -27.5 -9.25
+PadSize: 5 0.5
+Cathode:1
+
+DetID:1010 PadID:740
+PadPosition: -27.5 -9.75
+PadSize: 5 0.5
+Cathode:1
+
+DetID:1010 PadID:3554
+PadPosition: -25.3571 -7.5
+PadSize: 0.714286 5
+Cathode:0
+
+DetID:1010 PadID:3549
+PadPosition: -26.0714 -7.5
+PadSize: 0.714286 5
+Cathode:0
+
+Post-calcul cathode:0
+x:-25.6448
+y:-7.5
+Charge:961
+xsize:0.0230415
+ysize:0.16129
+Multiplicity:2
+
+Post-calcul cathode:1
+x:-27.5
+y:-9.00339
+Charge:1624
+xsize:0.124073
+ysize:0.0124073
+Multiplicity:4
+
+
+Cluster multiplicity 6 
+(x,y)=(-2.564479e+01,-9.003387e+00) 
+boundaries=(xmin,ymin,xmax,ymax)=(-3.000000e+01,-1.000000e+01,-2.500000e+01,-5.000000e+00) 
+precision=(ex,ey)=(2.304148e-02,1.240729e-02) 
+timestamp = 0.000000 
+
+
+
+==========
+Running MinuitDoubleGaussian Algorithm.
+
+
+On va set digits
+344 est ADC du premier digit
+On va set les params
+ MINUIT WARNING IN HESSE   
+ ============== Negative diagonal element 2 in Error Matrix
+ MINUIT WARNING IN HESSE   
+ ============== 1.8319 added to diagonal of error matrix
+Cluster fitted to (x,y)=(-2.567083e+01,-8.860380e+00) (xerr,yerr)=(7.278558e-03,4.100813e+00) 
+ chi2=1.629200e-02 ndf=2On va set les params
+ MINUIT WARNING IN HESSE   
+ ============== Negative diagonal element 1 in Error Matrix
+ MINUIT WARNING IN HESSE   
+ ============== 1594.38 added to diagonal of error matrix
+ MINUIT WARNING IN MIGRAD  
+ ============== Negative diagonal element 1 in Error Matrix
+ MINUIT WARNING IN MIGRAD  
+ ============== 1.00076 added to diagonal of error matrix
+Cluster fitted to (x,y)=(-2.994829e+01,-9.009068e+00) (xerr,yerr)=(9.020252e-03,7.614690e-03) 
+ chi2=6.242458e+02 ndf=2
+
+Cluster par double gaussian fit:
+Cluster multiplicity 6 
+(x,y)=(-2.567083e+01,-9.009068e+00) 
+precision=(ex,ey)=(7.278558e-03,7.614690e-03) 
+timestamp = 0.000000 
+
+Nombre de preclusters au départ:55
+Nombre de preclusters de taille 1, abandonnés:52
