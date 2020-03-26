@@ -463,5 +463,22 @@ void PreClusterFinder::createMapping()
   LOG(INFO) << "create mapping in: " << std::chrono::duration<double, std::milli>(tEnd - tStart).count() << " ms";
 }
 
+
+std::ostream& operator<<(std::ostream& stream, PreClusterFinder& pcf)
+{
+  std::vector<Digit> digits(0);
+  std::vector<PreClusterStruct> preClusters(0);
+  pcf.getPreClusters(preClusters, digits);
+
+  stream << "nPreClusters = " << preClusters.size() << std::endl;
+  // print the preclusters
+  int i(0);
+  for (auto& precluster : preClusters) {
+    stream << "preCluster[" << i++ <<"]\n" << precluster;
+  }
+
+  return stream;
+}
+
 } // namespace mch
 } // namespace o2

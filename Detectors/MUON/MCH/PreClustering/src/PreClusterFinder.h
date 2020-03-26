@@ -100,6 +100,10 @@ class PreClusterFinder
   std::vector<std::unique_ptr<PreCluster>> mPreClusters[SNDEs][2]{}; ///< preclusters in each cathods of each DE
 };
 
+
+/// stream operator for printout
+std::ostream& operator<<(std::ostream& stream, PreClusterFinder& pcf);
+
 //_________________________________________________________________________________________________
 inline int PreClusterFinder::getNDEWithPreClusters(int& nUsedDigits)
 {

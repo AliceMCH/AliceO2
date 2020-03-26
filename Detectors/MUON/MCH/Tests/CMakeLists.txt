@@ -8,11 +8,21 @@
 # granted to it by virtue of its status as an Intergovernmental Organization or
 # submit itself to any jurisdiction.
 
+o2_add_executable(print-preclusters-run2
+                  COMPONENT_NAME mch
+                  SOURCES src/PrintPreclustersRun2.cxx src/DigitsFileReader.cxx
+                  PUBLIC_LINK_LIBRARIES O2::MCHBase O2::MCHPreClustering)
+
+o2_add_executable(print-preclusters-tb
+                  COMPONENT_NAME mch
+                  SOURCES src/PrintPreclustersTB.cxx src/TBDigitsFileReader.cxx
+                  PUBLIC_LINK_LIBRARIES O2::MCHBase O2::MCHPreClustering)
+
 o2_add_executable(clusterizer-test
                   COMPONENT_NAME mch
                   SOURCES src/ClusterizerTest.cxx src/DigitsFileReader.cxx
                   PUBLIC_LINK_LIBRARIES O2::MCHBase O2::MCHPreClustering O2::MCHClustering)
-                  
+
 o2_add_executable(clusterizer-test-tb
                   COMPONENT_NAME mch
                   SOURCES src/ClusterizerTestTB.cxx src/TBDigitsFileReader.cxx

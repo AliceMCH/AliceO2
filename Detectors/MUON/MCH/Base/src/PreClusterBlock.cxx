@@ -232,11 +232,15 @@ int PreClusterBlock::readBuffer()
 //_________________________________________________________________
 std::ostream& operator<<(std::ostream& stream, const PreClusterStruct& cluster)
 {
-  stream << "{nDigits= " << cluster.nDigits;
+  /*stream << "{nDigits= " << cluster.nDigits;
   for (int i = 0; i < cluster.nDigits; ++i) {
     stream << ", digit[" << i << "]= " << cluster.digits[i].getPadID();
   }
-  stream << "}";
+  stream << "}";*/
+  stream << "  nDigits = " << cluster.nDigits << std::endl;
+  for (int i = 0; i < cluster.nDigits; ++i) {
+    stream << "  digit[" << i << "] = " << cluster.digits[i].getDetID() << "," << cluster.digits[i].getPadID() << "," << cluster.digits[i].getADC() << std::endl;
+  }
 
   return stream;
 }
