@@ -541,7 +541,7 @@ std::vector<Clustering::Cluster> Validation::TestClustering(){
           
     
     //To run COG Clustering
- //      clustering.runFinderCOG(preClusters, clusters);
+//       clustering.runFinderCOG(preClusters, clusters);
 //        printf("Number of clusters obtained and saved: %lu\n", clusters.size());
     
     
@@ -554,7 +554,7 @@ std::vector<Clustering::Cluster> Validation::TestClustering(){
     
     
     //To run Double Gaussian fit Clustering
-  //  clustering.runFinderDoubleGaussianFit(preClusters, clusters);
+ //   clustering.runFinderDoubleGaussianFit(preClusters, clusters);
     
     delete digitsBuffer;
     delete preClustersBuffer;

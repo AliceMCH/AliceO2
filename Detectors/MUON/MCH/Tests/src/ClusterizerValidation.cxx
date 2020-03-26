@@ -43,11 +43,11 @@ int main(int argc, char** argv){
     // Declaration of arrays. The size of the arrays is hardcoded (it wouldn't accept an initialisation using a variable)
     // The size of the arrays should be the number of events you wish to simulate
     
-    double xarray[50]{0};
-    double yarray[50]{0};
-    double chg[50]{0};
-    double resyfound[50]{0};
-    double eyfound[50]{0};
+    double xarray[200]{0};
+    double yarray[200]{0};
+    double chg[200]{0};
+    double resyfound[200]{0};
+    double eyfound[200]{0};
     
     Validation validation;
     std::vector<Clustering::Cluster> clusters;
@@ -65,10 +65,10 @@ int main(int argc, char** argv){
      I would fix x to 0, get y uniformly between 0 and 0.5, get the charge uniformly between 20 and 2000.
      
      To see the residuals distribution on the detector 819:
-     I would make x and y uniform on the detector 819 (so x from -20 to 20 and y from -40 to 40) and the charge uniformly between 20 and 2000.
+     I would make x and y uniform on the detector 819 (so y from -20 to 20 and x from -40 to 40) and the charge uniformly between 20 and 2000.
      
      To see the evolution of residuals distribution width with respect to cluster charge:
-     I would make x and y uniform on the detector 819 (so x from -20 to 20 and y from -40 to 40) and fix the charge to any given value I wish to look at.
+     I would make x and y uniform on the detector 819 (so y from -20 to 20 and x from -40 to 40) and fix the charge to any given value I wish to look at.
      Then I would run the code, make a gaussian fit of the residuals distrubtion obtained, and hardcode the result in the dedicated function at the end of Validation.cxx
      */
     
@@ -90,7 +90,7 @@ int main(int argc, char** argv){
 //            chg[i] = chggen->Uniform(20,2000);
 //        }
     
-   //  Residuals distribution width with respect to fixed cluster charge
+   //  Residuals distribution width with respect to fixed cluster charge, not really useful, since it is the same process as Residuals distribution but at fixed cluster charge
 //        for(int i=0; i<200; i++){
 //            yarray[i] = ygen->Uniform(-20,20);
 //            xarray[i] = xgen->Uniform(-40,40);
@@ -102,7 +102,7 @@ int main(int argc, char** argv){
     cout << "\n\n==========\nGetting info for Non-Bending plane\n\n" << endl;
    validation.InfoDE819nb();
 
-    for(int i=0; i<50 ; i++){
+    for(int i=0; i<200 ; i++){
     cout << "\n\n==========\nHit generation, histograms plotting and digitization\n\n" << endl;
    validation.PlotMathieson2D(xarray[i], yarray[i], chg[i]);
     cout << "\n\n==========\nTesting the (pre)clustering\n\n" << endl;
@@ -115,7 +115,7 @@ int main(int argc, char** argv){
     cout << "\n\n==========\nValidation procedure terminated\n\n" << endl;
 
     // If want to plot the residual dependency wrt y and/or the residuals distribution for this run of events
-   ResidualsPlot(yarray, resyfound, eyfound, 50);
+   ResidualsPlot(yarray, resyfound, eyfound, 200);
 
     
     //Useless
