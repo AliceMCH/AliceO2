@@ -21,4 +21,4 @@ PUBLIC_LINK_LIBRARIES O2::MCHBase O2::MCHPreClustering O2::MCHClustering)
 o2_add_executable(clusterizer-validation
                   COMPONENT_NAME mch
                   SOURCES src/ClusterizerValidation.cxx src/Validation.cxx
-                  PUBLIC_LINK_LIBRARIES O2::MCHBase O2::MCHPreClustering O2::MCHClustering)
+                  PUBLIC_LINK_LIBRARIES O2::MCHBase O2::MCHMappingFactory O2::MCHMappingImpl3 O2::MCHMappingSegContour O2::MCHPreClustering O2::MCHClustering)

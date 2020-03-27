@@ -7,6 +7,7 @@
 #include "Validation.h"
 #include "MCHMappingInterface/Segmentation.h"
 #include "MCHMappingInterface/CathodeSegmentation.h"
+#include "MCHMappingFactory/CreateSegmentation.h"
 #include "MCHBase/Digit.h"
 #include "MCHPreClustering/PreClusterBlock.h"
 #include "MCHPreClustering/PreClusterFinder.h"
@@ -30,7 +31,11 @@ namespace o2 {
 
 namespace mch {
 
-Validation::Validation(){};
+Validation::Validation()
+{
+  std::string fname;
+  preClusterFinder.init(fname);
+};
 
 
 //PART WITH DEFINITION OF THE MATHIESON AND THE IMPACT POINTS
@@ -295,7 +300,10 @@ void Validation::InfoDE819b(){
     
     int detElemId =819;
     bool isbending = kTRUE;
-    o2::mch::mapping::CathodeSegmentation catseg(detElemId, isbending);
+    try {
+      const o2::mch::mapping::Segmentation& segment = o2::mch::mapping::segmentation(detElemId);
+      const o2::mch::mapping::CathodeSegmentation& catseg = segment.bending();
+    //o2::mch::mapping::CathodeSegmentation catseg(detElemId, isbending);
 
     int nopads = catseg.nofPads();
     int gPrintLevel = 0;
@@ -386,8 +394,11 @@ void Validation::InfoDE819b(){
 //    for(int i=0; i<lowysb.size(); i++){
 //        cout << lowysb[i] << endl;
 //    }
-    
-    
+    }
+    catch (const std::exception& e) {
+      std::cout<<"[InfoDE819b] cannot create segmentation for DE "<<detElemId<<std::endl;
+        return;
+    }
 }
 
 //________________________________________________________________________________________
@@ -395,7 +406,10 @@ void Validation::InfoDE819nb(){
     
     int detElemId =819;
     bool isbending = kFALSE;
-    o2::mch::mapping::CathodeSegmentation catseg(detElemId, isbending);
+    try {
+      const o2::mch::mapping::Segmentation& segment = o2::mch::mapping::segmentation(detElemId);
+      const o2::mch::mapping::CathodeSegmentation& catseg = segment.nonBending();
+    //o2::mch::mapping::CathodeSegmentation catseg(detElemId, isbending);
 
     int nopads = catseg.nofPads();
     int gPrintLevel = 0;
@@ -484,7 +498,11 @@ void Validation::InfoDE819nb(){
 //    for(int i=0; i<lowysnb.size(); i++){
 //        cout << lowysnb[i] << endl;
 //    }
-    
+    }
+    catch (const std::exception& e) {
+      std::cout<<"[InfoDE819b] cannot create segmentation for DE "<<detElemId<<std::endl;
+        return;
+    }
 }
 
 
@@ -505,13 +523,6 @@ std::vector<Clustering::Cluster> Validation::TestClustering(){
     nDigits = getNumberOfDigits();
     digitsBuffer = (mch::Digit*)realloc(digitsBuffer, sizeof(mch::Digit) * nDigits);
     storeDigits(digitsBuffer);
-    
-      mch::PreClusterFinder preClusterFinder;
-      mch::PreClusterBlock preClusterBlock;
-      mch::Clustering clustering;
-      
-      std::string fname;
-      preClusterFinder.init(fname);
 
       char* preClustersBuffer = NULL;
       std::vector<mch::Clustering::Cluster> clusters(0);

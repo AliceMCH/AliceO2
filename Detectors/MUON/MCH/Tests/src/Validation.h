@@ -51,7 +51,11 @@ private:
     vector<double> lowysb;
     vector<double> lowxsnb;
     vector<double> lowysnb;
-    
+
+    PreClusterFinder preClusterFinder;
+    PreClusterBlock preClusterBlock;
+    Clustering clustering;
+
     
     std::vector< std::unique_ptr<mch::Digit> > digits;
     mch::Digit* digitsBuffer;
