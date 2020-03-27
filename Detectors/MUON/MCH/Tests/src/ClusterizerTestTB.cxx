@@ -63,6 +63,11 @@ int main(int argc, char** argv)
     digitsBuffer = (Digit*)realloc(digitsBuffer, sizeof(Digit) * nDigits);
     digitsReader.storeDigits(digitsBuffer);
 
+    std::vector<TBCluster>& tbclusters = digitsReader.getClusters();
+    for(size_t ic = 0; ic < tbclusters.size(); ic++) {
+      std::cout<<"TBCluster "<<ic<<":\n"<<tbclusters[ic];
+    }
+
     // load the digits from the memory buffer and run the pre-clustering phase
     preClusterFinder.reset();
     preClusterFinder.loadDigits(digitsBuffer, nDigits);

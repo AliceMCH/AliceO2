@@ -45,6 +45,7 @@ bool TBDigitsFileReader::readDigitsFromFile()
 
 
   digits.clear();
+  clusters.clear();
 
   /// send the digits of the current event
 
@@ -101,6 +102,45 @@ bool TBDigitsFileReader::readDigitsFromFile()
         continue;
       }
     }
+
+    int nclus;
+    mInputFile.read(reinterpret_cast<char*>(&nclus), sizeof(int));
+
+    for(int ic = 0; ic < nclus; ic++) {
+      clusters.emplace_back();
+      TBCluster& c = clusters.back();
+      //mInputFile.read(reinterpret_cast<char*>(&c), sizeof(TBCluster));
+      mInputFile.read(reinterpret_cast<char*>(&(c.fDir)), sizeof(char));
+      mInputFile.read(reinterpret_cast<char*>(&(c.fNhits)), sizeof(int));
+      mInputFile.read(reinterpret_cast<char*>(&(c.fXNhits)), sizeof(int));
+      mInputFile.read(reinterpret_cast<char*>(&(c.fYNhits)), sizeof(int));
+      mInputFile.read(reinterpret_cast<char*>(&(c.fCharge)), sizeof(double));
+      mInputFile.read(reinterpret_cast<char*>(&(c.fChargemax)), sizeof(double));
+      mInputFile.read(reinterpret_cast<char*>(&(c.fXclus)), sizeof(double));
+      mInputFile.read(reinterpret_cast<char*>(&(c.fYclus)), sizeof(double));
+      mInputFile.read(reinterpret_cast<char*>(&(c.fXmat)), sizeof(double));
+      mInputFile.read(reinterpret_cast<char*>(&(c.fYmat)), sizeof(double));
+      mInputFile.read(reinterpret_cast<char*>(&(c.fYmaterror)), sizeof(double));
+      mInputFile.read(reinterpret_cast<char*>(&(c.fXmaterror)), sizeof(double));
+      mInputFile.read(reinterpret_cast<char*>(&(c.fChi2mat)), sizeof(double));
+      mInputFile.read(reinterpret_cast<char*>(&(c.fChmat)), sizeof(double));
+      mInputFile.read(reinterpret_cast<char*>(&(c.fYcenter)), sizeof(double));
+      mInputFile.read(reinterpret_cast<char*>(&(c.fXcenter)), sizeof(double));
+      mInputFile.read(reinterpret_cast<char*>(&(c.fInversepitch)), sizeof(double));
+      mInputFile.read(reinterpret_cast<char*>(&(c.fK3x)), sizeof(double));
+      mInputFile.read(reinterpret_cast<char*>(&(c.fK3y)), sizeof(double));
+      mInputFile.read(reinterpret_cast<char*>(&(c.fK3yrec)), sizeof(double));
+      mInputFile.read(reinterpret_cast<char*>(&(c.fPadyMean)), sizeof(double));
+      mInputFile.read(reinterpret_cast<char*>(&(c.fPadxMean)), sizeof(double));
+      mInputFile.read(reinterpret_cast<char*>(&(c.fPadySigma)), sizeof(double));
+      mInputFile.read(reinterpret_cast<char*>(&(c.fPadxSigma)), sizeof(double));
+      mInputFile.read(reinterpret_cast<char*>(&(c.fTimeMean)), sizeof(double));
+      mInputFile.read(reinterpret_cast<char*>(&(c.fTimeSigma)), sizeof(double));
+      mInputFile.read(reinterpret_cast<char*>(&(c.fSizeMean)), sizeof(double));
+      mInputFile.read(reinterpret_cast<char*>(&(c.fSizeSigma)), sizeof(double));
+      printf("B  clus %d  dir=%d nHits=%d nXHits=%d nYHits=%d Y=%f\n", ic,
+          (int)c.fDir, (int)c.fNhits, (int)c.fXNhits, (int)c.fYNhits, c.fYmat);
+    }
   }
 
   return true;
@@ -121,4 +161,23 @@ void TBDigitsFileReader::storeDigits(void* bufferPtr)
     memcpy(ptr, digits[di].get(), sizeof(Digit));
     ptr += 1;
   }
+}
+
+
+
+std::ostream& operator<<(std::ostream& stream, const TBCluster& c)
+{
+  stream<<"  XNhits: "<<c.fXNhits<<"\n"
+      <<"  XYhits: "<<c.fYNhits<<"\n"
+      <<"  Charge: "<<c.fCharge<<"\n"
+      <<"  fXclus: "<<c.fXclus<<"\n"
+      <<"  fYclus: "<<c.fYclus<<"\n"
+      <<"  fXmat: "<<c.fXmat<<"\n"
+      <<"  fYmat: "<<c.fYmat<<"\n"
+      <<"  fXmaterror: "<<c.fXmaterror<<"\n"
+      <<"  fYmaterror: "<<c.fYmaterror<<"\n"
+      <<"  fChi2mat: "<<c.fChi2mat<<"\n"
+      <<"  fK3x: "<<c.fK3x<<"\n"
+      <<"  fK3y: "<<c.fK3y<<"\n"
+      <<"  fK3yrec: "<<c.fK3yrec<<"\n";
 }
