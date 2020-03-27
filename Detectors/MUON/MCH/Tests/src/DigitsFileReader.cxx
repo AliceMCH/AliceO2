@@ -11,12 +11,26 @@
 #include <iostream>
 
 #include "DigitsFileReader.h"
-#include "MCHBase/DigitBlock.h"
 #include "MCHMappingInterface/Segmentation.h"
 
 using namespace o2::mch;
 using namespace std;
 
+struct DataBlockHeader {
+  uint16_t fType;        // The type of the data block. Must contain a value defined by DataBlockType.
+  uint16_t fRecordWidth; // The number of bytes each record uses.
+  uint32_t fNrecords;    // Number of records in this data block.
+};
+
+struct DigitBlock {
+  DataBlockHeader header; // Common data block header
+};
+
+struct DigitStruct {
+  uint32_t uid;   // Digit ID in the current mapping (from OCDB)
+  uint16_t index; // Digit index in the new mapping (produced internally)
+  uint16_t adc;   // ADC value of signal
+};
 
 DigitsFileReader::DigitsFileReader(std::string inputFileName)
 {

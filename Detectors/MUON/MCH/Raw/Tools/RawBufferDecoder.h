@@ -17,7 +17,6 @@
 #include "MCHRawDecoder/Decoder.h"
 #include "MCHRawElecMap/Mapper.h"
 #include "MCHMappingFactory/CreateSegmentation.h"
-#include "MCHBase/DigitBlock.h"
 #include "MCHBase/Digit.h"
 #include "boost/program_options.hpp"
 #include <chrono>

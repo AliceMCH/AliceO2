@@ -8,11 +8,7 @@
 #include "MCHMappingInterface/Segmentation.h"
 #include "MCHMappingInterface/CathodeSegmentation.h"
 #include "MCHMappingFactory/CreateSegmentation.h"
-#include "MCHBase/Digit.h"
-#include "MCHPreClustering/PreClusterBlock.h"
-#include "MCHPreClustering/PreClusterFinder.h"
 #include "DigitsFileReader.h"
-#include "MCHClustering/ClusteringForTest.h"
 
 #include "TMath.h"
 #include "TRandom.h"
@@ -33,8 +29,7 @@ namespace mch {
 
 Validation::Validation()
 {
-  std::string fname;
-  preClusterFinder.init(fname);
+  preClusterFinder.init();
 };
 
 
@@ -524,7 +519,6 @@ std::vector<Clustering::Cluster> Validation::TestClustering(){
     digitsBuffer = (mch::Digit*)realloc(digitsBuffer, sizeof(mch::Digit) * nDigits);
     storeDigits(digitsBuffer);
 
-      char* preClustersBuffer = NULL;
       std::vector<mch::Clustering::Cluster> clusters(0);
 
         // load the digits from the memory buffer and run the pre-clustering phase
@@ -532,18 +526,11 @@ std::vector<Clustering::Cluster> Validation::TestClustering(){
         preClusterFinder.loadDigits(digitsBuffer, nDigits);
         preClusterFinder.run();
 
-        // get number of pre-clusters and store them into a memory buffer
-        auto preClustersSize = preClusterBlock.getPreClustersBufferSize(preClusterFinder);
-        printf("preClustersSize: %d\n", (int)preClustersSize);
-        preClustersBuffer = (char*)realloc(preClustersBuffer, preClustersSize);
-        preClusterBlock.storePreClusters(preClusterFinder, preClustersBuffer);
+        // get the preclusters and associated digits
+        std::vector<Digit> digits(0);
+        std::vector<PreClusterStruct> preClusters(0);
+        preClusterFinder.getPreClusters(preClusters, digits);
 
-        //continue;
-        printf("\n\n==========\nReading clusters\n\n");
-
-        std::vector<mch::PreClusterStruct> preClusters;
-        preClusterBlock.readPreClusters(preClusters, preClustersBuffer, preClustersSize);
-          
           printf("\n\n==========\nRunning Clustering\n\n");
     
     
@@ -568,7 +555,6 @@ std::vector<Clustering::Cluster> Validation::TestClustering(){
  //   clustering.runFinderDoubleGaussianFit(preClusters, clusters);
     
     delete digitsBuffer;
-    delete preClustersBuffer;
     
     return clusters;
 

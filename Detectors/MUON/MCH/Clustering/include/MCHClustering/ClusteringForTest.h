@@ -19,7 +19,7 @@
 
 #include "MCHBase/Digit.h"
 #include "MCHMappingInterface/Segmentation.h"
-#include "MCHPreClustering/PreClusterBlock.h"
+#include "MCHBase/PreClusterBlock.h"
 
 namespace o2
 {

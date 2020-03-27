@@ -20,8 +20,10 @@
 #include <unordered_map>
 #include <vector>
 
-#include "MCHPreClustering/PreClusterFinderMapping.h"
 #include "MCHBase/Digit.h"
+#include "MCHBase/PreClusterBlock.h"
+
+#include "PreClusterFinderMapping.h"
 
 namespace o2
 {
@@ -30,7 +32,7 @@ namespace mch
 
 class PreClusterFinder
 {
-public:
+ public:
   struct PreCluster {
     uint16_t firstPad; // index of first associated pad in the orderedPads array
     uint16_t lastPad;  // index of last associated pad in the orderedPads array
@@ -47,11 +49,11 @@ public:
   PreClusterFinder(PreClusterFinder&&) = delete;
   PreClusterFinder& operator=(PreClusterFinder&&) = delete;
 
-  void init(std::string& fileName);
+  void init();
   void deinit();
   void reset();
 
-  void loadDigits(const o2::mch::Digit* digits, uint32_t nDigits);
+  void loadDigits(const Digit* digits, int nDigits);
 
   int run();
 
@@ -60,42 +62,34 @@ public:
   int getNPreClusters(int iDE, int iPlane);
   const PreCluster* getPreCluster(int iDE, int iPlane, int iCluster);
   const Digit* getDigit(int iDE, uint16_t iOrderedPad);
+  void getPreClusters(std::vector<PreClusterStruct>& preClusters, std::vector<Digit>& digits);
 
   /// return the number of detection elements in the internal structure
   static constexpr int getNDEs() { return SNDEs; }
   int getDEId(int iDE);
 
-
-  uint32_t getNumberOfPreClusters() { return nPreClusters; }
-
-private:
+ private:
   struct DetectionElement {
     std::unique_ptr<Mapping::MpDE> mapping; // mapping of this DE including the list of pads
-    std::vector<const Digit*> digits; // list of pointers to digits (not owner)
+    std::vector<const Digit*> digits;       // list of pointers to digits (not owner)
     uint16_t nFiredPads[2];                 // number of fired pads on each plane
     std::vector<uint16_t> firedPads[2];     // indices of fired pads on each plane
     uint16_t nOrderedPads[2];               // current number of fired pads in the following arrays
     std::vector<uint16_t> orderedPads[2];   // indices of fired pads ordered after preclustering and merging
   };
 
-  /// Return detection element ID part of the unique ID
-  int detectionElementId(uint32_t uid) { return uid & 0xFFF; }
-
-  /// Return the cathode part of the unique ID
-  int cathode(uint32_t uid) { return (uid & 0x40000000) >> 30; }
-
   void preClusterizeRecursive();
   void addPad(DetectionElement& de, uint16_t iPad, PreCluster& cluster);
 
   int mergePreClusters();
   void mergePreClusters(PreCluster& cluster, std::vector<std::unique_ptr<PreCluster>> preClusters[2],
-      int nPreClusters[2], DetectionElement& de, int iPlane, PreCluster*& mergedCluster);
+                        int nPreClusters[2], DetectionElement& de, int iPlane, PreCluster*& mergedCluster);
   PreCluster* usePreClusters(PreCluster* cluster, DetectionElement& de);
   void mergePreClusters(PreCluster& cluster1, PreCluster& cluster2, DetectionElement& de);
 
   bool areOverlapping(PreCluster& cluster1, PreCluster& cluster2, DetectionElement& de, float precision);
 
-  void readMapping(const char* fileName);
+  void createMapping();
 
   static constexpr int SNDEs = 156; ///< number of DEs
 
@@ -104,11 +98,7 @@ private:
 
   int mNPreClusters[SNDEs][2]{};                                     ///< number of preclusters in each cathods of each DE
   std::vector<std::unique_ptr<PreCluster>> mPreClusters[SNDEs][2]{}; ///< preclusters in each cathods of each DE
-  uint32_t nPreClusters;                  // total number of pre-clusters found
-
-  FILE* fpreclus;
 };
-
 
 //_________________________________________________________________________________________________
 inline int PreClusterFinder::getNDEWithPreClusters(int& nUsedDigits)
@@ -152,12 +142,12 @@ inline const PreClusterFinder::PreCluster* PreClusterFinder::getPreCluster(int i
 {
   /// return the preclusters "iCluster" in plane "iPlane" of DE "iDE"
   assert(iDE >= 0 && iDE < SNDEs && iPlane >= 0 && iPlane < 2 && iCluster >= 0 &&
-      iCluster < mNPreClusters[iDE][iPlane]);
+         iCluster < mNPreClusters[iDE][iPlane]);
   return mPreClusters[iDE][iPlane][iCluster].get();
 }
 
 //_________________________________________________________________________________________________
-inline const o2::mch::Digit* PreClusterFinder::getDigit(int iDE, uint16_t iOrderedPad)
+inline const Digit* PreClusterFinder::getDigit(int iDE, uint16_t iOrderedPad)
 {
   /// return the digit associated to the pad registered at the index "iOrderedPad".
   /// This index must be in the range [firstPad, lastPad] associated to a precluster to be stored.

@@ -16,6 +16,7 @@
 #include <stdio.h>
 
 #include "MCHBase/Digit.h"
+#include "../../PreClustering/src/PreClusterFinder.h"
 #include "MCHClustering/ClusteringForTest.h"
 
 using namespace o2::mch;
@@ -53,7 +54,6 @@ private:
     vector<double> lowysnb;
 
     PreClusterFinder preClusterFinder;
-    PreClusterBlock preClusterBlock;
     Clustering clustering;
 
     

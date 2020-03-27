@@ -10,7 +10,7 @@
 
 o2_add_library(MCHClustering
                SOURCES src/ClusteringForTest.cxx src/MyObjectDigits.cxx src/MyObjectParametersMathieson.cxx src/MyObjectParametersGauss.cxx src/MyObjectParametersDoubleGauss.cxx
-               PUBLIC_LINK_LIBRARIES O2::MCHMappingInterface O2::SimulationDataFormat O2::MCHBase O2::Framework O2::MCHPreClustering)
+               PUBLIC_LINK_LIBRARIES O2::MCHMappingInterface O2::SimulationDataFormat O2::MCHBase O2::Framework O2::MCHPreClustering O2::MCHMappingInterface O2::MCHMappingFactory O2::MCHMappingImpl3)
                
 o2_target_root_dictionary(MCHClustering
                HEADERS include/MCHClustering/MyObjectDigits.h

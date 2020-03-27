@@ -11,12 +11,10 @@
 #include <fstream>
 
 #include "MCHBase/Digit.h"
-//#include "MCHBase/DigitBlock.h"
-#include "MCHPreClustering/PreClusterBlock.h"
-#include "MCHPreClustering/PreClusterFinder.h"
+#include "MCHBase/PreClusterBlock.h"
 #include "DigitsFileReader.h"
+#include "../../PreClustering/src/PreClusterFinder.h"
 #include "MCHClustering/ClusteringForTest.h"
-#include "PreClusterSerializer.h"
 
 using namespace o2::mch;
 using namespace std;
@@ -25,14 +23,13 @@ int main(int argc, char** argv)
 {
   DigitsFileReader digitsReader(argv[1]);
   PreClusterFinder preClusterFinder;
-  PreClusterSerializer preClusterSerializer;
   Clustering clustering;
   
-  std::string fname;
-  preClusterFinder.init(fname);
+  preClusterFinder.init();
 
   Digit* digitsBuffer = NULL;
-  char* preClustersBuffer = NULL;
+  std::vector<Digit> digits(0);
+  std::vector<PreClusterStruct> preClusters(0);
   std::vector<Clustering::Cluster> clusters(0);
 
   // load digits from binary input file, block-by-block
@@ -50,17 +47,8 @@ int main(int argc, char** argv)
     preClusterFinder.loadDigits(digitsBuffer, nDigits);
     preClusterFinder.run();
 
-    // get number of pre-clusters and store them into a memory buffer
-    auto preClustersSize = preClusterSerializer.getPreClustersBufferSize(preClusterFinder);
-    printf("preClustersSize: %d\n", (int)preClustersSize);
-    preClustersBuffer = (char*)realloc(preClustersBuffer, preClustersSize);
-    preClusterSerializer.storePreClusters(preClusterFinder, preClustersBuffer);
-
-    //continue;
-    printf("\n\n==========\nReading clusters\n\n");
-
-    std::vector<PreClusterStruct> preClusters;
-    preClusterSerializer.readPreClusters(preClusters, preClustersBuffer, preClustersSize);
+    // get the preclusters and associated digits
+    preClusterFinder.getPreClusters(preClusters, digits);
       
       printf("\n\n==========\nRunning Clustering\n\n");
       

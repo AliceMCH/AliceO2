@@ -20,8 +20,6 @@
 #include <vector>
 
 #include "MCHBase/Digit.h"
-#include "MCHPreClustering/PreClusterFinder.h"
-//#include "MCHBase/DigitBlock.h"
 
 namespace o2
 {
@@ -33,8 +31,8 @@ namespace mch
  * hit reconstruction and correlated into a common cluster.
  */
 struct PreClusterStruct {
-  uint16_t nDigits;          // number of digits attached to this precluster
-  const Digit* digits; // pointer to the 1st element of the array of digits
+  uint16_t nDigits; // number of digits attached to this precluster
+  Digit* digits;    // pointer to the 1st element of the array of digits
 };
 
 /**
@@ -106,7 +104,7 @@ class PreClusterBlock
   /**
    * Return the vector of preclusters currently stored in the data block.
    */
-  //const std::vector<PreClusterStruct>& getPreClusters() const { return mPreClusters; }
+  const std::vector<PreClusterStruct>& getPreClusters() const { return mPreClusters; }
 
   /**
    * Return the total size of the precluster blocks.
@@ -121,14 +119,9 @@ class PreClusterBlock
              : 0;
   }
 
-  uint32_t getPreClustersBufferSize(PreClusterFinder& finder);
-  void storePreClusters(PreClusterFinder& finder, char* buf);
-
-  /// read the buffer
-  int readBuffer(std::vector<PreClusterStruct>& preClusters);
-  void readPreClusters(std::vector<PreClusterStruct>& preClusters, char* buffer, uint32_t size);
-
  private:
+  /// read the buffer
+  int readBuffer();
 
   static constexpr uint32_t SSizeOfUShort = sizeof(uint16_t);
   static constexpr uint32_t SSizeOfDigit = sizeof(Digit);
@@ -147,7 +140,7 @@ class PreClusterBlock
   uint16_t* mNPreClusters = nullptr; ///< number of preclusters
   uint16_t* mLastNDigits = nullptr;  ///< number of digits in the last precluster (write mode)
 
-  //std::vector<PreClusterStruct> mPreClusters{}; ///< list of preclusters
+  std::vector<PreClusterStruct> mPreClusters{}; ///< list of preclusters
 };
 
 /// stream operator for printout
