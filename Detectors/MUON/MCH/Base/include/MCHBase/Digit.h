@@ -36,14 +36,14 @@ class Digit
 
   bool operator==(const Digit&) const;
 
-  void setTimeStamp(double t) { mTime = t; }
   double getTimeStamp() const { return mTime; }
+  void setTimeStamp(double t) { mTime = t; }
 
-  void setDetID(int i) { mDetID = i; }
   int getDetID() const { return mDetID; }
+  void setDetID(int i) { mDetID = i; }
 
-  void setPadID(int i) { mPadID = i; }
   int getPadID() const { return mPadID; }
+  void setPadID(int padID) { mPadID = padID; }
 
   unsigned long getADC() const { return mADC; }
   void setADC(unsigned long adc) { mADC = adc; }

@@ -11,7 +11,6 @@
 #include <iostream>
 
 #include "TBDigitsFileReader.h"
-#include "MCHBase/DigitBlock.h"
 #include "MCHMappingInterface/Segmentation.h"
 
 using namespace o2::mch;

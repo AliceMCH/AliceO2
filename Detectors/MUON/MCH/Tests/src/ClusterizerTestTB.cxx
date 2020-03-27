@@ -15,10 +15,9 @@
 #include "TGraphErrors.h"
 
 #include "MCHBase/Digit.h"
-//#include "MCHBase/DigitBlock.h"
-#include "MCHPreClustering/PreClusterBlock.h"
-#include "MCHPreClustering/PreClusterFinder.h"
+#include "MCHBase/PreClusterBlock.h"
 #include "TBDigitsFileReader.h"
+#include "../../PreClustering/src/PreClusterFinder.h"
 #include "MCHClustering/ClusteringForTest.h"
 
 using namespace o2::mch;
@@ -29,7 +28,6 @@ int main(int argc, char** argv)
     
   TBDigitsFileReader digitsReader(argv[1]);
   PreClusterFinder preClusterFinder;
-  PreClusterBlock preClusterBlock;
   Clustering clustering;
   float residuals[1000];
     float ytrks[1000];
@@ -40,12 +38,12 @@ int main(int argc, char** argv)
     TCanvas *cbell = new TCanvas("cbell","Bell",0,0,600,600);
     TH1F *h1 = new TH1F("h1", "Residuals distribution from TB data", 50, -0.1, 0.1);
   
-  std::string fname;
-  preClusterFinder.init(fname);
+  preClusterFinder.init();
 
   Digit* digitsBuffer = NULL;
-  char* preClustersBuffer = NULL;
-    std::vector<Clustering::Cluster> clusters(0);
+  std::vector<Digit> digits(0);
+  std::vector<PreClusterStruct> preClusters(0);
+  std::vector<Clustering::Cluster> clusters(0);
     
   // load digits from binary input file, block-by-block
   while(digitsReader.readDigitsFromFile()) {
@@ -73,17 +71,8 @@ int main(int argc, char** argv)
     preClusterFinder.loadDigits(digitsBuffer, nDigits);
     preClusterFinder.run();
 
-    // get number of pre-clusters and store them into a memory buffer
-    auto preClustersSize = preClusterBlock.getPreClustersBufferSize(preClusterFinder);
-    printf("preClustersSize: %d\n", (int)preClustersSize);
-    preClustersBuffer = (char*)realloc(preClustersBuffer, preClustersSize);
-    preClusterBlock.storePreClusters(preClusterFinder, preClustersBuffer);
-
-    //continue;
-    printf("\n\n==========\nReading clusters\n\n");
-
-    std::vector<PreClusterStruct> preClusters;
-    preClusterBlock.readPreClusters(preClusters, preClustersBuffer, preClustersSize);
+    // get the preclusters and associated digits
+    preClusterFinder.getPreClusters(preClusters, digits);
       
       printf("\n\n==========\nRunning Clustering\n\n");
 
