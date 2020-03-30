@@ -54,14 +54,16 @@ int main(int argc, char** argv)
       cout << "xtrk: " << xtrk << endl;
       cout << "ytrk: " << ytrk << endl;
     printf("nDigits: %d\n", (int)nDigits);
-    //continue;
-    digitsBuffer = (Digit*)realloc(digitsBuffer, sizeof(Digit) * nDigits);
-    digitsReader.storeDigits(digitsBuffer);
 
     std::vector<TBCluster>& tbclusters = digitsReader.getClusters();
+    std::cout<<"tbclusters.size(): "<<tbclusters.size()<<std::endl;
     for(size_t ic = 0; ic < tbclusters.size(); ic++) {
       std::cout<<"TBCluster "<<ic<<":\n"<<tbclusters[ic];
     }
+    //continue;
+
+    digitsBuffer = (Digit*)realloc(digitsBuffer, sizeof(Digit) * nDigits);
+    digitsReader.storeDigits(digitsBuffer);
 
     // load the digits from the memory buffer and run the pre-clustering phase
     preClusterFinder.reset();
