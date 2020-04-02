@@ -27,7 +27,7 @@
 #include "MCHBase/Digit.h"
 #include "MCHMappingInterface/Segmentation.h"
 #//include "MCHPreClustering/PreClusterFinder.h"
-#include "MCHBase/PreClusterBlock.h"
+#include "MCHBase/PreCluster.h"
 #include "TVirtualFitter.h"
 #include "TObject.h"
 #include "TObjArray.h"
@@ -60,40 +60,35 @@ using namespace std;
 
 
 //_________________________________________________________________________________________________
-void Clustering::runFinderCOG(std::vector<PreClusterStruct>& preClusters, std::vector<Cluster>& clusters)
+void Clustering::runFinderCOG(gsl::span<const PreCluster> preClusters, gsl::span<const Digit> digits, std::vector<Cluster>& clusters)
 {
     cout << "preClusters.size():" << preClusters.size() << endl;
-    int sizedigit;
     int jete = 0;
-    Digit digittmp;
     Cluster clustertmp;
     int gPrintLevel = 0;
     
-    for (Int_t i = 0; i < preClusters.size(); i++)   //On boucle sur les preclusters identifiés
+    for (const auto& preCluster : preClusters)   //On boucle sur les preclusters identifiés
     {
-        if(preClusters[i].nDigits == 1){         // Je vire les preclusters qui n'ont qu'un seul digit
+        if(preCluster.nDigits == 1){         // Je vire les preclusters qui n'ont qu'un seul digit
             jete++;
             continue;
         }
-        cout << "Precluster avec " << preClusters[i].nDigits << " digits." << endl;  //Nombre de digits dans le precluster aue l'on regarde
+        cout << "Precluster avec " << preCluster.nDigits << " digits." << endl;  //Nombre de digits dans le precluster aue l'on regarde
         
-        std::vector<Digit> preclustertmp;
-        const Digit* ptrdigit = preClusters[i].digits;
+        // copy the digits of this precluster in preclustertmp
+        auto preClusterDigits = digits.subspan(preCluster.firstDigit, preCluster.nDigits);
+        std::vector<Digit> preclustertmp(preClusterDigits.begin(), preClusterDigits.end());
         
-        for (int j=0; j<preClusters[i].nDigits; j++){          //Je récupère les digits et les mets dans un   vecteur de digits, preclustertmp
-            digittmp = *ptrdigit;
-            if(gPrintLevel > 1){
-                cout << "Digit numero:" << j << endl;
+        if(gPrintLevel > 1){
+            int j = 0;
+            for (const auto& digittmp : preclustertmp) {
+                cout << "Digit numero:" << j++ << endl;
                 cout << "digittmp.getADC():" << digittmp.getADC() << endl;
                 cout << "digittmp.getDetID():" << digittmp.getDetID() << endl;
                 cout << "digittmp.getPadID():" << digittmp.getPadID() << endl;
     //            cout << "type digittmp:" << typeid(digittmp).name() << endl;
-    //            cout << "type ptrdigit:" << typeid(ptrdigit).name() << endl;
-    //            cout << "ptrdigit:" << ptrdigit << endl;
+    //            cout << "digittmp:" << digittmp << endl;
             }
-            preclustertmp.push_back(digittmp);
-            sizedigit = sizeof(digittmp);
-            ptrdigit++;
         }
         
         //Je clusterise mon vecteur de digits, preclustertmp et l'ajoute au vecteur de clusters, nommé clusters.
@@ -279,42 +274,37 @@ Clustering::Cluster Clustering::FinderCOG(std::vector<Digit> &precluster)
 
 
 //_________________________________________________________________________________________________
-void Clustering::runFinderSimpleFit(std::vector<PreClusterStruct>& preClusters, std::vector<Cluster>& clusters)
+void Clustering::runFinderSimpleFit(gsl::span<const PreCluster> preClusters, gsl::span<const Digit> digits, std::vector<Cluster>& clusters)
 {
     cout << "\n\n==========\nRunning runFinderSimpleFit Algorithm\n\n" << endl;
     cout << "preClusters.size():" << preClusters.size() << endl;
-    int sizedigit;
     int jete = 0;
-    Digit digittmp;
     Cluster clustertmpCOG;
     Cluster clustertmp;
     int gPrintLevel = 0;
     
-    for (Int_t i = 0; i < preClusters.size(); i++)   //On boucle sur les preclusters identifiés
+    for (const auto& preCluster : preClusters)   //On boucle sur les preclusters identifiés
     {
-        if(preClusters[i].nDigits == 1){         // Je vire les preclusters qui n'ont qu'un seul digit
+        if(preCluster.nDigits == 1){         // Je vire les preclusters qui n'ont qu'un seul digit
             jete++;
             continue;
         }
-        cout << "Precluster avec " << preClusters[i].nDigits << " digits." << endl;  //Nombre de digits dans le precluster aue l'on regarde
+        cout << "Precluster avec " << preCluster.nDigits << " digits." << endl;  //Nombre de digits dans le precluster aue l'on regarde
         
-        std::vector<Digit> preclustertmp;
-        const Digit* ptrdigit = preClusters[i].digits;
+        // copy the digits of this precluster in preclustertmp
+        auto preClusterDigits = digits.subspan(preCluster.firstDigit, preCluster.nDigits);
+        std::vector<Digit> preclustertmp(preClusterDigits.begin(), preClusterDigits.end());
         
-        for (int j=0; j<preClusters[i].nDigits; j++){          //Je récupère les digits et les mets dans un   vecteur de digits, preclustertmp
-            digittmp = *ptrdigit;
-            if(gPrintLevel > 1){
-                cout << "Digit numero:" << j << endl;
+        if(gPrintLevel > 1){
+            int j = 0;
+            for (const auto& digittmp : preclustertmp) {
+                cout << "Digit numero:" << j++ << endl;
                 cout << "digittmp.getADC():" << digittmp.getADC() << endl;
                 cout << "digittmp.getDetID():" << digittmp.getDetID() << endl;
                 cout << "digittmp.getPadID():" << digittmp.getPadID() << endl;
     //            cout << "type digittmp:" << typeid(digittmp).name() << endl;
-    //            cout << "type ptrdigit:" << typeid(ptrdigit).name() << endl;
-    //            cout << "ptrdigit:" << ptrdigit << endl;
+    //            cout << "digittmp:" << digittmp << endl;
             }
-            preclustertmp.push_back(digittmp);
-            sizedigit = sizeof(digittmp);
-            ptrdigit++;
         }
         
         //Je clusterise mon vecteur de digits, preclustertmp et l'ajoute au vecteur de clusters, nommé clusters.
@@ -612,38 +602,33 @@ Double_t Clustering::IntMathiesonXY(Double_t x1, Double_t y1, Double_t x2, Doubl
 
 
 //_________________________________________________________________________________________________
-void Clustering::runFinderGaussianFit(std::vector<PreClusterStruct>& preClusters, std::vector<Cluster>& clusters)
+void Clustering::runFinderGaussianFit(gsl::span<const PreCluster> preClusters, gsl::span<const Digit> digits, std::vector<Cluster>& clusters)
 {
     cout << "preClusters.size():" << preClusters.size() << endl;
-    int sizedigit;
     int jete = 0;
-    Digit digittmp;
     Cluster clustertmpCOG;
     Cluster clustertmp;
     
-    for (Int_t i = 0; i < preClusters.size(); i++)   //On boucle sur les preclusters identifiés
+    for (const auto& preCluster : preClusters)   //On boucle sur les preclusters identifiés
     {
-        if(preClusters[i].nDigits == 1){         // Je vire les preclusters qui n'ont qu'un seul digit
+        if(preCluster.nDigits == 1){         // Je vire les preclusters qui n'ont qu'un seul digit
             jete++;
             continue;
         }
-        cout << "Precluster avec " << preClusters[i].nDigits << " digits." << endl;  //Nombre de digits dans le precluster aue l'on regarde
+        cout << "Precluster avec " << preCluster.nDigits << " digits." << endl;  //Nombre de digits dans le precluster aue l'on regarde
         
-        std::vector<Digit> preclustertmp;
-        const Digit* ptrdigit = preClusters[i].digits;
+        // copy the digits of this precluster in preclustertmp
+        auto preClusterDigits = digits.subspan(preCluster.firstDigit, preCluster.nDigits);
+        std::vector<Digit> preclustertmp(preClusterDigits.begin(), preClusterDigits.end());
         
-        for (int j=0; j<preClusters[i].nDigits; j++){          //Je récupère les digits et les mets dans un   vecteur de digits, preclustertmp
-            digittmp = *ptrdigit;
-            cout << "Digit numero:" << j << endl;
+        int j = 0;
+        for (const auto& digittmp : preclustertmp){
+            cout << "Digit numero:" << j++ << endl;
             cout << "digittmp.getADC():" << digittmp.getADC() << endl;
             cout << "digittmp.getDetID():" << digittmp.getDetID() << endl;
             cout << "digittmp.getPadID():" << digittmp.getPadID() << endl;
 //            cout << "type digittmp:" << typeid(digittmp).name() << endl;
-//            cout << "type ptrdigit:" << typeid(ptrdigit).name() << endl;
-//            cout << "ptrdigit:" << ptrdigit << endl;
-            preclustertmp.push_back(digittmp);
-            sizedigit = sizeof(digittmp);
-            ptrdigit++;
+//            cout << "digittmp:" << digittmp << endl;
         }
         
         //Je clusterise mon vecteur de digits, preclustertmp et l'ajoute au vecteur de clusters, nommé clusters.
@@ -909,38 +894,33 @@ Double_t Clustering::IntGaussXY(Double_t x1, Double_t y1, Double_t x2, Double_t 
 
 
 //_________________________________________________________________________________________________
-void Clustering::runFinderDoubleGaussianFit(std::vector<PreClusterStruct>& preClusters, std::vector<Cluster>& clusters)
+void Clustering::runFinderDoubleGaussianFit(gsl::span<const PreCluster> preClusters, gsl::span<const Digit> digits, std::vector<Cluster>& clusters)
 {
     cout << "preClusters.size():" << preClusters.size() << endl;
-    int sizedigit;
     int jete = 0;
-    Digit digittmp;
     Cluster clustertmpCOG;
     Cluster clustertmp;
     
-    for (Int_t i = 0; i < preClusters.size(); i++)   //On boucle sur les preclusters identifiés
+    for (const auto& preCluster : preClusters)   //On boucle sur les preclusters identifiés
     {
-        if(preClusters[i].nDigits == 1){         // Je vire les preclusters qui n'ont qu'un seul digit
+        if(preCluster.nDigits == 1){         // Je vire les preclusters qui n'ont qu'un seul digit
             jete++;
             continue;
         }
-        cout << "Precluster avec " << preClusters[i].nDigits << " digits." << endl;  //Nombre de digits dans le precluster aue l'on regarde
+        cout << "Precluster avec " << preCluster.nDigits << " digits." << endl;  //Nombre de digits dans le precluster aue l'on regarde
         
-        std::vector<Digit> preclustertmp;
-        const Digit* ptrdigit = preClusters[i].digits;
+        // copy the digits of this precluster in preclustertmp
+        auto preClusterDigits = digits.subspan(preCluster.firstDigit, preCluster.nDigits);
+        std::vector<Digit> preclustertmp(preClusterDigits.begin(), preClusterDigits.end());
         
-        for (int j=0; j<preClusters[i].nDigits; j++){          //Je récupère les digits et les mets dans un   vecteur de digits, preclustertmp
-            digittmp = *ptrdigit;
-            cout << "Digit numero:" << j << endl;
+        int j = 0;
+        for (const auto& digittmp : preclustertmp){
+            cout << "Digit numero:" << j++ << endl;
             cout << "digittmp.getADC():" << digittmp.getADC() << endl;
             cout << "digittmp.getDetID():" << digittmp.getDetID() << endl;
             cout << "digittmp.getPadID():" << digittmp.getPadID() << endl;
 //            cout << "type digittmp:" << typeid(digittmp).name() << endl;
-//            cout << "type ptrdigit:" << typeid(ptrdigit).name() << endl;
-//            cout << "ptrdigit:" << ptrdigit << endl;
-            preclustertmp.push_back(digittmp);
-            sizedigit = sizeof(digittmp);
-            ptrdigit++;
+//            cout << "digittmp:" << digittmp << endl;
         }
         
         //Je clusterise mon vecteur de digits, preclustertmp et l'ajoute au vecteur de clusters, nommé clusters.

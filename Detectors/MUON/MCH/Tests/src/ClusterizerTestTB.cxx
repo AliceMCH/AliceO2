@@ -14,7 +14,7 @@
 #include "TApplication.h"
 
 #include "MCHBase/Digit.h"
-#include "MCHBase/PreClusterBlock.h"
+#include "MCHBase/PreCluster.h"
 #include "TBDigitsFileReader.h"
 #include "../../PreClustering/src/PreClusterFinder.h"
 #include "MCHClustering/ClusteringForTest.h"
@@ -39,7 +39,7 @@ int main(int argc, char** argv)
 
   Digit* digitsBuffer = NULL;
   std::vector<Digit> digits(0);
-  std::vector<PreClusterStruct> preClusters(0);
+  std::vector<PreCluster> preClusters(0);
   std::vector<Clustering::Cluster> clusters(0);
     
   // load digits from binary input file, block-by-block
@@ -67,16 +67,18 @@ int main(int argc, char** argv)
 
     // load the digits from the memory buffer and run the pre-clustering phase
     preClusterFinder.reset();
-    preClusterFinder.loadDigits(digitsBuffer, nDigits);
+    preClusterFinder.loadDigits({digitsBuffer, nDigits});
     preClusterFinder.run();
 
     // get the preclusters and associated digits
+    preClusters.clear();
+    digits.clear();
     preClusterFinder.getPreClusters(preClusters, digits);
       
       printf("\n\n==========\nRunning Clustering\n\n");
 
       // Fit Mathieson
-      clustering.runFinderSimpleFit(preClusters, clusters);
+      clustering.runFinderSimpleFit(preClusters, digits, clusters);
 
       
       if(preClusters.size()==1){

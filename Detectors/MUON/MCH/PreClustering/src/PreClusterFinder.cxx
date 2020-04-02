@@ -84,13 +84,11 @@ void PreClusterFinder::reset()
 }
 
 //_________________________________________________________________________________________________
-void PreClusterFinder::loadDigits(const Digit* digits, int nDigits)
+void PreClusterFinder::loadDigits(gsl::span<const Digit> digits)
 {
   /// fill the Mapping::MpDE structure with fired pads
 
-  for (int i = 0; i < nDigits; ++i) {
-
-    const Digit& digit(digits[i]);
+  for (const auto& digit : digits) {
 
     int deIndex = mDEIndices[digit.getDetID()];
     assert(deIndex >= 0 && deIndex < SNDEs);
@@ -129,18 +127,11 @@ int PreClusterFinder::run()
 }
 
 //_________________________________________________________________________________________________
-void PreClusterFinder::getPreClusters(std::vector<PreClusterStruct>& preClusters, std::vector<Digit>& digits)
+void PreClusterFinder::getPreClusters(std::vector<o2::mch::PreCluster>& preClusters, std::vector<Digit>& digits)
 {
-  /// fill the input vectors with the preclusters and associated digits
-
-  preClusters.clear();
-  digits.clear();
-
-  // prepare the vector of digits to receive all the digits
-  // to avoid losing pointers because of memory reallocation
-  int nUsedDigits(0);
-  getNDEWithPreClusters(nUsedDigits);
-  digits.reserve(nUsedDigits);
+  /// add the preclusters and associated digits at the end of the input vectors
+  /// the existing preclusters and digits are not touched, so the corresponding indices are preserved
+  /// however, iterators, pointers and references might be invalidated in case the vectors are resized
 
   for (int iDE = 0, nDEs = SNDEs; iDE < nDEs; ++iDE) {
 
@@ -157,17 +148,15 @@ void PreClusterFinder::getPreClusters(std::vector<PreClusterStruct>& preClusters
           continue;
         }
 
-        // index of the first digit of this precluster to be added
-        auto firstDigit = digits.size();
+        // add this precluster
+        uint16_t firstDigit = digits.size();
+        uint16_t nDigits = cluster->lastPad - cluster->firstPad + 1;
+        preClusters.push_back({firstDigit, nDigits});
 
         // add the digits of this precluster
         for (uint16_t iOrderedPad = cluster->firstPad; iOrderedPad <= cluster->lastPad; ++iOrderedPad) {
           digits.emplace_back(*de.digits[de.mapping->pads[de.orderedPads[1][iOrderedPad]].iDigit]);
         }
-
-        // add this precluster
-        uint16_t nDigits = cluster->lastPad - cluster->firstPad + 1;
-        preClusters.push_back({nDigits, &digits[firstDigit]});
       }
     }
   }

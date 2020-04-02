@@ -8,7 +8,7 @@
 #include "MCHMappingInterface/Segmentation.h"
 #include "MCHMappingInterface/CathodeSegmentation.h"
 #include "MCHBase/Digit.h"
-#include "MCHBase/PreClusterBlock.h"
+#include "MCHBase/PreCluster.h"
 #include "../../PreClustering/src/PreClusterFinder.h"
 #include "DigitsFileReader.h"
 #include "MCHClustering/ClusteringForTest.h"
@@ -510,32 +510,34 @@ std::vector<Clustering::Cluster> Validation::TestClustering(){
 
         // load the digits from the memory buffer and run the pre-clustering phase
         preClusterFinder.reset();
-        preClusterFinder.loadDigits(digitsBuffer, nDigits);
-        preClusterFinder.run();
+        preClusterFinder.loadDigits({digitsBuffer, nDigits});
+        int nPreClusters = preClusterFinder.run();
 
         // get the preclusters and associated digits
         std::vector<Digit> digits(0);
-        std::vector<PreClusterStruct> preClusters(0);
+        digits.reserve(nDigits);
+        std::vector<PreCluster> preClusters(0);
+        preClusters.reserve(nPreClusters);
         preClusterFinder.getPreClusters(preClusters, digits);
 
           printf("\n\n==========\nRunning Clustering\n\n");
           
     
     //To run COG Clustering
-       clustering.runFinderCOG(preClusters, clusters);
+       clustering.runFinderCOG(preClusters, digits, clusters);
 //        printf("Number of clusters obtained and saved: %lu\n", clusters.size());
     
     
     //To run Mathieson fit Clustering
- //      clustering.runFinderSimpleFit(preClusters, clusters);
+ //      clustering.runFinderSimpleFit(preClusters, digits, clusters);
           
     
     //To run Gaussian fit Clustering
- //         clustering.runFinderGaussianFit(preClusters, clusters);
+ //         clustering.runFinderGaussianFit(preClusters, digits, clusters);
     
     
     //To run Double Gaussian fit Clustering
-  //  clustering.runFinderDoubleGaussianFit(preClusters, clusters);
+  //  clustering.runFinderDoubleGaussianFit(preClusters, digits, clusters);
     
     delete digitsBuffer;
     
