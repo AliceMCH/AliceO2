@@ -46,7 +46,7 @@ int main(int argc, char** argv)
 
     // load the digits from the memory buffer and run the pre-clustering phase
     preClusterFinder.reset();
-    preClusterFinder.loadDigits(digitsBuffer, nDigits);
+    preClusterFinder.loadDigits({digitsBuffer, nDigits});
     preClusterFinder.run();
 
     outFile<<preClusterFinder<<std::endl;

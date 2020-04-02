@@ -456,14 +456,15 @@ void PreClusterFinder::createMapping()
 std::ostream& operator<<(std::ostream& stream, PreClusterFinder& pcf)
 {
   std::vector<Digit> digits(0);
-  std::vector<PreClusterStruct> preClusters(0);
+  std::vector<PreCluster> preClusters(0);
   pcf.getPreClusters(preClusters, digits);
 
   stream << "nPreClusters = " << preClusters.size() << std::endl;
   // print the preclusters
   int i(0);
   for (auto& precluster : preClusters) {
-    stream << "preCluster[" << i++ <<"]\n" << precluster;
+    stream << "preCluster[" << i++ <<"]\n";
+    precluster.print(stream, digits);
   }
 
   return stream;
