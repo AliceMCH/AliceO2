@@ -25,13 +25,14 @@ int main(int argc, char** argv)
   preClusterFinder.init();
 
   Digit* digitsBuffer = NULL;
+  int nevent = 1;
 
   // load digits from binary input file, block-by-block
   while(digitsReader.readDigitsFromFile()) {
 
     // get number of loaded digits and store them into a memory buffer
     auto nDigits = digitsReader.getNumberOfDigits();
-    printf("nDigits: %d\n", (int)nDigits);
+    printf("nEvent: %d  nDigits: %d\n", nevent, (int)nDigits);
     //continue;
     digitsBuffer = (Digit*)realloc(digitsBuffer, sizeof(Digit) * nDigits);
     digitsReader.storeDigits(digitsBuffer);
@@ -42,6 +43,9 @@ int main(int argc, char** argv)
     preClusterFinder.run();
 
     outFile<<preClusterFinder<<std::endl;
+
+    nevent += 1;
+    if( nevent > 100 ) break;
   }
 
   return 0;
