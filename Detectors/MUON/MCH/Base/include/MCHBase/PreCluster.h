@@ -33,7 +33,7 @@ struct PreCluster {
   /// return the index of last associated digit in the ordered vector of digits
   uint16_t lastDigit() const { return firstDigit + nDigits - 1; }
 
-  void print(gsl::span<const Digit> digits) const;
+  void print(std::ostream& stream, gsl::span<const Digit> digits) const;
 };
 
 } // namespace mch

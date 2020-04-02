@@ -25,20 +25,19 @@ namespace mch
 using namespace std;
 
 //_________________________________________________________________
-void PreCluster::print(gsl::span<const Digit> digits) const
+void PreCluster::print(std::ostream& stream, gsl::span<const Digit> digits) const
 {
   /// print the precluster, getting the associated digits from the provided span
 
   if (lastDigit() >= digits.size()) {
-    cout << "the vector of digits is too small to contain the digits of this precluster" << endl;
+    stream << "the vector of digits is too small to contain the digits of this precluster" << endl;
   }
 
-  cout << "{nDigits= " << nDigits;
   int i(0);
+  stream << "  nDigits = " << nDigits << std::endl;
   for (const auto& digit : digits.subspan(firstDigit, nDigits)) {
-    cout << ", digit[" << i++ << "]= " << digit.getPadID();
+    stream << "  digit[" << i++ << "] = " << digit.getDetID() << "," << digit.getPadID() << "," << digit.getADC() << std::endl;
   }
-  cout << "}" << endl;
 }
 
 } // namespace mch

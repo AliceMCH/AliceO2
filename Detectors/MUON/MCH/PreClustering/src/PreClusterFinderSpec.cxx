@@ -112,7 +112,7 @@ class PreClusterFinderTask
     if (mPrint) {
       cout << mPreClusters.size() << " preclusters:" << endl;
       for (const auto& precluster : mPreClusters) {
-        precluster.print(mUsedDigits);
+        precluster.print(cout, mUsedDigits);
       }
     }
 
