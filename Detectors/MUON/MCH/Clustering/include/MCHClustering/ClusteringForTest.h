@@ -14,12 +14,14 @@
 #include <unordered_map>
 #include <vector>
 
+#include <gsl/span>
+
 //include michael
 //include segmentation.h
 
 #include "MCHBase/Digit.h"
 #include "MCHMappingInterface/Segmentation.h"
-#include "MCHBase/PreClusterBlock.h"
+#include "MCHBase/PreCluster.h"
 
 namespace o2
 {
@@ -82,21 +84,21 @@ class Clustering
   Clustering& operator=(Clustering&&) = delete;
 
     
-    void runFinderCOG(std::vector<PreClusterStruct>& preClusters, std::vector<Cluster>& clusters);
+    void runFinderCOG(gsl::span<const PreCluster> preClusters, gsl::span<const Digit> digits, std::vector<Cluster>& clusters);
     Clustering::Cluster FinderCOG(std::vector<Digit> &precluster);
 
     
-    void runFinderSimpleFit(std::vector<PreClusterStruct>& preClusters, std::vector<Cluster>& clusters);
+    void runFinderSimpleFit(gsl::span<const PreCluster> preClusters, gsl::span<const Digit> digits, std::vector<Cluster>& clusters);
     Clustering::Cluster ComputePositionClean(std::vector<Digit> &precluster, Clustering::Cluster clustertmpCOG);
     Double_t IntMathiesonXY(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Double_t Kx3, Double_t Ky3);
     
     
-    void runFinderGaussianFit(std::vector<PreClusterStruct>& preClusters, std::vector<Cluster>& clusters);
+    void runFinderGaussianFit(gsl::span<const PreCluster> preClusters, gsl::span<const Digit> digits, std::vector<Cluster>& clusters);
     Clustering::Cluster ComputePositionGaussianFitClean(std::vector<Digit> &precluster, Clustering::Cluster clustertmpCOG);
     Double_t IntGaussXY(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Double_t sigx, Double_t sigy);
     
     
-    void runFinderDoubleGaussianFit(std::vector<PreClusterStruct>& preClusters, std::vector<Cluster>& clusters);
+    void runFinderDoubleGaussianFit(gsl::span<const PreCluster> preClusters, gsl::span<const Digit> digits, std::vector<Cluster>& clusters);
     Clustering::Cluster ComputePositionDoubleGaussianFitClean(std::vector<Digit> &precluster, Clustering::Cluster clustertmpCOG);
     Double_t IntDoubleGaussXY(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Double_t sig1x, Double_t sig1y, Double_t sig2x, Double_t sig2y, Double_t chgfracx, Double_t chgfracy);
 

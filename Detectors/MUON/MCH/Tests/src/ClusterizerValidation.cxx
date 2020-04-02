@@ -14,12 +14,6 @@
 #include <fstream>
 #include <cstdio>
 
-#include "MCHBase/Digit.h"
-//#include "MCHBase/DigitBlock.h"
-#include "MCHBase/PreClusterBlock.h"
-//#include "MCHPreClustering/PreClusterFinder.h"
-#include "DigitsFileReader.h"
-#include "MCHClustering/ClusteringForTest.h"
 #include "Validation.h"
 
 #include "TMath.h"
