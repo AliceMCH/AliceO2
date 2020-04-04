@@ -13,6 +13,11 @@ o2_add_library(MCHPreClustering
                        src/PreClusterFinderMapping.cxx
                PUBLIC_LINK_LIBRARIES O2::MCHMappingFactory O2::MCHBase O2::Framework)
 
+o2_add_executable(preclustering
+                  COMPONENT_NAME mch
+                  SOURCES src/PreClusterFinderSpec.cxx src/PreClusterFinderDevice.cxx
+                  PUBLIC_LINK_LIBRARIES O2::Framework O2::DPLUtils Boost::program_options O2::MCHBase O2::MCHPreClustering)
+
 o2_add_executable(preclusterizer-workflow
                   COMPONENT_NAME mch
                   SOURCES src/PreClusterizerWorkflow.cxx

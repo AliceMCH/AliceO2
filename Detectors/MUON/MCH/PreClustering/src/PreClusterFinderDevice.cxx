@@ -8,28 +8,22 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-/// \file PreClusterFinderSpec.h
-/// \brief Definition of a data processor to run the preclusterizer
+/// \file PreClusterFinderDevice.cxx
+/// \brief Implementation of a DPL device to run the preclusterizer
 ///
 /// \author Philippe Pillot, Subatech
 
-#ifndef O2_MCH_PRECLUSTERFINDERSPEC_H_
-#define O2_MCH_PRECLUSTERFINDERSPEC_H_
+#include "PreClusterFinderSpec.h"
+#include "PreClusterFinderDevice.h"
 
-#include "Framework/DataProcessorSpec.h"
-
-using namespace o2;
-using namespace o2::framework;
-
-
-namespace o2
+// clang-format off
+WorkflowSpec defineDataProcessing(const ConfigContext&)
 {
-namespace mch
-{
+  WorkflowSpec specs;
 
-o2::framework::DataProcessorSpec getPreClusterFinderSpec();
+  DataProcessorSpec producer = o2::mch::getPreClusterFinderSpec();
+  specs.push_back(producer);
 
-} // end namespace mch
-} // end namespace o2
-
-#endif // O2_MCH_PRECLUSTERFINDERSPEC_H_
+  return specs;
+}
+// clang-format on
