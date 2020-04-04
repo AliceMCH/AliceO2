@@ -26,15 +26,25 @@
 #include <fstream>
 #include <stdexcept>
 #include "Framework/CallbackService.h"
+#include "Framework/ConfigParamRegistry.h"
 #include "Framework/ControlService.h"
+#include "Framework/DataProcessorSpec.h"
+#include "Framework/Lifetime.h"
+#include "Framework/Output.h"
 #include "Framework/Task.h"
-#include "Framework/runDataProcessing.h"
+#include "Framework/WorkflowSpec.h"
+
 #include "DPLUtils/DPLRawParser.h"
 #include "MCHBase/Digit.h"
 #include "DataDecoderSpec.h"
 #include "RawBufferDecoder.h"
 
 // Dans ce code, on récupère un infut aui est un message avec le buffer, on fait tourner le code de base decodeBuffer qui est dans Handlers, et on renvoir un message de sortie (inspiré de FileReader de Andrea)
+
+namespace o2
+{
+namespace mch
+{
 
 using namespace o2;
 using namespace o2::framework;
@@ -158,12 +168,10 @@ private:
 
 };
 
-// clang-format off
-WorkflowSpec defineDataProcessing(const ConfigContext&)
+//_________________________________________________________________________________________________
+o2::framework::DataProcessorSpec getDecodingSpec()
 {
-  WorkflowSpec specs;
-
-  DataProcessorSpec producer{
+  return DataProcessorSpec{
     "DataDecoder",
     //Inputs{InputSpec{"readout", "ROUT", "RAWDATA", Lifetime::Timeframe}},
     o2::framework::select("TF:MCH/RAWDATA"),
@@ -171,10 +179,8 @@ WorkflowSpec defineDataProcessing(const ConfigContext&)
     Outputs{OutputSpec{"MCH", "DIGITS", 0, Lifetime::Timeframe}},
     AlgorithmSpec{adaptFromTask<DataDecoderTask>()},
     Options{}
-
   };
-  specs.push_back(producer);
-
-  return specs;
 }
-// clang-format on
+
+} // end namespace mch
+} // end namespace o2

@@ -24,7 +24,7 @@ o2_add_executable(
         
 o2_add_executable(
         decoder
-        SOURCES DataDecoderSpec.cxx
+        SOURCES DataDecoderSpec.cxx DataDecoderDevice.cxx
         COMPONENT_NAME mch
         PUBLIC_LINK_LIBRARIES O2::Framework O2::DPLUtils O2::MCHRawDecoder Boost::program_options
         O2::MCHRawImplHelpers RapidJSON::RapidJSON O2::MCHMappingInterface O2::MCHMappingFactory O2::MCHMappingImpl3 O2::MCHRawElecMap O2::MCHBase)
