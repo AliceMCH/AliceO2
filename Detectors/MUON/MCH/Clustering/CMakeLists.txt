@@ -18,3 +18,9 @@ o2_target_root_dictionary(MCHClustering
                        include/MCHClustering/MyObjectParametersGauss.h
                        include/MCHClustering/MyObjectParametersDoubleGauss.h
                LINKDEF include/MCHClustering/LinkDef.h)
+
+o2_add_executable(
+        clustering
+        SOURCES src/ClusteringSpec.cxx src/ClusteringDevice.cxx
+        COMPONENT_NAME mch
+        PUBLIC_LINK_LIBRARIES O2::Framework O2::DPLUtils O2::MCHClustering)
