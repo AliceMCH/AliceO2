@@ -8,6 +8,10 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
+#ifndef O2_MCH_TBDIGITSFILEREADER_H_
+#define O2_MCH_TBDIGITSFILEREADER_H_
+
+
 #include <memory>
 #include <fstream>
 
@@ -55,7 +59,9 @@ struct TBCluster
 class TBDigitsFileReader
 {
 public:
-  TBDigitsFileReader(std::string inputFileName);
+  TBDigitsFileReader();
+
+  void init(std::string inputFileName);
 
   bool readDigitsFromFile();
 
@@ -76,6 +82,7 @@ private:
   std::vector<TBCluster> clusters;
   float trkx[1500];
   float trky[1500];
+  int fEvent, fSiEvent;
 };
 
 }
@@ -84,3 +91,5 @@ private:
 
 
 std::ostream& operator<<(std::ostream& stream, const o2::mch::TBCluster& c);
+
+#endif

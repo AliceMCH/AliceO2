@@ -17,7 +17,12 @@ using namespace o2::mch;
 using namespace std;
 
 
-TBDigitsFileReader::TBDigitsFileReader(std::string inputFileName)
+TBDigitsFileReader::TBDigitsFileReader()
+{
+}
+
+
+void TBDigitsFileReader::init(std::string inputFileName)
 {
   mInputFile.open(inputFileName, ios::binary);
   if (!mInputFile.is_open()) {
@@ -48,6 +53,10 @@ bool TBDigitsFileReader::readDigitsFromFile()
 
   /// send the digits of the current event
 
+  int event, sievent;
+  mInputFile.read(reinterpret_cast<char*>(&event), sizeof(int));
+  mInputFile.read(reinterpret_cast<char*>(&sievent), sizeof(int));
+
   int nDE = 0;
   int DE1 = 0; 
   mInputFile.read(reinterpret_cast<char*>(&nDE), sizeof(int));
@@ -66,8 +75,8 @@ bool TBDigitsFileReader::readDigitsFromFile()
     int npad;
     mInputFile.read(reinterpret_cast<char*>(&npad), sizeof(int));
 
-    int dsId, dsCh, size, time;
-    float charge;
+    int dsId, dsCh, size, time, padX, padY;
+    float charge, posX, posY;
     for(int ih = 0; ih < npad; ih++) {
 
       mInputFile.read(reinterpret_cast<char*>(&dsId), sizeof(int));
@@ -76,8 +85,11 @@ bool TBDigitsFileReader::readDigitsFromFile()
       mInputFile.read(reinterpret_cast<char*>(&time), sizeof(int));
       mInputFile.read(reinterpret_cast<char*>(&charge), sizeof(float));
 
-      printf("B  hit %d  dsid=%d chan=%d  charge=%f  time=%d\n",
-          ih, dsId, dsCh, charge, time);
+      mInputFile.read(reinterpret_cast<char*>(&padX), sizeof(int));
+      mInputFile.read(reinterpret_cast<char*>(&padY), sizeof(int));
+
+      mInputFile.read(reinterpret_cast<char*>(&posX), sizeof(float));
+      mInputFile.read(reinterpret_cast<char*>(&posY), sizeof(float));
 
       uint16_t adc = static_cast<uint16_t>(charge);
 
@@ -88,7 +100,21 @@ bool TBDigitsFileReader::readDigitsFromFile()
       try {
         mapping::Segmentation segment(detId);
         int padId = segment.findPadByFEE(dualSampaId, dualSampaChannel);
-        if(padId < 0) continue;
+        if(padId < 0) {
+          printf("padId: %d\n", padId);
+          continue;
+        }
+
+        float X = segment.padPositionX(padId);
+        float Y = segment.padPositionY(padId);
+
+        if(Y != posY) {
+          printf("B  hit %d  dsid=%d chan=%d  charge=%f  time=%d\n",
+              ih, dsId, dsCh, charge, time);
+          std::cout<<"posY: "<<posY<<"  "<<Y<<std::endl;
+          break;
+        }
+
         //digits.push_back( std::make_unique<Digit>(time, detId, padId, adc) );
         digits.push_back( std::make_unique<Digit>() );
         Digit* mchdigit = digits.back().get();
@@ -137,8 +163,8 @@ bool TBDigitsFileReader::readDigitsFromFile()
       mInputFile.read(reinterpret_cast<char*>(&(c.fTimeSigma)), sizeof(double));
       mInputFile.read(reinterpret_cast<char*>(&(c.fSizeMean)), sizeof(double));
       mInputFile.read(reinterpret_cast<char*>(&(c.fSizeSigma)), sizeof(double));
-      printf("B  clus %d  dir=%d nHits=%d nXHits=%d nYHits=%d Y=%f\n", ic,
-          (int)c.fDir, (int)c.fNhits, (int)c.fXNhits, (int)c.fYNhits, c.fYmat);
+      //printf("B  clus %d  dir=%d nHits=%d nXHits=%d nYHits=%d Y=%f\n", ic,
+      //    (int)c.fDir, (int)c.fNhits, (int)c.fXNhits, (int)c.fYNhits, c.fYmat);
     }
   }
 

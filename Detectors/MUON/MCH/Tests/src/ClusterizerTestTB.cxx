@@ -25,7 +25,8 @@ using namespace std;
 int main(int argc, char** argv)
 {
     
-  TBDigitsFileReader digitsReader(argv[1]);
+  TBDigitsFileReader digitsReader;
+  digitsReader.init(argv[1]);
   PreClusterFinder preClusterFinder;
   Clustering clustering;
   std::vector<float> residuals;
