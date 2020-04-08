@@ -14,7 +14,10 @@
 #include "TRandom.h"
 #include "TCanvas.h"
 #include "TH2.h"
+#include "TH1.h"
 #include "TF2.h"
+#include "TF1.h"
+#include "TGraphPainter.h"
 #include "TGraphErrors.h"
 #include "TGraph2DErrors.h"
 #include "TLegend.h"
@@ -79,9 +82,10 @@ void myMath1hit(Double_t x, Double_t y){
     // Function generating a ONE HIT Mathieson histogram
     
     TF2 *f1 = new TF2("myMath",myMathieson2D,-10,10,-10,10,4);
-    f1->SetParameters(0.5085, 0.5840, x, y);
+    f1->SetParameters(0.5840, 0.5085, x, y);
     f1->SetParNames("K3x", "K3y", "Mean x", "Mean y");
 }
+//0.5840 0.5085  x y
     
 //________________________________________________________________________________________
 void myMath2hits(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Double_t chg1, Double_t chg2){
@@ -89,7 +93,7 @@ void myMath2hits(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Double_t ch
     // Function generating a TWO HITS Mathieson histogram
     
     TF2 *f1 = new TF2("myMath",myMathieson2D2hits,-10,10,-10,10,8);
-    f1->SetParameters(0.5085, 0.5840, x1, y1, x2, y2, chg1, chg2);
+    f1->SetParameters(0.5840, 0.5085, x1, y1, x2, y2, chg1, chg2);
     f1->SetParNames("K3x", "K3y", "Mean1 x", "Mean1 y", "Mean2 x", "Mean2 y", "Charge1", "Charge2");
     //f1->Draw("colz");
 }
@@ -102,11 +106,12 @@ void myMath2hits(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Double_t ch
 //           - DIGIT CREATION
 
 //________________________________________________________________________________________
-void Validation::PlotMathieson2D(Double_t x, Double_t y, int nsamples){
+void Validation::PlotMathieson2D(TH1F* hchgpads, TH1F* hchgafter, TH1F* hchmaxafter, TH1F* hNbinsafter, TH1F* hNbinsX, TH1F* hNbinsXafter, TH1F* hNbinsY, TH1F* hNbinsYafter, TH1F* hMeanYbins, TH1F* hMeanbins, Double_t x, Double_t y, int nsamples, int SeedMath){
     
     digits.clear();
     
     TH2F* hb(NULL);
+    TH2F* hdice(NULL);
     TH2F* hnb(NULL);
     myMath1hit(x, y);
     int gPrintLevel = 0;
@@ -117,6 +122,7 @@ void Validation::PlotMathieson2D(Double_t x, Double_t y, int nsamples){
     int nopadsb = catsegb.nofPads();
     int nopadsnb = catsegnb.nofPads();
     int padid;
+    bool keepdigit = kTRUE;
     
     
     //Conversion des vecteurs en arrays bending
@@ -134,20 +140,176 @@ void Validation::PlotMathieson2D(Double_t x, Double_t y, int nsamples){
     std::copy(lowysnb.begin(), lowysnb.end(), ylowsnb);
     
     double noise;
+    double dice;
+    
+    TRandom *keep = new TRandom(0);
+    hdice = new TH2F("hdice","hdice",lowxsb.size()-1,xlowsb,lowysb.size()-1,ylowsb);
+    for(int bin=0; bin<(lowxsb.size()+1)*(lowysb.size()+1); bin++){
+        dice = keep->Uniform(0,1);
+     //   cout << "[dicegen] dice = " << dice <<endl;
+        hdice->AddBinContent(bin,dice);
+   //     cout << "Saved in hdice: " << hdice->GetBinContent(bin)<<endl;
+        
+    }
     
     //Création et remplissage histogrammes bending
     
     cout << "Generating histograms bending and non-bending..."<< endl;
 
     hb = new TH2F("hb","hb",lowxsb.size()-1,xlowsb,lowysb.size()-1,ylowsb);
-    gRandom->SetSeed(0);
+    gRandom->SetSeed(SeedMath);
     hb->FillRandom("myMath", /*nsamples=*/nsamples);
+    
+    //Plot to find the NBinsY
+    std::vector<int> fullbins;
+    int appearances = 0;
+    int appearancesmax = 0;
+    int column = 0;
+    int columnmax = 0;
+    int chgbin = 0;
+    int chgsum = 0;
+    for(int i=1; i<lowxsb.size()+1; i++){
+        for(int j=1; j<lowysb.size()+1; j++){
+            chgbin = hb->GetBinContent(i,j);
+            if(chgbin != 0){
+                cout << "Chgbin = " << chgbin << " in bin (" << i << "," << j <<")"<<endl;
+                fullbins.push_back(i);
+                fullbins.push_back(j);
+                
+            }
+        }
+    }
+    for(int k; k < fullbins.size(); k += 2){
+        if(fullbins[k] != column){
+            column = fullbins[k];
+            appearances = 0;
+        }
+        appearances++;
+        if(appearances>appearancesmax){
+            appearancesmax = appearances;
+            columnmax = column;
+        }
+    }
+    cout << "Column " << columnmax << " appears the most: " << appearancesmax << " times."<<endl;
+    hNbinsY->Fill(appearancesmax);
+    
+    cout << "On a rempli hNbinsY" <<endl;
+    
+    //Plot to find the NBinsX
+       std::vector<int> fullbinsX;
+       int appearancesX = 0;
+       int appearancesmaxX = 0;
+       int line = 0;
+       int linemax = 0;
+       int chgbinX = 0;
+       for(int i=1; i<lowysb.size()+1; i++){
+           for(int j=1; j<lowxsb.size()+1; j++){
+               chgbinX = hb->GetBinContent(j,i);
+               if(chgbinX != 0){
+                   cout << "Chgbin = " << chgbinX << " in bin (" << j << "," << i <<")"<<endl;
+                   fullbinsX.push_back(i);
+                   fullbinsX.push_back(j);
+                   
+               }
+           }
+       }
+       for(int k; k < fullbinsX.size(); k += 2){
+           if(fullbinsX[k] != line){
+               line = fullbinsX[k];
+               appearancesX = 0;
+           }
+           appearancesX++;
+           if(appearancesX>appearancesmaxX){
+               appearancesmaxX = appearancesX;
+               linemax = line;
+           }
+       }
+       cout << "Line " << linemax << " appears the most: " << appearancesmaxX << " times."<<endl;
+       hNbinsX->Fill(appearancesmaxX);
+       
+       cout << "On a rempli hNbinsX" <<endl;
+    
     
     TRandom *noisegen = new TRandom(321);
     for(int bin=0; bin<(lowxsb.size()+1)*(lowysb.size()+1); bin++){
-        noise = noisegen->Gaus(1,0);
-        hb->AddBinContent(bin, noise);
+        noise = noisegen->Gaus(0,1);
+        hb->AddBinContent(bin, abs(noise));
     }
+    
+    //Plot to find the NBinsY after noise and cut
+       std::vector<int> fullbinsafter;
+        appearances = 0;
+        appearancesmax = 0;
+        column = 0;
+        columnmax = 0;
+        chgbin = 0;
+    double dice1;
+       for(int i=1; i<lowxsb.size()+1; i++){
+           for(int j=1; j<lowysb.size()+1; j++){
+               chgbin = hb->GetBinContent(i,j);
+               dice1 = hdice->GetBinContent(i,j);
+               keepdigit = GradualAcceptance(chgbin, dice1);
+               if(chgbin > 10 && keepdigit){
+                   cout << "Chgbin = " << chgbin << " in bin (" << i << "," << j <<")"<<endl;
+                   fullbinsafter.push_back(i);
+                   fullbinsafter.push_back(j);
+                   
+               }
+           }
+       }
+       for(int k; k < fullbinsafter.size(); k += 2){
+           if(fullbinsafter[k] != column){
+               column = fullbinsafter[k];
+               appearances = 0;
+           }
+           appearances++;
+           if(appearances>appearancesmax){
+               appearancesmax = appearances;
+               columnmax = column;
+           }
+       }
+    cout << "Column " << columnmax << " appears the most after noise and cut: " << appearancesmax << " times." <<endl;
+       hNbinsYafter->Fill(appearancesmax);
+    
+    cout << "On a rempli hNbinsYafter" <<endl;
+    
+    
+    //Plot to find the NBinsX after noise and cut
+          std::vector<int> fullbinsafterX;
+           appearancesX = 0;
+           appearancesmaxX = 0;
+           line = 0;
+           linemax = 0;
+           chgbinX = 0;
+          for(int i=1; i<lowysb.size()+1; i++){
+              for(int j=1; j<lowxsb.size()+1; j++){
+                  chgbinX = hb->GetBinContent(j,i);
+                  dice1 = hdice->GetBinContent(j,i);
+                  keepdigit = GradualAcceptance(chgbinX, dice1);
+                  if(chgbinX > 10 && keepdigit){
+                      cout << "ChgbinX = " << chgbinX << " in bin (" << j << "," << i <<")"<<endl;
+                      fullbinsafterX.push_back(i);
+                      fullbinsafterX.push_back(j);
+                      
+                  }
+              }
+          }
+          for(int k; k < fullbinsafterX.size(); k += 2){
+              if(fullbinsafterX[k] != line){
+                  line = fullbinsafterX[k];
+                  appearancesX = 0;
+              }
+              appearancesX++;
+              if(appearancesX>appearancesmaxX){
+                  appearancesmaxX = appearancesX;
+                  linemax = line;
+              }
+          }
+       cout << "Line " << linemax << " appears the most after noise and cut: " << appearancesmaxX << " times." <<endl;
+          hNbinsXafter->Fill(appearancesmaxX);
+       
+       cout << "On a rempli hNbinsXafter" <<endl;
+       
     
 //    TCanvas *c2 = new TCanvas("c2", "The road to PlotDorado",
 //                              200,10,600,400);
@@ -176,8 +338,8 @@ void Validation::PlotMathieson2D(Double_t x, Double_t y, int nsamples){
     hnb->FillRandom("myMath", /*nsamples=*/nsamples);
     
     for(int bin=0; bin<(lowxsnb.size()+1)*(lowysnb.size()+1); bin++){
-        noise = noisegen->Gaus(1,0);
-        hnb->AddBinContent(bin, noise);
+        noise = noisegen->Gaus(0,1);
+        hnb->AddBinContent(bin, abs(noise));
     }
     
 //    c2->cd(2);
@@ -200,9 +362,14 @@ void Validation::PlotMathieson2D(Double_t x, Double_t y, int nsamples){
     double binxcent;
     double binycent;
     double charge[nopadsb + nopadsnb];
+    double dicecontent;
+    double dice2[nopadsb + nopadsnb];
     
     for(int i=0; i<nopadsb + nopadsnb; i++ ){
         charge[i] = 0.;
+    }
+    for(int i=0; i<nopadsb + nopadsnb; i++ ){
+        dice2[i] = 0.;
     }
     
     if(gPrintLevel > 1){
@@ -218,6 +385,7 @@ void Validation::PlotMathieson2D(Double_t x, Double_t y, int nsamples){
     for(int binx = 1; binx<lowxsb.size(); binx++){
         for(int biny = 1; biny<lowysb.size(); biny++){
             bincontent = hb->GetBinContent(binx,biny);
+            dicecontent = hdice->GetBinContent(binx,biny);
             binxcent = (hb->GetXaxis())->GetBinCenter(binx);
             binycent = (hb->GetYaxis())->GetBinCenter(biny);
             
@@ -228,6 +396,7 @@ void Validation::PlotMathieson2D(Double_t x, Double_t y, int nsamples){
             
             padid = catsegb.findPadByPosition(binxcent,binycent);
             charge[padid] += bincontent;
+            dice2[padid] += dicecontent;
             
 //            if(charge[padid] > 2){
 //               cout << "Content of bending bin (binx= " << binx << ", biny= " << biny << "): " << bincontent << endl;
@@ -264,29 +433,78 @@ void Validation::PlotMathieson2D(Double_t x, Double_t y, int nsamples){
         cout << "Nombre de bins non-bending : " << nbbinsnb << " Nombre de pads non-bending : " << nopadsnb << endl;
     }
     
+    int chargeevent = 0;
+    int chpadmax = 0;
+    int nbleftdigits = 0;
+    
     for(int i=0; i<nopadsb + nopadsnb; i++){
-        if(charge[i] > 6){  //Couper le bruit type (6ADC = 2*seuil de 3ADC, seuil de 3adc vient de 3*bruit/0.8)
+        keepdigit = GradualAcceptance(charge[i], dice2[i]);
+        if(charge[i] > 10 && keepdigit){  //Couper le bruit type (6ADC = 2*seuil de 3ADC, seuil de 3adc vient de 3*bruit/0.8)
+            if(i<nopadsb){
+                chargeevent += charge[i];
+                hchgpads->Fill(charge[i]);
+                if(charge[i]>chpadmax){
+                    chpadmax = charge[i];
+                }
+                nbleftdigits++;
+        
+              //  cout << "Un digit est en cours de création..." << endl;
 
-          //  cout << "Un digit est en cours de création..." << endl;
+                digits.push_back( std::make_unique<mch::Digit>() );
+                mch::Digit* digit = digits.back().get();
 
-            digits.push_back( std::make_unique<mch::Digit>() );
-            mch::Digit* digit = digits.back().get();
-
-               digit->setDetID(819);
-               digit->setPadID(i);
-               digit->setADC(charge[i]);
-            if(gPrintLevel > 1){
-                cout << "Digit padid " << digit->getPadID() << " et ADC " << digit->getADC() << endl;
+                   digit->setDetID(819);
+                   digit->setPadID(i);
+                   digit->setADC(charge[i]);
+                if(gPrintLevel > 1){
+                    cout << "Digit padid " << digit->getPadID() << " et ADC " << digit->getADC() << endl;
+                }
             }
         }
     }
     
+    cout << "This event had " << nbleftdigits << " digits left after noise and cuts" <<endl;
+    hNbinsafter->Fill(nbleftdigits);
+    
+    if(nbleftdigits > 1){
+        hchgafter->Fill(chargeevent);
+        hMeanYbins->Fill(chargeevent, appearancesmax);
+        hMeanbins->Fill(chargeevent, nbleftdigits);
+        hchmaxafter->Fill(chpadmax);
+    }
+    
     delete hb;
     delete hnb;
+    delete hdice;
 }
 
 
+//________________________________________________________________________________________
+bool GradualAcceptance(int charge, double dice){
+    //Following the charge, we will keep random events to get the pad charge distribution we want as in TB. To replicate the cutting process.
+    
+    double probabilitiestokeep[9] = {0.002, 0.0047, 0.0125, 0.0718, 0.1875, 0.25, 0.4333, 0.72, 0.84};
+    
+    
+    if(charge <= 10){
+           return kFALSE;
+       }
+    
+    else if(charge >= 20){
+        return kTRUE;
+    }
+    
+    else if(dice < probabilitiestokeep[charge-11]){
+        cout << "[GradualAcceptance] The charge is " << charge << " and the dice tells " << dice << " compared to " << probabilitiestokeep[charge-11] << "... KEEP" << endl;
+        return kTRUE;
+    }
+    
+    else{
+        cout << "[GradualAcceptance] The charge is " << charge << " and the dice tells " << dice << " compared to " << probabilitiestokeep[charge-11] << "... THROW" <<endl;
+        return kFALSE;
+    }
 
+}
 
 //PART GETTING THE MAPPING INFO FOR THE TWO CATHODES OF DETECTOR 819 TO MAKE NICE HISTOGRAMS BASED ON SIZE AND POSITION OF PADS
 
@@ -539,20 +757,20 @@ std::vector<Clustering::Cluster> Validation::TestClustering(){
           
     
     //To run COG Clustering
-//       clustering.runFinderCOG(preClusters, clusters);
+       clustering.runFinderCOG(preClusters, clusters);
 //        printf("Number of clusters obtained and saved: %lu\n", clusters.size());
     
     
     //To run Mathieson fit Clustering
-       clustering.runFinderSimpleFit(preClusters, clusters);
+ //      clustering.runFinderSimpleFit(preClusters, clusters);
           
     
     //To run Gaussian fit Clustering
-  //        clustering.runFinderGaussianFit(preClusters, clusters);
+ //         clustering.runFinderGaussianFit(preClusters, clusters);
     
     
     //To run Double Gaussian fit Clustering
- //   clustering.runFinderDoubleGaussianFit(preClusters, clusters);
+  //  clustering.runFinderDoubleGaussianFit(preClusters, clusters);
     
     delete digitsBuffer;
     
@@ -730,58 +948,298 @@ void PlotWidthWrtCharge(){
     
     Double_t chginput[n]  = {20, 50, 100, 200, 500, 1000, 2000, 5000};
     Double_t echginput[n] = {0, 0, 0, 0, 0, 0, 0, 0};
-    Double_t widthMathieson[n]  = {0.0724216, 0.0473039, 0.0237125, 0.0195968, 0.0136211, 0.00922341, 0.00550195, 0.00424860};
-    Double_t ewidthMathieson[n] = {0.00823728, 0.00253988, 0.000958042, 0.000588419, 0.000349494, 0.000168508, 0.0000935699, 0.0000546348};
-    Double_t widthDoubleGauss[n]  = {0.0809867, 0.0405142, 0.0245105, 0.0198315, 0.0130453, 0.00867564, 0.00585070, 0.00422690};
-    Double_t ewidthDoubleGauss[n] = {0.0110478, 0.00196554, 0.000973368, 0.000605342, 0.000327329, 0.000196655, 0.0000988013, 0.0000564364};
-    Double_t widthGauss[n]  = {0.115848, 0.0386573, 0.0268345, 0.0240388, 0.0184959, 0.0164656, 0.0157473, 0.0171971};
-    Double_t ewidthGauss[n] = {0.0261366, 0.00189652, 0.00106311, 0.000851333, 0.000518058, 0.000461726, 0.000396683, 0.000548232};
-    Double_t widthCOG[n]  = {0.111975, 0.0470066, 0.0272162, 0.0258470, 0.0250620, 0.0212521, 0.0182168, 0.0266299};
-    Double_t ewidthCOG[n] = {0.0234304, 0.00250890, 0.00103235, 0.000912423, 0.000890655, 0.000643082, 0.000500731, 0.00143591};
     
-    TCanvas *cerr = new TCanvas("cerr","width wrt charge",0,0,600,600);
+    // RESULTATS AVEC 50 EVTS
     
-    TGraphErrors *gr2 = new TGraphErrors(n, chginput, widthMathieson, echginput, ewidthMathieson);
-    gr2->SetTitle("Residuals width wrt charge of clusters");
-    gr2->SetMarkerColor(4);
-    gr2->SetLineColor(4);
-    gr2->SetMarkerStyle(8);
-    gr2->GetXaxis()->SetTitle("charge of a cluster (ADC)");
-    gr2->GetYaxis()->SetTitle("Residual width (cm)");
-    gr2->Draw("AP");
+//    Double_t widthMathieson[n]  = {0.0724216, 0.0473039, 0.0237125, 0.0195968, 0.0136211, 0.00922341, 0.00550195, 0.00424860};
+//    Double_t ewidthMathieson[n] = {0.00823728, 0.00253988, 0.000958042, 0.000588419, 0.000349494, 0.000168508, 0.0000935699, 0.0000546348};
+//    Double_t widthDoubleGauss[n]  = {0.0809867, 0.0405142, 0.0245105, 0.0198315, 0.0130453, 0.00867564, 0.00585070, 0.00422690};
+//    Double_t ewidthDoubleGauss[n] = {0.0110478, 0.00196554, 0.000973368, 0.000605342, 0.000327329, 0.000196655, 0.0000988013, 0.0000564364};
+//    Double_t widthGauss[n]  = {0.115848, 0.0386573, 0.0268345, 0.0240388, 0.0184959, 0.0164656, 0.0157473, 0.0171971};
+//    Double_t ewidthGauss[n] = {0.0261366, 0.00189652, 0.00106311, 0.000851333, 0.000518058, 0.000461726, 0.000396683, 0.000548232};
+//    Double_t widthCOG[n]  = {0.111975, 0.0470066, 0.0272162, 0.0258470, 0.0250620, 0.0212521, 0.0182168, 0.0266299};
+//    Double_t ewidthCOG[n] = {0.0234304, 0.00250890, 0.00103235, 0.000912423, 0.000890655, 0.000643082, 0.000500731, 0.00143591};
+
+    // RESULTATS AVEC 2000 EVTS
     
-    TGraphErrors *gr3 = new TGraphErrors(n, chginput, widthDoubleGauss, echginput, ewidthDoubleGauss);
-     gr3->SetMarkerColor(2);
-     gr3->SetLineColor(2);
-     gr3->SetMarkerStyle(8);
-    gr3->Draw("P SAME");
+        Double_t widthCOG[n]  = {7.60227E-02, 3.91475E-02, 2.70075E-02, 2.47138E-02, 2.36353E-02, 1.95029E-02, 1.81684E-02, 1.80579E-02};
+        Double_t ewidthCOG[n] = {8.74033E-04, 1.77986E-04, 9.88354E-05, 8.31474E-05, 6.91609E-05, 5.04850E-05, 4.32215E-05, 4.11040E-05};
     
-    TGraphErrors *gr4 = new TGraphErrors(n, chginput, widthCOG, echginput, ewidthCOG);
-     gr4->SetMarkerColor(3);
-     gr4->SetLineColor(3);
-     gr4->SetMarkerStyle(8);
-    gr4->Draw("P SAME");
+        Double_t widthGauss[n]  = {8.04075E-02, 4.18631E-02, 2.88616E-02, 2.23938E-02, 1.83937E-02, 1.64864E-02, 1.49507E-02, 1.41666E-02};
+        Double_t ewidthGauss[n] = {1.00424E-03, 1.93914E-04, 1.03890E-04, 7.12706E-05, 5.00895E-05, 3.87129E-05, 3.38022E-05, 2.98527E-05};
     
-    TGraphErrors *gr5 = new TGraphErrors(n, chginput, widthGauss, echginput, ewidthGauss);
-     gr5->SetMarkerColor(1);
-     gr5->SetLineColor(1);
-     gr5->SetMarkerStyle(8);
-    gr5->Draw("P SAME");
+        Double_t widthDoubleGauss[n]  = {7.82095E-02, 4.09391E-02, 2.75198E-02, 2.12291E-02, 1.26785E-02, 8.64849E-03, 5.82560E-03, 3.99766E-03};
+        Double_t ewidthDoubleGauss[n] = {9.27416E-04, 1.86571E-04, 9.97959E-05, 6.53720E-05, 3.18873E-05, 1.71273E-05, 9.97586E-06, 5.41483E-06};
+    
+        Double_t widthMathieson[n]  = {8.36689E-02, 3.94728E-02, 2.70987E-02, 1.85719E-02, 1.22286E-02, 8.33011E-03, 5.73253E-03, 3.71460E-03};
+        Double_t ewidthMathieson[n] = {1.12688E-03, 1.76920E-04, 9.55805E-05, 5.20617E-05, 2.77115E-05, 1.67013E-05, 9.26347E-06, 5.06832E-06};
+    
+        Double_t widthMathieson01[n]  = {8.05518E-02, 4.62265E-02, 3.63358E-02, 2.84678E-02, 2.41877E-02, 2.34258E-02, 2.32844E-02, 2.41844E-02};
+        Double_t ewidthMathieson01[n] = {1.01157E-03, 2.47385E-04, 1.51532E-04, 1.01928E-04, 7.55642E-05, 6.69759E-05, 6.37582E-05, 6.61309E-05};
+    
+        Double_t widthMathieson02[n]  = {8.04581E-02, 4.53607E-02, 3.16927E-02, 2.26150E-02, 1.61596E-02, 1.51937E-02, 1.44840E-02, 1.45222E-02};
+        Double_t ewidthMathieson02[n] = {1.01779E-03, 2.27123E-04, 1.22195E-04, 7.31616E-05, 4.62418E-05, 3.82145E-05, 3.24152E-05, 3.08703E-05};
+    
+        Double_t widthMathieson03[n]  = {7.28293E-02, 4.22823E-02, 2.89688E-02, 1.96324E-02, 1.38605E-02, 1.12013E-02, 1.00848E-02, 8.96331E-03};
+        Double_t ewidthMathieson03[n] = {7.66027E-04, 2.02240E-04, 1.07416E-04, 6.20914E-05, 3.54202E-05, 2.51841E-05, 2.03993E-05, 1.59101E-05};
+    
+        Double_t widthMathieson04[n]  = {8.37835E-02, 4.21793E-02, 2.76214E-02, 1.92385E-02, 1.25567E-02, 9.18683E-03, 6.93955E-03, 5.47619E-03};
+        Double_t ewidthMathieson04[n] = {1.10881E-03, 1.99743E-04, 1.01470E-04, 6.04768E-05, 3.06376E-05, 1.90336E-05, 1.27466E-05, 8.57512E-06};
+    
+    
+    
+    
+    TCanvas *cwid = new TCanvas("cwid","width wrt charge",0,0,600,600);
+    
+    TGraphErrors *gr01 = new TGraphErrors(n, chginput, widthCOG, echginput, ewidthCOG);
+    gr01->SetTitle("Residuals width wrt charge of clusters");
+    gr01->SetMarkerColor(1);
+    gr01->SetLineColor(1);
+    gr01->SetMarkerStyle(8);
+    gr01->GetXaxis()->SetTitle("charge of a cluster (ADC)");
+    gr01->GetYaxis()->SetTitle("Residual width (cm)");
+    gr01->GetHistogram()->SetMinimum(0.001);
+    gr01->GetHistogram()->SetMaximum(0.1);
+    gr01->Draw("AP");
+    
+        TGraphErrors *gr02 = new TGraphErrors(n, chginput, widthGauss, echginput, ewidthGauss);
+         gr02->SetMarkerColor(2);
+         gr02->SetLineColor(2);
+         gr02->SetMarkerStyle(8);
+        gr02->Draw("P SAME");
+    
+        TGraphErrors *gr03 = new TGraphErrors(n, chginput, widthDoubleGauss, echginput, ewidthDoubleGauss);
+         gr03->SetMarkerColor(3);
+         gr03->SetLineColor(3);
+         gr03->SetMarkerStyle(8);
+        gr03->Draw("P SAME");
+    
+    TGraphErrors *gr04 = new TGraphErrors(n, chginput, widthMathieson, echginput, ewidthMathieson);
+    gr04->SetMarkerColor(4);
+    gr04->SetLineColor(4);
+    gr04->SetMarkerStyle(8);
+    gr04->Draw("P SAME");
+    
+    
     
     auto legend = new TLegend(0.7,0.7,0.9,0.9);
                     legend->SetHeader("Clustering procedures"); // option "C" allows to center the header
-                    legend->AddEntry(gr2,"Mathieson fit, K3 AliRoot","lep");
-                    legend->AddEntry(gr3, "Double Gaussian fit, K3 AliRoot","lep");
-                    legend->AddEntry(gr5, "Simple Gaussian fit, K3 AliRoot","lep");
-                    legend->AddEntry(gr4, "Center of Gravity","lep");
+                    legend->AddEntry(gr01, "Center of Gravity","lep");
+                    legend->AddEntry(gr02, "Simple Gaussian fit, K3 AliRoot","lep");
+                    legend->AddEntry(gr03, "Double Gaussian fit, K3 AliRoot","lep");
+                    legend->AddEntry(gr04,"Mathieson fit, K3 AliRoot","lep");
                     legend->Draw();
     
-    cerr->SetLogx(true);
-    cerr->SetLogy(true);
-    cerr->Update();
-    cerr->Draw();
+    cwid->SetLogx(true);
+    cwid->SetLogy(true);
+    cwid->Update();
+    cwid->Draw();
+    
+    // K3 related study
+    
+    TCanvas *cerrk = new TCanvas("cerrk","width wrt charge",0,0,600,600);
+    
+    TGraphErrors *gr010 = new TGraphErrors(n, chginput, widthMathieson01, echginput, ewidthMathieson01);
+    gr010->SetTitle("Residuals width wrt charge of clusters for different K3");
+    gr010->SetMarkerColor(1);
+    gr010->SetLineColor(1);
+    gr010->SetMarkerStyle(8);
+    gr010->GetXaxis()->SetTitle("charge of a cluster (ADC)");
+    gr010->GetYaxis()->SetTitle("Residual width (cm)");
+    gr010->GetHistogram()->SetMinimum(0.001);
+    gr010->GetHistogram()->SetMaximum(0.1);
+    gr010->Draw("AP");
+    
+    TGraphErrors *gr020 = new TGraphErrors(n, chginput, widthMathieson02, echginput, ewidthMathieson02);
+    gr020->SetMarkerColor(2);
+    gr020->SetLineColor(2);
+    gr020->SetMarkerStyle(8);
+    gr020->Draw("P SAME");
+    
+    TGraphErrors *gr030 = new TGraphErrors(n, chginput, widthMathieson03, echginput, ewidthMathieson03);
+    gr030->SetMarkerColor(3);
+    gr030->SetLineColor(3);
+    gr030->SetMarkerStyle(8);
+    gr030->Draw("P SAME");
+    
+    TGraphErrors *gr040 = new TGraphErrors(n, chginput, widthMathieson04, echginput, ewidthMathieson04);
+    gr040->SetMarkerColor(5);
+    gr040->SetLineColor(5);
+    gr040->SetMarkerStyle(8);
+    gr040->Draw("P SAME");
+    
+    TGraphErrors *gr058 = new TGraphErrors(n, chginput, widthMathieson, echginput, ewidthMathieson);
+    gr058->SetMarkerColor(4);
+    gr058->SetLineColor(4);
+    gr058->SetMarkerStyle(8);
+    gr058->Draw("P SAME");
     
     
+    
+    auto legend2 = new TLegend(0.7,0.7,0.9,0.9);
+                    legend2->SetHeader("Clustering procedures"); // option "C" allows to center the header
+                    legend2->AddEntry(gr010, "Mathieson fit, K3 = 0,1","lep");
+                    legend2->AddEntry(gr020, "Mathieson fit, K3 = 0,2","lep");
+                    legend2->AddEntry(gr030, "Mathieson fit, K3 = 0,3","lep");
+                    legend2->AddEntry(gr040, "Mathieson fit, K3 = 0,4","lep");
+                    legend2->AddEntry(gr058,"Mathieson fit, K3 AliRoot = 0,584","lep");
+                    legend2->Draw();
+    
+    cerrk->SetLogx(true);
+    cerrk->SetLogy(true);
+    cerrk->Update();
+    cerrk->Draw();
+    
+    
+    
+}
+
+
+void PowFitHitsWrtChg(){
+
+    const Int_t n = 11;
+
+    Double_t Kyinput[n]  = {0.1, 0.2, 0.3, 0.4, 0.5085, 0.5840, 0.6, 0.7, 0.8, 0.9, 1.0};
+    Double_t eKyinput[n] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+    // RESULTATS Nhit
+
+        Double_t A[n]  = {-4.21090E-01, -4.38204E-01, -4.37657E-01, -4.38090E-01, -4.50430E-01, -4.44181E-01, -4.37458E-01, -4.40858E-01, -4.61754E-01, -4.83430e-01, -5.14002E-01};
+        Double_t eA[n] = {8.06906E-02, 8.07751E-02, 8.12839E-02, 8.16296E-02, 8.22543E-02, 8.28223E-02, 8.30776E-02, 8.38515E-02, 8.41772E-02, 8.46338e-02, 8.54575E-02};
+
+        Double_t B[n]  = {1.82640E-01, 1.87841E-01, 1.91275E-01, 1.94537E-01, 1.98234E-01, 2.00095E-01, 2.00262E-01, 2.03291E-01, 2.06923E-01, 2.10539e-01, 2.14624E-01};
+        Double_t eB[n] = {3.67935E-03, 3.56855E-03, 3.51521E-03, 3.46050E-03, 3.40752E-03, 3.39232E-03, 3.39789E-03, 3.36618E-03, 3.30577E-03, 3.25156e-03, 3.20159E-03};
+    
+    // RESULTATS NYhit
+    
+        Double_t Ay[n]  = {-2.04643E-01, -2.12065E-01, -1.95381E-01, -1.83955E-01, -1.88283E-01, -1.80734E-01, -1.76481E-01, -1.76784E-01, -1.89669E-01, -2.10244e-01, -2.42355E-01};
+           Double_t eAy[n] = {7.43735E-02, 7.44994E-02, 7.52579E-02, 7.57952E-02, 7.64351E-02, 7.70176E-02, 7.73119E-02, 7.80585E-02, 7.85110E-02, 7.89559e-02, 7.96241E-02};
+
+           Double_t By[n]  = {1.45580E-01, 1.51095E-01, 1.54191E-01, 1.57273E-01, 1.61149E-01, 1.63162E-01, 1.63482E-01, 1.66773E-01, 1.70706E-01, 1.74885e-01, 1.79758E-01};
+           Double_t eBy[n] = {4.29345E-03, 4.15430E-03, 4.11402E-03, 4.06387E-03, 3.99849E-03, 3.97858E-03, 3.98475E-03, 3.94130E-03, 3.86845E-03, 3.79078e-03, 3.70815E-03};
+
+
+    TCanvas *cpowA = new TCanvas("cpowA","Power Fit Coefficient A wrt K3",0,0,600,600);
+    TCanvas *cpowB = new TCanvas("cpowB","Power Fit Coefficient B wrt K3",0,0,600,600);
+
+    cpowA->cd();
+    TGraphErrors *grA = new TGraphErrors(n, Kyinput, A, eKyinput, eA);
+    grA->SetTitle("Power Fit Coefficient A wrt K3");
+    grA->SetMarkerColor(1);
+    grA->SetLineColor(1);
+    grA->SetMarkerStyle(8);
+    grA->GetXaxis()->SetTitle("K3y");
+    grA->GetYaxis()->SetTitle("Values of Power fit coefficients");
+    grA->Draw("AP");
+    grA->GetYaxis()->SetRangeUser(-1,0.3);
+    grA->Draw("AP");
+    
+    TF1 *fA = new TF1("f1","-6.20309E-01",0,1.2);
+    fA->SetLineColor(1);
+    fA->SetLineStyle(1);
+    fA->Draw("SAME");
+    
+    TF1 *fAup = new TF1("f1","-6.20309E-01 + 2.64759E-01",0,1.2);
+    fAup->SetLineColor(1);
+    fAup->SetLineStyle(2);
+    fAup->Draw("SAME");
+    
+    TF1 *fAdown = new TF1("f1","-6.20309E-01 - 2.64759E-01",0,1.2);
+    fAdown->SetLineColor(1);
+    fAdown->SetLineStyle(2);
+    fAdown->Draw("SAME");
+
+    
+    TGraphErrors *grAy = new TGraphErrors(n, Kyinput, Ay, eKyinput, eAy);
+    grAy->SetMarkerColor(2);
+    grAy->SetLineColor(2);
+    grAy->SetMarkerStyle(8);
+    grAy->Draw("P SAME");
+    
+    TF1 *fAy = new TF1("f1","-3.45061E-01",0,1.2);
+    fAy->SetLineColor(2);
+    fAy->SetLineStyle(1);
+    fAy->Draw("SAME");
+    
+    TF1 *fAyup = new TF1("f1","-3.45061E-01 + 2.38040E-01",0,1.2);
+    fAyup->SetLineColor(2);
+    fAyup->SetLineStyle(2);
+    fAyup->Draw("SAME");
+    
+    TF1 *fAydown = new TF1("f1","-3.45061E-01 - 2.38040E-01",0,1.2);
+    fAydown->SetLineColor(2);
+    fAydown->SetLineStyle(2);
+    fAydown->Draw("SAME");
+    
+    
+    
+    auto legendA = new TLegend(0.7,0.7,0.9,0.9);
+                    legendA->SetHeader("Fit coefficients"); // option "C" allows to center the header
+                    legendA->AddEntry(grA, "Constant A - Nhits","lep");
+                    legendA->AddEntry(grAy, "Constant A - NYhits","lep");
+                    legendA->Draw();
+    
+    cpowB->cd();
+    TGraphErrors *grB = new TGraphErrors(n, Kyinput, B, eKyinput, eB);
+     grB->SetTitle("Power Fit Coefficient B wrt K3");
+     grB->SetMarkerColor(1);
+     grB->SetLineColor(1);
+     grB->SetMarkerStyle(5);
+    grB->GetXaxis()->SetTitle("K3y");
+    grB->GetYaxis()->SetTitle("Values of Power fit coefficients");
+    grB->Draw("AP");
+    grB->GetYaxis()->SetRangeUser(0.1,0.3);
+    grB->Draw("AP");
+    
+    TF1 *fB = new TF1("f1","2.01511E-01",0,1.2);
+       fB->SetLineColor(1);
+       fB->SetLineStyle(1);
+       fB->Draw("SAME");
+       
+       TF1 *fBup = new TF1("f1","2.01511E-01 + 1.07484E-02",0,1.2);
+       fBup->SetLineColor(1);
+       fBup->SetLineStyle(2);
+       fBup->Draw("SAME");
+       
+       TF1 *fBdown = new TF1("f1","2.01511E-01 - 1.07484E-02",0,1.2);
+       fBdown->SetLineColor(1);
+       fBdown->SetLineStyle(2);
+       fBdown->Draw("SAME");
+
+        TGraphErrors *grBy = new TGraphErrors(n, Kyinput, By, eKyinput, eBy);
+         grBy->SetMarkerColor(2);
+         grBy->SetLineColor(2);
+         grBy->SetMarkerStyle(5);
+        grBy->Draw("P SAME");
+    
+    TF1 *fBy = new TF1("f1","1.63366E-01",0,1.2);
+    fBy->SetLineColor(2);
+    fBy->SetLineStyle(1);
+    fBy->Draw("SAME");
+    
+    TF1 *fByup = new TF1("f1","1.63366E-01 + 1.22941E-02",0,1.2);
+    fByup->SetLineColor(2);
+    fByup->SetLineStyle(2);
+    fByup->Draw("SAME");
+    
+    TF1 *fBydown = new TF1("f1","1.63366E-01 - 1.22941E-02",0,1.2);
+    fBydown->SetLineColor(2);
+    fBydown->SetLineStyle(2);
+    fBydown->Draw("SAME");
+
+    auto legendB = new TLegend(0.7,0.7,0.9,0.9);
+                    legendB->SetHeader("Fit coefficients"); // option "C" allows to center the header
+                    legendB->AddEntry(grB, "Constant B - Nhits","lep");
+                    legendB->AddEntry(grBy, "Constant B - NYhits","lep");
+                    legendB->Draw();
+
+    cpowA->Update();
+    cpowA->Draw();
+
+    cpowB->Update();
+    cpowB->Draw();
+
+
 }
 
 

@@ -18,6 +18,7 @@
 #include "MCHBase/Digit.h"
 #include "../../PreClustering/src/PreClusterFinder.h"
 #include "MCHClustering/ClusteringForTest.h"
+#include "TH1.h"
 
 using namespace o2::mch;
 using namespace std;
@@ -34,12 +35,14 @@ void ResidualsCOG();
 void ResidualsCompare();
 void ResidualsPlot(double yarray[], double resyfound[], double eyfound[], const int size);
 void PlotWidthWrtCharge();
+bool GradualAcceptance(int charge, double dice);
+void PowFitHitsWrtChg();
 
 class Validation
 {
 public:
   Validation();
-  void PlotMathieson2D(Double_t x, Double_t y, int nsamples);
+  void PlotMathieson2D(TH1F* hchgpads, TH1F* hchgafter, TH1F* hchmaxafter, TH1F* hNbinsafter, TH1F* hNbinsX, TH1F* hNbinsXafter, TH1F* hNbinsY, TH1F* hNbinsYafter, TH1F* hMeanYbins, TH1F* hMeanbins, Double_t x, Double_t y, int nsamples, int SeedMath = 0);
   void InfoDE819b();
   void InfoDE819nb();
   std::vector<Clustering::Cluster> TestClustering();
