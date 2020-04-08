@@ -179,4 +179,6 @@ std::ostream& operator<<(std::ostream& stream, const TBCluster& c)
       <<"  fK3x: "<<c.fK3x<<"\n"
       <<"  fK3y: "<<c.fK3y<<"\n"
       <<"  fK3yrec: "<<c.fK3yrec<<"\n";
+    
+    return stream;
 }
