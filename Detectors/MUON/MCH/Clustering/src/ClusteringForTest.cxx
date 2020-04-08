@@ -395,9 +395,10 @@ Clustering::Cluster Clustering::ComputePositionClean(std::vector<Digit> &preclus
 
   Float_t stepX = 0.00001; // cm
   Float_t stepY = 0.00001; // cm
-    Double_t Kx3 = 0.5085;
-    Double_t Ky3 = 0.5840;
-  //  Double_t Ky3 = 0.2; //Compare with Alberto
+    Double_t Ky3 = 0.5085;
+    Double_t Kx3 = 0.5840;
+//    Double_t Ky3 = 0.2; //Compare with Alberto
+  //  Double_t Ky3 = 0.4; //For tests
     
     MyObjectDigits digits;
 
@@ -724,8 +725,8 @@ Clustering::Cluster Clustering::ComputePositionGaussianFitClean(std::vector<Digi
 
       Float_t stepX = 0.00001; // cm
       Float_t stepY = 0.00001; // cm
-        Double_t sigx = 0.7604;
-        Double_t sigy = 0.7808;
+        Double_t sigy = 0.7604;
+        Double_t sigx = 0.7808;
         
         
         MyObjectDigits digits;
@@ -1020,12 +1021,12 @@ Clustering::Cluster Clustering::ComputePositionDoubleGaussianFitClean(std::vecto
 
       Float_t stepX = 0.00001; // cm
       Float_t stepY = 0.00001; // cm
-        Double_t sig1x = 1.1059;
-        Double_t sig1y = 1.1350;
-        Double_t sig2x = 0.5702;
-        Double_t sig2y = 0.5785;
-        Double_t chgfracx = 0.6233;
-        Double_t chgfracy = 0.6519;
+        Double_t sig1y = 1.1059;
+        Double_t sig1x = 1.1350;
+        Double_t sig2y = 0.5702;
+        Double_t sig2x = 0.5785;
+        Double_t chgfracy = 0.6233;
+        Double_t chgfracx = 0.6519;
         
         
         MyObjectDigits digits;
