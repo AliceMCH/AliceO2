@@ -48,6 +48,10 @@ bool TBDigitsFileReader::readDigitsFromFile()
 
   /// send the digits of the current event
 
+  int event, sievent;
+  mInputFile.read(reinterpret_cast<char*>(&event), sizeof(int));
+  mInputFile.read(reinterpret_cast<char*>(&sievent), sizeof(int));
+
   int nDE = 0;
   int DE1 = 0; 
   mInputFile.read(reinterpret_cast<char*>(&nDE), sizeof(int));
@@ -66,8 +70,8 @@ bool TBDigitsFileReader::readDigitsFromFile()
     int npad;
     mInputFile.read(reinterpret_cast<char*>(&npad), sizeof(int));
 
-    int dsId, dsCh, size, time;
-    float charge;
+    int dsId, dsCh, size, time, padX, padY;
+    float charge, posX, posY;
     for(int ih = 0; ih < npad; ih++) {
 
       mInputFile.read(reinterpret_cast<char*>(&dsId), sizeof(int));
@@ -76,6 +80,11 @@ bool TBDigitsFileReader::readDigitsFromFile()
       mInputFile.read(reinterpret_cast<char*>(&time), sizeof(int));
       mInputFile.read(reinterpret_cast<char*>(&charge), sizeof(float));
 
+      mInputFile.read(reinterpret_cast<char*>(&padX), sizeof(int));
+      mInputFile.read(reinterpret_cast<char*>(&padY), sizeof(int));
+
+      mInputFile.read(reinterpret_cast<char*>(&posX), sizeof(float));
+      mInputFile.read(reinterpret_cast<char*>(&posY), sizeof(float));
       printf("B  hit %d  dsid=%d chan=%d  charge=%f  time=%d\n",
           ih, dsId, dsCh, charge, time);
 
@@ -88,7 +97,21 @@ bool TBDigitsFileReader::readDigitsFromFile()
       try {
         mapping::Segmentation segment(detId);
         int padId = segment.findPadByFEE(dualSampaId, dualSampaChannel);
-        if(padId < 0) continue;
+        if(padId < 0) {
+          printf("padId: %d\n", padId);
+          continue;
+        }
+
+        float X = segment.padPositionX(padId);
+        float Y = segment.padPositionY(padId);
+
+        if(Y != posY) {
+          printf("B  hit %d  dsid=%d chan=%d  charge=%f  time=%d\n",
+              ih, dsId, dsCh, charge, time);
+          std::cout<<"posY: "<<posY<<"  "<<Y<<std::endl;
+          break;
+        }
+
         //digits.push_back( std::make_unique<Digit>(time, detId, padId, adc) );
         digits.push_back( std::make_unique<Digit>() );
         Digit* mchdigit = digits.back().get();
@@ -104,6 +127,7 @@ bool TBDigitsFileReader::readDigitsFromFile()
 
     int nclus;
     mInputFile.read(reinterpret_cast<char*>(&nclus), sizeof(int));
+    printf("nclus: %d\n", nclus);
 
     for(int ic = 0; ic < nclus; ic++) {
       clusters.emplace_back();
@@ -179,6 +203,6 @@ std::ostream& operator<<(std::ostream& stream, const TBCluster& c)
       <<"  fK3x: "<<c.fK3x<<"\n"
       <<"  fK3y: "<<c.fK3y<<"\n"
       <<"  fK3yrec: "<<c.fK3yrec<<"\n";
-    
-    return stream;
+
+  return stream;
 }
