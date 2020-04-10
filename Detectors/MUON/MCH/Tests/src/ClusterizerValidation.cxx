@@ -23,6 +23,7 @@
 #include "Validation.h"
 
 #include "TMath.h"
+#include "TFile.h"
 #include "TRandom.h"
 #include "TH1.h"
 #include "TF1.h"
@@ -42,6 +43,8 @@ int main(int argc, char** argv){
     
     // Declaration of arrays. The size of the arrays is hardcoded (it wouldn't accept an initialisation using a variable)
     // The size of the arrays should be the number of events you wish to simulate
+    
+    TFile *f = new TFile("ComparisonSimuTB/NumberOfPadsWrtCharge/N\(Y\)HitsChargeIntervals/out_6500evts_KyMathieson.root", "NEW");
     
     double xarray[6500]{0};
     double yarray[6500]{0};
@@ -76,10 +79,14 @@ int main(int argc, char** argv){
     TRandom *xgen = new TRandom(123456);
     TRandom *chggen = new TRandom(123);
     
+    double newbins[5]{0,300,600,1000,3000};
+    
     TCanvas *cchg = new TCanvas("cchg","Charge",0,0,600,600);
       TH1F *hchg = new TH1F("hchg", "Validation data cluster charge distribution without cuts or noise", 150, 0, 3000);
       TH1F *hchgafter = new TH1F("hchgafter", "Validation data cluster charge distribution with cuts and noise on bending plane, events with > 1 digit", 60, 0, 3000);
     hchgafter->SetLineColor(3);
+    
+    TCanvas *cchgrebin = new TCanvas("cchgrebin","Charge rebin",0,0,600,600);
     
     TCanvas *cNbinsY = new TCanvas("cNbinsY","NBinsY",0,0,600,600);
       TH1F *hNbinsY = new TH1F("hNbinsY", "Validation data cluster NBinsY distribution without cuts or noise", 20, 0.5, 20.5);
@@ -89,6 +96,9 @@ int main(int argc, char** argv){
     TCanvas *cMeanYbins = new TCanvas("cMeanYbins","cMeanYbins",0,0,600,600);
       TH1F *hMeanYbins = new TH1F("hMeanYbins", "Validation data mean Y pads wrt charge with cuts and noise on bending plane, events with > 1 digit", 60, 0, 3000);
     hMeanYbins->SetLineColor(3);
+    
+    TCanvas *cMeanYbinsrebin = new TCanvas("cMeanYbinsrebin","cMeanYbinsrebin",0,0,600,600);
+    TCanvas *cMeanbinsrebin = new TCanvas("cMeanbinsrebin","cMeanbinsrebin",0,0,600,600);
     
     TCanvas *cMeanbins = new TCanvas("cMeanbins","cMeanbins",0,0,600,600);
       TH1F *hMeanbins = new TH1F("hMeanbins", "Validation data mean pads wrt charge with cuts and noise on bending plane, events with > 1 digit", 60, 0, 3000);
@@ -110,6 +120,22 @@ int main(int argc, char** argv){
     TCanvas *cchgpads = new TCanvas("cchgpads","cchgpads",0,0,600,600);
       TH1F *hchgpads = new TH1F("hchgpads", "Validation data pad charge distribution with cuts or noise, all events", 3000, 0, 3000);
     hchgpads->SetLineColor(3);
+    
+    
+    
+       TCanvas *cChargeIntervals = new TCanvas("cChargeIntervals","NHits wrt K3 for different charge intervals",0,0,600,600);
+       TH1F *hNhits0_300 = new TH1F("hNhits0_300", "Validation data NHits distribution - Charge 0 to 300 ADC, events with > 1 digit", 8, 0.5, 8.5);
+       TH1F *hNhits300_600 = new TH1F("hNhits300_600", "Validation data NHits distribution - Charge 300 to 600 ADC, events with > 1 digit", 8, 0.5, 8.5);
+       TH1F *hNhits600_1000 = new TH1F("hNhits600_1000", "Validation data NHits distribution - Charge 600 to 1000 ADC, events with > 1 digit", 8, 0.5, 8.5);
+       TH1F *hNhits1000_3000 = new TH1F("hNhits1000_3000", "Validation data NHits distribution - Charge 1000 to 3000 ADC, events with > 1 digit", 8, 0.5, 8.5);
+       
+       TCanvas *cChargeIntervals_Y = new TCanvas("cChargeIntervals_Y","NYHits wrt K3 for different charge intervals",0,0,600,600);
+       TH1F *hYNhits0_300 = new TH1F("hYNhits0_300", "Validation data NHitsY distribution - Charge 0 to 300 ADC, events with > 1 digit", 8, 0.5, 8.5);
+       TH1F *hYNhits300_600 = new TH1F("hYNhits300_600", "Validation data NHitsY distribution - Charge 300 to 600 ADC, events with > 1 digit", 8, 0.5, 8.5);
+       TH1F *hYNhits600_1000 = new TH1F("hYNhits600_1000", "Validation data NHitsY distribution - Charge 600 to 1000 ADC, events with > 1 digit", 8, 0.5, 8.5);
+       TH1F *hYNhits1000_3000 = new TH1F("hYNhits1000_3000", "Validation data NHitsY distribution - Charge 1000 to 3000 ADC, events with > 1 digit", 8, 0.5, 8.5);
+    
+    
     
     cchg->Divide(2,1);
     cNbinsY->Divide(2,1);
@@ -162,7 +188,7 @@ int main(int argc, char** argv){
    validation.InfoDE819nb();
     for(int i=0; i<6500 ; i++){
     cout << "\n\n==========\nHit generation, histograms plotting and digitization\n\n" << endl;
-   validation.PlotMathieson2D(hchgpads, hchgafter, hchmaxafter, hNbinsafter, hNbinsX, hNbinsXafter, hNbinsY, hNbinsYafter, hMeanYbins, hMeanbins, xarray[i], yarray[i], chg[i]);
+   validation.PlotMathieson2D(hchgpads, hchgafter, hchmaxafter, hNbinsafter, hNbinsX, hNbinsXafter, hNbinsY, hNbinsYafter, hMeanYbins, hMeanbins, hNhits0_300, hNhits300_600, hNhits600_1000, hNhits1000_3000, hYNhits0_300, hYNhits300_600, hYNhits600_1000, hYNhits1000_3000, xarray[i], yarray[i], chg[i]);
     cout << "\n\n==========\nTesting the (pre)clustering\n\n" << endl;
         cout << "EVENT # " << i << endl;
    clusters = validation.TestClustering();
@@ -178,8 +204,17 @@ int main(int argc, char** argv){
     hchgafter->GetXaxis()->SetTitle("Charge (ADC)");
     hchgafter->GetYaxis()->SetTitle("Count");
     hchgafter->Draw();
+    TH1F* hchgafterrebin = (TH1F*)hchgafter->Rebin(4, "hchgafterrebin", newbins);
     cchg->Update();
     cchg->Draw();
+    
+    cchgrebin->cd();
+    hchgafter->GetXaxis()->SetTitle("Charge (ADC)");
+    hchgafter->GetYaxis()->SetTitle("Count");
+    hchgafterrebin->SetLineColor(3);
+    hchgafterrebin->Draw();
+    cchgrebin->Update();
+    cchgrebin->Draw();
     
     cNbinsY->cd(1);
     hNbinsY->GetXaxis()->SetTitle("Number of pads on y");
@@ -229,6 +264,7 @@ int main(int argc, char** argv){
     cMeanYbins->cd();
     hMeanYbins->GetXaxis()->SetTitle("Charge (ADC)");
     hMeanYbins->GetYaxis()->SetTitle("Mean number of pads on y");
+    TH1F* hMeanYbinsrebin = (TH1F*)hMeanYbins->Rebin(4, "hMeanYbinsrebin", newbins);
     hMeanYbins->Divide(hchgafter);
     hMeanYbins->Draw();
     cMeanYbins->Update();
@@ -237,11 +273,79 @@ int main(int argc, char** argv){
     cMeanbins->cd();
     hMeanbins->GetXaxis()->SetTitle("Charge (ADC)");
     hMeanbins->GetYaxis()->SetTitle("Mean number of pads");
+    TH1F* hMeanbinsrebin = (TH1F*)hMeanbins->Rebin(4, "hMeanbinsrebin", newbins);
     hMeanbins->Divide(hchgafter);
     hMeanbins->Draw();
     cMeanbins->Update();
     cMeanbins->Draw();
     
+    
+    cMeanYbinsrebin->cd();
+    hMeanYbinsrebin->GetXaxis()->SetTitle("Charge (ADC)");
+    hMeanYbinsrebin->GetYaxis()->SetTitle("Mean number of pads on y");
+    hMeanYbinsrebin->Divide(hchgafterrebin);
+    hMeanYbinsrebin->SetLineColor(3);
+    hMeanYbinsrebin->Draw();
+    cMeanYbinsrebin->Update();
+    cMeanYbinsrebin->Draw();
+    
+    cMeanbinsrebin->cd();
+    hMeanbinsrebin->GetXaxis()->SetTitle("Charge (ADC)");
+    hMeanbinsrebin->GetYaxis()->SetTitle("Mean number of pads on y");
+    hMeanbinsrebin->Divide(hchgafterrebin);
+    hMeanbinsrebin->SetLineColor(3);
+    hMeanbinsrebin->Draw();
+    cMeanbinsrebin->Update();
+    cMeanbinsrebin->Draw();
+    
+    
+    
+    cChargeIntervals->Divide(2,2);
+    cChargeIntervals->cd(1);
+    hNhits0_300->GetXaxis()->SetTitle("Number of pads fired");
+    hNhits0_300->GetYaxis()->SetTitle("Count");
+    hNhits0_300->Draw();
+    cChargeIntervals->cd(2);
+    hNhits300_600->GetXaxis()->SetTitle("Number of pads fired");
+    hNhits300_600->GetYaxis()->SetTitle("Count");
+    hNhits300_600->Draw();
+    cChargeIntervals->cd(3);
+    hNhits600_1000->GetXaxis()->SetTitle("Number of pads fired");
+    hNhits600_1000->GetYaxis()->SetTitle("Count");
+    hNhits600_1000->Draw();
+    cChargeIntervals->cd(4);
+    hNhits1000_3000->GetXaxis()->SetTitle("Number of pads fired");
+    hNhits1000_3000->GetYaxis()->SetTitle("Count");
+    hNhits1000_3000->Draw();
+    cChargeIntervals->Update();
+    cChargeIntervals->Draw();
+    
+    cChargeIntervals_Y->Divide(2,2);
+    cChargeIntervals_Y->cd(1);
+    hYNhits0_300->GetXaxis()->SetTitle("Number of pads fired on Y");
+    hYNhits0_300->GetYaxis()->SetTitle("Count");
+    hYNhits0_300->Draw();
+    cChargeIntervals_Y->cd(2);
+    hYNhits300_600->GetXaxis()->SetTitle("Number of pads fired on Y");
+    hYNhits300_600->GetYaxis()->SetTitle("Count");
+    hYNhits300_600->Draw();
+    cChargeIntervals_Y->cd(3);
+    hYNhits600_1000->GetXaxis()->SetTitle("Number of pads fired on Y");
+    hYNhits600_1000->GetYaxis()->SetTitle("Count");
+    hYNhits600_1000->Draw();
+    cChargeIntervals_Y->cd(4);
+    hYNhits1000_3000->GetXaxis()->SetTitle("Number of pads fired on Y");
+    hYNhits1000_3000->GetYaxis()->SetTitle("Count");
+    hYNhits1000_3000->Draw();
+    cChargeIntervals_Y->Update();
+    cChargeIntervals_Y->Draw();
+    
+    
+    cChargeIntervals->SaveAs("ComparisonSimuTB/NumberOfPadsWrtCharge/N\(Y\)HitsChargeIntervals/NHits_KyMathieson_6500evts.pdf");
+cChargeIntervals_Y->SaveAs("ComparisonSimuTB/NumberOfPadsWrtCharge/N\(Y\)HitsChargeIntervals/NYHits_KyMathieson_6500evts.pdf");
+    
+    f->Write();
+    f->Close();
 
     cout << "\n\n==========\nValidation procedure terminated\n\n" << endl;
 

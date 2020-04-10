@@ -42,7 +42,7 @@ class Validation
 {
 public:
   Validation();
-  void PlotMathieson2D(TH1F* hchgpads, TH1F* hchgafter, TH1F* hchmaxafter, TH1F* hNbinsafter, TH1F* hNbinsX, TH1F* hNbinsXafter, TH1F* hNbinsY, TH1F* hNbinsYafter, TH1F* hMeanYbins, TH1F* hMeanbins, Double_t x, Double_t y, int nsamples, int SeedMath = 0);
+  void PlotMathieson2D(TH1F* hchgpads, TH1F* hchgafter, TH1F* hchmaxafter, TH1F* hNbinsafter, TH1F* hNbinsX, TH1F* hNbinsXafter, TH1F* hNbinsY, TH1F* hNbinsYafter, TH1F* hMeanYbins, TH1F* hMeanbins, TH1F* hNhits0_300, TH1F* hNhits300_600, TH1F* hNhits600_1000, TH1F* hNhits1000_3000, TH1F* hYNhits0_300, TH1F* hYNhits300_600, TH1F* hYNhits600_1000, TH1F* hYNhits1000_3000, Double_t x, Double_t y, int nsamples, int SeedMath = 0);
   void InfoDE819b();
   void InfoDE819nb();
   std::vector<Clustering::Cluster> TestClustering();

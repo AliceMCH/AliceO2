@@ -11,6 +11,7 @@
 #include <fstream>
 #include "TCanvas.h"
 #include "TH1F.h"
+#include "TFile.h"
 #include "TApplication.h"
 #include "TGraphErrors.h"
 
@@ -35,16 +36,18 @@ int main(int argc, char** argv)
     float ytrks[7000];
     int count = 0;
     
+//   TFile *f = new TFile("ComparisonSimuTB/ReferenceTB.root", "NEW");
+    
     TApplication app ("app",&argc,argv);
     
-    TCanvas *cbell = new TCanvas("cbell","Bell",0,0,600,600);
-    TH1F *h1 = new TH1F("h1", "Residuals distribution from TB data - My Clustering", 50, -0.1, 0.1);
-    TH1F *h2 = new TH1F("h2", "Residuals distribution from TB data - Alberto Clustering", 50, -0.1, 0.1);
-    TH1F *h3 = new TH1F("h3", "TB data cluster charge distribution", 60, 0, 3000);
-    TH1F *h4 = new TH1F("h4", "Mean YNHits as a function of charge", 60, 0, 3000);
-    TH1F *h5 = new TH1F("h5", "Mean NHits as a function of charge", 60, 0, 3000);
+    TCanvas *cResDistrib = new TCanvas("cResDistrib","Residuals Distribution",0,0,600,600);
+    TH1F *hResDist_Seb = new TH1F("hResDist_Seb", "Residuals distribution from TB data - My Clustering", 50, -0.1, 0.1);
+    TH1F *hResDist_Alberto = new TH1F("hResDist_Alberto", "Residuals distribution from TB data - Alberto Clustering", 50, -0.1, 0.1);
+    TH1F *hTB_ClusterChg = new TH1F("hTB_ClusterChg", "TB data cluster charge distribution", 300, 0, 3000);
+    TH1F *hTB_MeanYNHits = new TH1F("hTB_MeanYNHits", "Mean YNHits as a function of charge", 300, 0, 3000);
+    TH1F *hTB_MeanNHits = new TH1F("hTB_MeanNHits", "Mean NHits as a function of charge", 300, 0, 3000);
     
-    cbell->Divide(2,1);
+    cResDistrib->Divide(2,1);
     
     TCanvas *cYNhits = new TCanvas("cYNhits","cYNhits",0,0,600,600);
     TH1F *hYNhitsTB = new TH1F("hYNhitsTB", "TB data NHitsY distribution", 10, 0.5, 10.5);
@@ -60,6 +63,18 @@ int main(int argc, char** argv)
     
     TCanvas *cytrkspread = new TCanvas("cytrkspread","cytrkspread",0,0,600,600);
     TH1F *hytrkspread = new TH1F("hytrkspread", "Spread of y trk", 500, 10, 15);
+    
+    TCanvas *cChargeIntervals = new TCanvas("cChargeIntervals","NHits wrt K3 for different charge intervals",0,0,600,600);
+    TH1F *hNhitsTB0_300 = new TH1F("hNhitsTB0_300", "TB data NHits distribution - Charge 0 to 300 ADC", 8, 0.5, 8.5);
+    TH1F *hNhitsTB300_600 = new TH1F("hNhitsTB300_600", "TB data NHits distribution - Charge 300 to 600 ADC", 8, 0.5, 8.5);
+    TH1F *hNhitsTB600_1000 = new TH1F("hNhitsTB600_1000", "TB data NHits distribution - Charge 600 to 1000 ADC", 8, 0.5, 8.5);
+    TH1F *hNhitsTB1000_3000 = new TH1F("hNhitsTB1000_3000", "TB data NHits distribution - Charge 1000 to 3000 ADC", 8, 0.5, 8.5);
+    
+    TCanvas *cChargeIntervals_Y = new TCanvas("cChargeIntervals_Y","NYHits wrt K3 for different charge intervals",0,0,600,600);
+    TH1F *hYNhitsTB0_300 = new TH1F("hYNhitsTB0_300", "TB data NHitsY distribution - Charge 0 to 300 ADC", 8, 0.5, 8.5);
+    TH1F *hYNhitsTB300_600 = new TH1F("hYNhitsTB300_600", "TB data NHitsY distribution - Charge 300 to 600 ADC", 8, 0.5, 8.5);
+    TH1F *hYNhitsTB600_1000 = new TH1F("hYNhitsTB600_1000", "TB data NHitsY distribution - Charge 600 to 1000 ADC", 8, 0.5, 8.5);
+    TH1F *hYNhitsTB1000_3000 = new TH1F("hYNhitsTB1000_3000", "TB data NHitsY distribution - Charge 1000 to 3000 ADC", 8, 0.5, 8.5);
   
   preClusterFinder.init();
 
@@ -141,23 +156,41 @@ int main(int argc, char** argv)
           residualsDifference[count] = differenceMoi-differenceAlberto;
           
           
+          if(chargeAlberto < 300){
+              hNhitsTB0_300->Fill(tbclusters[0].fNhits);
+              hYNhitsTB0_300->Fill(tbclusters[0].fYNhits);
+          }
+          else if(300 <= chargeAlberto && chargeAlberto < 600){
+              hNhitsTB300_600->Fill(tbclusters[0].fNhits);
+              hYNhitsTB300_600->Fill(tbclusters[0].fYNhits);
+          }
+          else if(600 <= chargeAlberto && chargeAlberto < 1000){
+              hNhitsTB600_1000->Fill(tbclusters[0].fNhits);
+              hYNhitsTB600_1000->Fill(tbclusters[0].fYNhits);
+          }
+          else if(1000 <= chargeAlberto && chargeAlberto < 3000){
+              hNhitsTB1000_3000->Fill(tbclusters[0].fNhits);
+              hYNhitsTB1000_3000->Fill(tbclusters[0].fYNhits);
+          }
+          
+          
           // Look at the distribution of residuals from this TestBeam data
           
-            h1->Fill(differenceMoi);
-            h1->GetXaxis()->SetTitle("Residual y (cm)");
-            h1->GetYaxis()->SetTitle("Count");
-              h2->Fill(differenceAlberto);
-              h2->GetXaxis()->SetTitle("Residual y (cm)");
-              h2->GetYaxis()->SetTitle("Count");
-              h3->Fill(chargeAlberto);
-              h3->GetXaxis()->SetTitle("Cluster charge (ADC)");
-              h3->GetYaxis()->SetTitle("Count");
-              h4->Fill(chargeAlberto, tbclusters[0].fYNhits);
-              h4->GetXaxis()->SetTitle("Cluster charge (ADC)");
-              h4->GetYaxis()->SetTitle("Mean number of pads fired on Y");
-          h5->Fill(chargeAlberto, tbclusters[0].fNhits);
-          h5->GetXaxis()->SetTitle("Cluster charge (ADC)");
-          h5->GetYaxis()->SetTitle("Mean number of pads fired");
+            hResDist_Seb->Fill(differenceMoi);
+            hResDist_Seb->GetXaxis()->SetTitle("Residual y (cm)");
+            hResDist_Seb->GetYaxis()->SetTitle("Count");
+              hResDist_Alberto->Fill(differenceAlberto);
+              hResDist_Alberto->GetXaxis()->SetTitle("Residual y (cm)");
+              hResDist_Alberto->GetYaxis()->SetTitle("Count");
+              hTB_ClusterChg->Fill(chargeAlberto);
+              hTB_ClusterChg->GetXaxis()->SetTitle("Cluster charge (ADC)");
+              hTB_ClusterChg->GetYaxis()->SetTitle("Count");
+              hTB_MeanYNHits->Fill(chargeAlberto, tbclusters[0].fYNhits);
+              hTB_MeanYNHits->GetXaxis()->SetTitle("Cluster charge (ADC)");
+              hTB_MeanYNHits->GetYaxis()->SetTitle("Mean number of pads fired on Y");
+          hTB_MeanNHits->Fill(chargeAlberto, tbclusters[0].fNhits);
+          hTB_MeanNHits->GetXaxis()->SetTitle("Cluster charge (ADC)");
+          hTB_MeanNHits->GetYaxis()->SetTitle("Mean number of pads fired");
         
           cout << "RESIDUAL y found by me: " << differenceMoi <<endl;
           cout << "RESIDUAL y found by Alberto: " << differenceAlberto <<endl;
@@ -171,12 +204,12 @@ int main(int argc, char** argv)
       
     //break;
   }
-    cbell->cd(1);
-    h1->Draw();
-    cbell->cd(2);
-    h2->Draw();
-    cbell->Update();
-    cbell->Draw();
+    cResDistrib->cd(1);
+    hResDist_Seb->Draw();
+    cResDistrib->cd(2);
+    hResDist_Alberto->Draw();
+    cResDistrib->Update();
+    cResDistrib->Draw();
     
     cYNhits->cd();
     hYNhitsTB->Draw();
@@ -203,25 +236,120 @@ int main(int argc, char** argv)
     cytrkspread->Update();
     cytrkspread->Draw();
     
-    TCanvas *cchg = new TCanvas("cchg","As a function of charge",0,0,600,600);
-    cchg->Divide(2,1);
-    cchg->cd(1);
-    h3->Draw();
-    cchg->cd(2);
-    h4->Divide(h3);
-    h4->Draw();
-    cchg->Update();
-    cchg->Draw();
+    TCanvas *cMeanHits_Y = new TCanvas("cMeanHits_Y","As a function of charge",0,0,600,600);
+    cMeanHits_Y->Divide(2,1);
+    cMeanHits_Y->cd(1);
+    hTB_ClusterChg->Draw();
     
-    TCanvas *cchg2 = new TCanvas("cchg2","As a function of charge",0,0,600,600);
-    cchg2->Divide(2,1);
-    cchg2->cd(1);
-    h3->Draw();
-    cchg2->cd(2);
-    h5->Divide(h3);
-    h5->Draw();
-    cchg2->Update();
-    cchg2->Draw();
+    double custombins[5]{0,300,600,1000,3000};
+    TH1F* hTB_ClusterChg_60bins = (TH1F*)hTB_ClusterChg->Rebin(5, "hTB_ClusterChg_60bins");
+    TH1F* hTB_ClusterChg_custombins = (TH1F*)hTB_ClusterChg->Rebin(4, "hTB_ClusterChg_custombins",custombins);
+    
+    cMeanHits_Y->cd(2);
+    TH1F* hTB_MeanYNHits_60bins = (TH1F*)hTB_MeanYNHits->Rebin(5, "hTB_MeanYNHits_60bins");
+    TH1F* hTB_MeanYNHits_custombins = (TH1F*)hTB_MeanYNHits->Rebin(4, "hhTB_MeanYNHits_custombins",custombins);
+    hTB_MeanYNHits->Divide(hTB_ClusterChg);
+    hTB_MeanYNHits->Draw();
+    cMeanHits_Y->Update();
+    cMeanHits_Y->Draw();
+    
+    TCanvas *cMeanHits = new TCanvas("cMeanHits","As a function of charge",0,0,600,600);
+    cMeanHits->Divide(2,1);
+    cMeanHits->cd(1);
+    hTB_ClusterChg->Draw();
+    cMeanHits->cd(2);
+    TH1F* hTB_MeanNHits_60bins = (TH1F*)hTB_MeanNHits->Rebin(5, "hTB_MeanNHits_60bins");
+    TH1F* hTB_MeanNHits_custombins = (TH1F*)hTB_MeanNHits->Rebin(4, "hhTB_MeanNHits_custombins",custombins);
+    hTB_MeanNHits->Divide(hTB_ClusterChg);
+    hTB_MeanNHits->Draw();
+    cMeanHits->Update();
+    cMeanHits->Draw();
+    
+    
+    
+    TCanvas *cMeanHits_Y_60bins = new TCanvas("cMeanHits_Y_60bins","As a function of charge",0,0,600,600);
+    TCanvas *cMeanHits_60bins = new TCanvas("cMeanHits_60bins","As a function of charge",0,0,600,600);
+    
+    cMeanHits_Y_60bins->Divide(2,1);
+    cMeanHits_Y_60bins->cd(1);
+    hTB_ClusterChg_60bins->Draw();
+    cMeanHits_Y_60bins->cd(2);
+   hTB_MeanYNHits_60bins->Divide(hTB_ClusterChg_60bins);
+   hTB_MeanYNHits_60bins->Draw();
+   cMeanHits_Y_60bins->Update();
+   cMeanHits_Y_60bins->Draw();
+    
+    cMeanHits_60bins->Divide(2,1);
+     cMeanHits_60bins->cd(1);
+     hTB_ClusterChg_60bins->Draw();
+     cMeanHits_60bins->cd(2);
+    hTB_MeanNHits_60bins->Divide(hTB_ClusterChg_60bins);
+    hTB_MeanNHits_60bins->Draw();
+    cMeanHits_60bins->Update();
+    cMeanHits_60bins->Draw();
+    
+    TCanvas *cMeanHits_Y_custombins = new TCanvas("cMeanHits_Y_custombins","As a function of charge",0,0,600,600);
+     TCanvas *cMeanHits_custombins = new TCanvas("cMeanHits_custombins","As a function of charge",0,0,600,600);
+     
+     cMeanHits_Y_custombins->Divide(2,1);
+     cMeanHits_Y_custombins->cd(1);
+     hTB_ClusterChg_custombins->Draw();
+     cMeanHits_Y_custombins->cd(2);
+    hTB_MeanYNHits_custombins->Divide(hTB_ClusterChg_custombins);
+    hTB_MeanYNHits_custombins->Draw();
+    cMeanHits_Y_custombins->Update();
+    cMeanHits_Y_custombins->Draw();
+     
+     cMeanHits_custombins->Divide(2,1);
+      cMeanHits_custombins->cd(1);
+      hTB_ClusterChg_custombins->Draw();
+      cMeanHits_custombins->cd(2);
+     hTB_MeanNHits_custombins->Divide(hTB_ClusterChg_custombins);
+     hTB_MeanNHits_custombins->Draw();
+     cMeanHits_custombins->Update();
+     cMeanHits_custombins->Draw();
+    
+    
+    cChargeIntervals->Divide(2,2);
+    cChargeIntervals->cd(1);
+    hNhitsTB0_300->GetXaxis()->SetTitle("Number of pads fired");
+    hNhitsTB0_300->GetYaxis()->SetTitle("Count");
+    hNhitsTB0_300->Draw();
+    cChargeIntervals->cd(2);
+    hNhitsTB300_600->GetXaxis()->SetTitle("Number of pads fired");
+    hNhitsTB300_600->GetYaxis()->SetTitle("Count");
+    hNhitsTB300_600->Draw();
+    cChargeIntervals->cd(3);
+    hNhitsTB600_1000->GetXaxis()->SetTitle("Number of pads fired");
+    hNhitsTB600_1000->GetYaxis()->SetTitle("Count");
+    hNhitsTB600_1000->Draw();
+    cChargeIntervals->cd(4);
+    hNhitsTB1000_3000->GetXaxis()->SetTitle("Number of pads fired");
+    hNhitsTB1000_3000->GetYaxis()->SetTitle("Count");
+    hNhitsTB1000_3000->Draw();
+    cChargeIntervals->Update();
+    cChargeIntervals->Draw();
+    
+    cChargeIntervals_Y->Divide(2,2);
+    cChargeIntervals_Y->cd(1);
+    hYNhitsTB0_300->GetXaxis()->SetTitle("Number of pads fired on Y");
+    hYNhitsTB0_300->GetYaxis()->SetTitle("Count");
+    hYNhitsTB0_300->Draw();
+    cChargeIntervals_Y->cd(2);
+    hYNhitsTB300_600->GetXaxis()->SetTitle("Number of pads fired on Y");
+    hYNhitsTB300_600->GetYaxis()->SetTitle("Count");
+    hYNhitsTB300_600->Draw();
+    cChargeIntervals_Y->cd(3);
+    hYNhitsTB600_1000->GetXaxis()->SetTitle("Number of pads fired on Y");
+    hYNhitsTB600_1000->GetYaxis()->SetTitle("Count");
+    hYNhitsTB600_1000->Draw();
+    cChargeIntervals_Y->cd(4);
+    hYNhitsTB1000_3000->GetXaxis()->SetTitle("Number of pads fired on Y");
+    hYNhitsTB1000_3000->GetYaxis()->SetTitle("Count");
+    hYNhitsTB1000_3000->Draw();
+    cChargeIntervals_Y->Update();
+    cChargeIntervals_Y->Draw();
+    
     
     // Look at the residuals wrt coordinate y of the hit, to see if there is a bias
     
@@ -264,6 +392,9 @@ int main(int argc, char** argv)
        
        cdiff->Update();
        cdiff->Draw();
+    
+//    f->Write();
+//    f->Close();
     
               app.Run(kTRUE);
 

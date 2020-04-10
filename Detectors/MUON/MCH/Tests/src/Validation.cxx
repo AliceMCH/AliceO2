@@ -106,7 +106,7 @@ void myMath2hits(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Double_t ch
 //           - DIGIT CREATION
 
 //________________________________________________________________________________________
-void Validation::PlotMathieson2D(TH1F* hchgpads, TH1F* hchgafter, TH1F* hchmaxafter, TH1F* hNbinsafter, TH1F* hNbinsX, TH1F* hNbinsXafter, TH1F* hNbinsY, TH1F* hNbinsYafter, TH1F* hMeanYbins, TH1F* hMeanbins, Double_t x, Double_t y, int nsamples, int SeedMath){
+void Validation::PlotMathieson2D(TH1F* hchgpads, TH1F* hchgafter, TH1F* hchmaxafter, TH1F* hNbinsafter, TH1F* hNbinsX, TH1F* hNbinsXafter, TH1F* hNbinsY, TH1F* hNbinsYafter, TH1F* hMeanYbins, TH1F* hMeanbins, TH1F* hNhits0_300, TH1F* hNhits300_600, TH1F* hNhits600_1000, TH1F* hNhits1000_3000, TH1F* hYNhits0_300, TH1F* hYNhits300_600, TH1F* hYNhits600_1000, TH1F* hYNhits1000_3000, Double_t x, Double_t y, int nsamples, int SeedMath){
     
     digits.clear();
     
@@ -243,6 +243,8 @@ void Validation::PlotMathieson2D(TH1F* hchgpads, TH1F* hchgafter, TH1F* hchmaxaf
         column = 0;
         columnmax = 0;
         chgbin = 0;
+        chgsum = 0;
+    int counter = 0;
     double dice1;
        for(int i=1; i<lowxsb.size()+1; i++){
            for(int j=1; j<lowysb.size()+1; j++){
@@ -251,8 +253,10 @@ void Validation::PlotMathieson2D(TH1F* hchgpads, TH1F* hchgafter, TH1F* hchmaxaf
                keepdigit = GradualAcceptance(chgbin, dice1);
                if(chgbin > 10 && keepdigit){
                    cout << "Chgbin = " << chgbin << " in bin (" << i << "," << j <<")"<<endl;
+                   chgsum += chgbin;
                    fullbinsafter.push_back(i);
                    fullbinsafter.push_back(j);
+                   counter++;
                    
                }
            }
@@ -270,6 +274,20 @@ void Validation::PlotMathieson2D(TH1F* hchgpads, TH1F* hchgafter, TH1F* hchmaxaf
        }
     cout << "Column " << columnmax << " appears the most after noise and cut: " << appearancesmax << " times." <<endl;
        hNbinsYafter->Fill(appearancesmax);
+    if(counter > 1){
+        if(chgsum < 300){
+            hYNhits0_300->Fill(appearancesmax);
+        }
+        else if(chgsum >= 300 && chgsum < 600){
+            hYNhits300_600->Fill(appearancesmax);
+        }
+        else if(chgsum >= 600 && chgsum < 1000){
+            hYNhits600_1000->Fill(appearancesmax);
+        }
+        else if(chgsum >= 1000 && chgsum < 3000){
+            hYNhits1000_3000->Fill(appearancesmax);
+        }
+    }
     
     cout << "On a rempli hNbinsYafter" <<endl;
     
@@ -467,6 +485,20 @@ void Validation::PlotMathieson2D(TH1F* hchgpads, TH1F* hchgafter, TH1F* hchmaxaf
     hNbinsafter->Fill(nbleftdigits);
     
     if(nbleftdigits > 1){
+        
+        if(chargeevent < 300){
+            hNhits0_300->Fill(nbleftdigits);
+        }
+        else if(chargeevent >= 300 && chargeevent < 600){
+            hNhits300_600->Fill(nbleftdigits);
+        }
+        else if(chargeevent >= 600 && chargeevent < 1000){
+            hNhits600_1000->Fill(nbleftdigits);
+        }
+        else if(chargeevent >= 1000 && chargeevent < 3000){
+            hNhits1000_3000->Fill(nbleftdigits);
+        }
+        
         hchgafter->Fill(chargeevent);
         hMeanYbins->Fill(chargeevent, appearancesmax);
         hMeanbins->Fill(chargeevent, nbleftdigits);
