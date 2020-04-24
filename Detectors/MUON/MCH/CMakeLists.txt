@@ -9,6 +9,7 @@
 # submit itself to any jurisdiction.
 
 add_subdirectory(Base)
+add_subdirectory(Clustering)
 add_subdirectory(Contour)
 add_subdirectory(Mapping)
 add_subdirectory(PreClustering)
