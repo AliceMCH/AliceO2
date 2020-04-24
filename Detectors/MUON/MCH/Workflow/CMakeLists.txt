@@ -58,3 +58,9 @@ o2_add_executable(
         SOURCES src/PreClusterSinkSpec.cxx src/preclusters-sink-workflow.cxx
         COMPONENT_NAME mch
         PUBLIC_LINK_LIBRARIES O2::MCHWorkflow)
+
+o2_add_executable(
+        clusters-sink-workflow
+        SOURCES src/ClusterSinkSpec.cxx src/clusters-sink-workflow.cxx
+        COMPONENT_NAME mch
+        PUBLIC_LINK_LIBRARIES O2::MCHWorkflow)
