@@ -76,12 +76,13 @@ public:
       int ci{0};
       for (const auto& cluster : clusters) {
         std::cout<<"Cluster "<<ci<<std::endl;
-        std::cout<<"  x: "<<cluster.getX()<<"\n  y: "<<cluster.getY()<<"\n";
+        std::cout<<"  "<<cluster.getDetID()<<"  "<<cluster.getX()<<","<<cluster.getY()<<"\n";
       }
     }
 
     size_t bufSize = sizeof(Cluster) * clusters.size();
     char* clustersBuffer = (char*)malloc(bufSize);
+    memcpy(clustersBuffer, clusters.data(), bufSize);
 
     // create the output message
     auto freefct = [](void* data, void* /*hint*/) { free(data); };
