@@ -27,10 +27,10 @@ if(BUILD_TESTING)
                 LABELS "muon;mch;raw"
                 PUBLIC_LINK_LIBRARIES O2::MCHRawDecoder O2::MCHRawImplHelpers)
 
-        o2_add_test(userlogic-endpoint-decoder
-                SOURCES src/testUserLogicEndpointDecoder.cxx
-                COMPONENT_NAME mchraw
-                LABELS "muon;mch;raw"
-                PUBLIC_LINK_LIBRARIES O2::MCHRawDecoder O2::MCHRawImplHelpers)
+#        o2_add_test(userlogic-endpoint-decoder
+#                SOURCES src/testUserLogicEndpointDecoder.cxx
+#                COMPONENT_NAME mchraw
+#                LABELS "muon;mch;raw"
+#                PUBLIC_LINK_LIBRARIES O2::MCHRawDecoder O2::MCHRawImplHelpers)
 
 endif()
