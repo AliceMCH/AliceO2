@@ -121,8 +121,9 @@ class DigitSamplerTask
       int manuCh = (digitID & 0x3F000000) >> 24;
 
       int padID = mapping::segmentation(deID).findPadByFEE(manuID, manuCh);
-      if (mPrint)
+      if (mPrint) {
         cout << deID << "  " << digitID << "  " << manuID << "  " << manuCh << "  " << padID << endl;
+      }
       if (padID < 0) {
         throw runtime_error(std::string("digitID ") + digitID + " does not exist in the mapping");
       }

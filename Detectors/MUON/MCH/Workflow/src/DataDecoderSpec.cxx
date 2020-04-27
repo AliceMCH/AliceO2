@@ -81,12 +81,11 @@ int ds2manu(int i)
 class MapSolar
 {
  public:
-  int mLink = {-1}; // link ID
+  int mLink = -1; // link ID
 
   MapSolar() = default;
   ~MapSolar() = default;
 };
-
 
 // CRU mapping
 class MapCRU
@@ -101,7 +100,6 @@ class MapCRU
   bool initialized() { return mInitialized; }
   int32_t getLink(int32_t c, int32_t l);
 };
-
 
 bool MapCRU::load(std::string mapFile)
 {
@@ -118,10 +116,12 @@ bool MapCRU::load(std::string mapFile)
     std::string s(tstr);
     std::istringstream line(s);
     line >> link_id >> c >> l;
-    if (c < 0 || c >= MCH_MAX_FEEID)
+    if (c < 0 || c >= MCH_MAX_FEEID) {
       continue;
-    if (l < 0 || l >= MCH_MAX_CRU_LINK)
+    }
+    if (l < 0 || l >= MCH_MAX_CRU_LINK) {
       continue;
+    }
     mSolarMap[c][l].mLink = link_id;
   }
   mInitialized = true;
@@ -130,33 +130,35 @@ bool MapCRU::load(std::string mapFile)
 
 int32_t MapCRU::getLink(int32_t c, int32_t l)
 {
-  if (!initialized()) return -1;
+  if (!initialized()) {
+    return -1;
+  }
 
   int32_t result = -1;
-  if (c < 0 || c >= MCH_MAX_FEEID)
+  if (c < 0 || c >= MCH_MAX_FEEID) {
     return result;
-  if (l < 0 || l >= MCH_MAX_CRU_LINK)
+  }
+  if (l < 0 || l >= MCH_MAX_CRU_LINK) {
     return result;
+  }
   return mSolarMap[c][l].mLink;
 }
-
 
 class MapDualSampa
 {
  public:
-  int mDE = {-1};    // detector element
-  int mIndex = {-1}; // DS index
-  int mBad = {-1};   // if = 1 bad pad (not used for analysis)
+  int mDE = -1;    // detector element
+  int mIndex = -1; // DS index
+  int mBad = -1;   // if = 1 bad pad (not used for analysis)
 
   MapDualSampa() = default;
   ~MapDualSampa() = default;
 };
 
-
 // Electronics mapping
 class MapFEC
 {
-  bool mInitialized = {false};
+  bool mInitialized = false;
   MapDualSampa mDsMap[LINKID_MAX + 1][40];
 
  public:
@@ -179,14 +181,17 @@ bool MapFEC::load(std::string mapFile)
   int link_id, group_id, de, ds_id[5];
   while (!file.eof()) {
     file >> link_id >> group_id >> de >> ds_id[0] >> ds_id[1] >> ds_id[2] >> ds_id[3] >> ds_id[4];
-    if (link_id < 0 || link_id > LINKID_MAX)
+    if (link_id < 0 || link_id > LINKID_MAX) {
       continue;
+    }
     for (int i = 0; i < 5; i++) {
-      if (ds_id[i] <= 0)
+      if (ds_id[i] <= 0) {
         continue;
+      }
       int ds_addr = group_id * 5 + i;
-      if (ds_addr < 0 || ds_addr >= 40)
+      if (ds_addr < 0 || ds_addr >= 40) {
         continue;
+      }
       mDsMap[link_id][ds_addr].mDE = de;
       mDsMap[link_id][ds_addr].mIndex = ds_id[i];
       mDsMap[link_id][ds_addr].mBad = 0;
@@ -198,10 +203,13 @@ bool MapFEC::load(std::string mapFile)
 
 bool MapFEC::getDsId(uint32_t link_id, uint32_t ds_addr, int& de, int& dsid)
 {
-  if (!initialized()) return false;
-
-  if (mDsMap[link_id][ds_addr].mBad == 1)
+  if (!initialized()) {
     return false;
+  }
+
+  if (mDsMap[link_id][ds_addr].mBad == 1) {
+    return false;
+  }
   de = mDsMap[link_id][ds_addr].mDE;
   dsid = mDsMap[link_id][ds_addr].mIndex;
   return true;
@@ -219,14 +227,16 @@ class DataDecoderTask
       std::optional<uint16_t> result;
       uint16_t link = mMapCRU.getLink(feeLinkId.feeId(), feeLinkId.linkId());
       result = link;
-      if (mPrint)
+      if (mPrint) {
         std::cout << "[linkHandler] (" << (int)feeLinkId.feeId() << "," << (int)feeLinkId.linkId() << ") -> " << result.value() << std::endl;
+      }
       return result;
     };
 
     auto channelHandler = [&](DsElecId dsElecId, uint8_t channel, o2::mch::raw::SampaCluster sc) {
-      if (mDs2manu)
+      if (mDs2manu) {
         channel = ds2manu(int(channel));
+      }
       if (mPrint) {
         auto s = asString(dsElecId);
         auto ch = fmt::format("{}-CH{}", s, channel);
@@ -254,8 +264,9 @@ class DataDecoderTask
       try {
         const Segmentation& segment = segmentation(deId);
         padId = segment.findPadByFEE(dsIddet, int(channel));
-        if (mPrint)
+        if (mPrint) {
           std::cout << "DS " << (int)dsElecId.elinkId() << "  CHIP " << ((int)channel) / 32 << "  CH " << ((int)channel) % 32 << "  ADC " << digitadc << "  DE# " << deId << "  DSid " << dsIddet << "  PadId " << padId << std::endl;
+        }
       } catch (const std::exception& e) {
         std::cout << "Failed to get padId: " << e.what() << std::endl;
         return;
@@ -296,8 +307,9 @@ class DataDecoderTask
 
     for (int i = 0; i < 64; i++) {
       for (int j = 0; j < 64; j++) {
-        if (refManu2ds_st345[j] != i)
+        if (refManu2ds_st345[j] != i) {
           continue;
+        }
         refDs2manu_st345[i] = j;
         break;
       }
@@ -309,10 +321,12 @@ class DataDecoderTask
     auto mapCRUfile = ic.options().get<std::string>("cru-map");
     auto mapFECfile = ic.options().get<std::string>("fec-map");
 
-    if (!mapCRUfile.empty())
+    if (!mapCRUfile.empty()) {
       mMapCRU.load(mapCRUfile);
-    if (!mapFECfile.empty())
+    }
+    if (!mapFECfile.empty()) {
       mMapFEC.load(mapFECfile);
+    }
   }
 
   //_________________________________________________________________________________________________
@@ -330,8 +344,9 @@ class DataDecoderTask
       // size of payload
       size_t payloadSize = it.size();
 
-      if (payloadSize == 0)
+      if (payloadSize == 0) {
         continue;
+      }
 
       gsl::span<const std::byte> buffer(reinterpret_cast<const std::byte*>(raw), sizeof(o2::header::RAWDataHeaderV4) + payloadSize);
       decodeBuffer(buffer, digits);
@@ -343,29 +358,26 @@ class DataDecoderTask
   {
     static int nFrame = 1;
     // get the input buffer
-    if (input.spec->binding != "readout")
+    if (input.spec->binding != "readout") {
       return;
+    }
 
     const auto* header = o2::header::get<header::DataHeader*>(input.header);
-    if (false)
-      printf("Header: %p\n", (void*)header);
-    if (!header)
+    if (!header) {
       return;
-
-    if (false)
-      printf("payloadSize: %d\n", (int)header->payloadSize);
-    if (false)
-      printf("payload: %p\n", input.payload);
+    }
 
     auto const* raw = input.payload;
     // size of payload
     size_t payloadSize = header->payloadSize;
 
-    if (mPrint)
+    if (mPrint) {
       std::cout << nFrame << "  payloadSize=" << payloadSize << std::endl;
+    }
     nFrame += 1;
-    if (payloadSize == 0)
+    if (payloadSize == 0) {
       return;
+    }
 
     gsl::span<const std::byte> buffer(reinterpret_cast<const std::byte*>(raw), payloadSize);
     decodeBuffer(buffer, digits);
@@ -402,7 +414,7 @@ class DataDecoderTask
 
  private:
   std::function<std::optional<DsDetId>(DsElecId)> mElec2Det;
-  std::function<std::optional<uint16_t>(FeeLinkId)> mFee2LinkId{nullptr};
+  FeeLink2SolarMapper mFee2SolarMapper{nullptr};
   size_t mNrdhs{0};
 
   std::ifstream mInputFile{}; ///< input file
