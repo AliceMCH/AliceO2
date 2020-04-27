@@ -78,27 +78,18 @@ int ds2manu(int i)
 #define MCH_MAX_CRU_LINK 12
 #define LINKID_MAX 0x7FF
 
-class MapSolar
-{
- public:
-  int mLink = -1; // link ID
-
-  MapSolar() = default;
-  ~MapSolar() = default;
-};
-
 // CRU mapping
 class MapCRU
 {
   bool mInitialized = {false};
-  MapSolar mSolarMap[MCH_MAX_FEEID][MCH_MAX_CRU_LINK];
+  uint16_t mSolarMap[MCH_MAX_FEEID][MCH_MAX_CRU_LINK];
 
  public:
   MapCRU() = default;
   ~MapCRU() = default;
   bool load(std::string mapFile);
-  bool initialized() { return mInitialized; }
-  int32_t getLink(int32_t c, int32_t l);
+  bool initialized() const { return mInitialized; }
+  std::optional<uint16_t> operator()(const FeeLinkId& feeLinkId) const;
 };
 
 bool MapCRU::load(std::string mapFile)
@@ -122,26 +113,26 @@ bool MapCRU::load(std::string mapFile)
     if (l < 0 || l >= MCH_MAX_CRU_LINK) {
       continue;
     }
-    mSolarMap[c][l].mLink = link_id;
+    mSolarMap[c][l] = link_id;
   }
   mInitialized = true;
   return true;
 }
 
-int32_t MapCRU::getLink(int32_t c, int32_t l)
+std::optional<uint16_t> MapCRU::operator()(const FeeLinkId& feeLinkId) const
 {
   if (!initialized()) {
-    return -1;
+    return std::nullopt;
   }
-
-  int32_t result = -1;
-  if (c < 0 || c >= MCH_MAX_FEEID) {
-    return result;
+  auto f = feeLinkId.feeId();
+  auto l = feeLinkId.linkId();
+  if (f < 0 || f >= MCH_MAX_FEEID) {
+    return std::nullopt;
   }
   if (l < 0 || l >= MCH_MAX_CRU_LINK) {
-    return result;
+    return std::nullopt;
   }
-  return mSolarMap[c][l].mLink;
+  return mSolarMap[f][l];
 }
 
 class MapDualSampa
@@ -223,16 +214,6 @@ class DataDecoderTask
   {
     size_t ndigits{0};
 
-    auto linkHandler = [&](FeeLinkId feeLinkId) -> std::optional<uint16_t> {
-      std::optional<uint16_t> result;
-      uint16_t link = mMapCRU.getLink(feeLinkId.feeId(), feeLinkId.linkId());
-      result = link;
-      if (mPrint) {
-        std::cout << "[linkHandler] (" << (int)feeLinkId.feeId() << "," << (int)feeLinkId.linkId() << ") -> " << result.value() << std::endl;
-      }
-      return result;
-    };
-
     auto channelHandler = [&](DsElecId dsElecId, uint8_t channel, o2::mch::raw::SampaCluster sc) {
       if (mDs2manu) {
         channel = ds2manu(int(channel));
@@ -293,7 +274,7 @@ class DataDecoderTask
     };
 
     o2::mch::raw::PageDecoder decode =
-      mMapCRU.initialized() ? o2::mch::raw::createPageDecoder(page, channelHandler, linkHandler) : o2::mch::raw::createPageDecoder(page, channelHandler);
+      mMapCRU.initialized() ? o2::mch::raw::createPageDecoder(page, channelHandler, mMapCRU) : o2::mch::raw::createPageDecoder(page, channelHandler);
     patchPage(page);
     decode(page);
   }
