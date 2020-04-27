@@ -269,7 +269,9 @@ class DataDecoderTask
         return;
       }
 
-      int time = sc.timestamp;
+      HitTime time;
+      time.sampaTime = sc.timestamp;
+      time.bunchCrossing = sc.bunchCrossing;
 
       digits.emplace_back(o2::mch::Digit(time, deId, padId, digitadc));
 
