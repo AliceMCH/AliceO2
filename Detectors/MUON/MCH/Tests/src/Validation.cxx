@@ -106,7 +106,7 @@ void myMath2hits(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Double_t ch
 //           - DIGIT CREATION
 
 //________________________________________________________________________________________
-void Validation::PlotMathieson2D(TH1F* hchgpads, TH1F* hchgafter, TH1F* hchmaxafter, TH1F* hNbinsafter, TH1F* hNbinsX, TH1F* hNbinsXafter, TH1F* hNbinsY, TH1F* hNbinsYafter, TH1F* hMeanYbins, TH1F* hMeanbins, TH1F* hNhits0_300, TH1F* hNhits300_600, TH1F* hNhits600_1000, TH1F* hNhits1000_3000, TH1F* hYNhits0_300, TH1F* hYNhits300_600, TH1F* hYNhits600_1000, TH1F* hYNhits1000_3000, Double_t x, Double_t y, int nsamples, int SeedMath){
+void Validation::PlotMathieson2D(TH1F* hchgpads, TH1F* hchgafter, TH1F* hchmaxafter, TH1F* hNbinsafter, TH1F* hNbinsX, TH1F* hNbinsXafter, TH1F* hNbinsY, TH1F* hNbinsYafter, TH1F* hMeanYbins, TH1F* hMeanbins, TH1F* hNhits0_600, TH1F* hNhits600_1200, TH1F* hNhits1200_2000, TH1F* hNhits2000_6000, TH1F* hYNhits0_600, TH1F* hYNhits600_1200, TH1F* hYNhits1200_2000, TH1F* hYNhits2000_6000, Double_t x, Double_t y, int nsamples, int SeedMath){
     
     digits.clear();
     
@@ -275,17 +275,17 @@ void Validation::PlotMathieson2D(TH1F* hchgpads, TH1F* hchgafter, TH1F* hchmaxaf
     cout << "Column " << columnmax << " appears the most after noise and cut: " << appearancesmax << " times." <<endl;
        hNbinsYafter->Fill(appearancesmax);
     if(counter > 1){
-        if(chgsum < 300){
-            hYNhits0_300->Fill(appearancesmax);
+        if(chgsum < 600){
+            hYNhits0_600->Fill(appearancesmax);
         }
-        else if(chgsum >= 300 && chgsum < 600){
-            hYNhits300_600->Fill(appearancesmax);
+        else if(chgsum >= 600 && chgsum < 1200){
+            hYNhits600_1200->Fill(appearancesmax);
         }
-        else if(chgsum >= 600 && chgsum < 1000){
-            hYNhits600_1000->Fill(appearancesmax);
+        else if(chgsum >= 1200 && chgsum < 2000){
+            hYNhits1200_2000->Fill(appearancesmax);
         }
-        else if(chgsum >= 1000 && chgsum < 3000){
-            hYNhits1000_3000->Fill(appearancesmax);
+        else if(chgsum >= 2000 && chgsum < 6000){
+            hYNhits2000_6000->Fill(appearancesmax);
         }
     }
     
@@ -486,17 +486,17 @@ void Validation::PlotMathieson2D(TH1F* hchgpads, TH1F* hchgafter, TH1F* hchmaxaf
     
     if(nbleftdigits > 1){
         
-        if(chargeevent < 300){
-            hNhits0_300->Fill(nbleftdigits);
+        if(chargeevent < 600){
+            hNhits0_600->Fill(nbleftdigits);
         }
-        else if(chargeevent >= 300 && chargeevent < 600){
-            hNhits300_600->Fill(nbleftdigits);
+        else if(chargeevent >= 600 && chargeevent < 1200){
+            hNhits600_1200->Fill(nbleftdigits);
         }
-        else if(chargeevent >= 600 && chargeevent < 1000){
-            hNhits600_1000->Fill(nbleftdigits);
+        else if(chargeevent >= 1200 && chargeevent < 2000){
+            hNhits1200_2000->Fill(nbleftdigits);
         }
-        else if(chargeevent >= 1000 && chargeevent < 3000){
-            hNhits1000_3000->Fill(nbleftdigits);
+        else if(chargeevent >= 2000 && chargeevent < 6000){
+            hNhits2000_6000->Fill(nbleftdigits);
         }
         
         hchgafter->Fill(chargeevent);
@@ -1127,7 +1127,7 @@ void PlotWidthWrtCharge(){
 }
 
 
-void PowFitHitsWrtChg(){
+void PowFitHitsWrtChg_1650V(){
 
     const Int_t n = 11;
 
@@ -1263,6 +1263,103 @@ void PowFitHitsWrtChg(){
                     legendB->SetHeader("Fit coefficients"); // option "C" allows to center the header
                     legendB->AddEntry(grB, "Constant B - Nhits","lep");
                     legendB->AddEntry(grBy, "Constant B - NYhits","lep");
+                    legendB->Draw();
+
+    cpowA->Update();
+    cpowA->Draw();
+
+    cpowB->Update();
+    cpowB->Draw();
+
+
+}
+
+void PowFitHitsWrtChg_1700V_Thr3(){
+
+    const Int_t n = 11;
+
+    Double_t Kyinput[n]  = {0.1, 0.2, 0.3, 0.4, 0.5085, 0.5840, 0.6, 0.7, 0.8, 0.9, 1.0};
+    Double_t eKyinput[n] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    
+    // RESULTATS NYhit
+    
+        Double_t Ay[n]  = {3.92069e-01, 4.05030e-01, 4.36474e-01, 4.47387e-01, 4.49073e-01, 4.37122e-01, 4.48196e-01, 4.26593e-01, 3.97587e-01, 3.71202e-01, 3.37997e-01};
+           Double_t eAy[n] = {8.05654e-02, 8.17290e-02, 8.31797e-02, 8.42029e-02, 8.53037e-02, 8.58934e-02, 8.61100e-02, 8.67558e-02, 8.73071e-02, 8.79698e-02, 8.86916e-02};
+
+           Double_t By[n]  = {1.10804e-01, 1.16621e-01, 1.19855e-01, 1.23734e-01, 1.28355e-01, 1.32129e-01, 1.32305e-01, 1.37437e-01, 1.43238e-01, 1.48789e-01, 1.54664e-01};
+           Double_t eBy[n] = {4.85597e-03, 4.72363e-03, 4.69667e-03, 4.62459e-03, 4.53296e-03, 4.44398e-03, 4.44877e-03, 4.32262e-03, 4.17441e-03, 4.04417e-03, 3.91236e-03};
+
+
+    TCanvas *cpowA = new TCanvas("cpowA","Power Fit Coefficient A wrt K3",0,0,600,600);
+    TCanvas *cpowB = new TCanvas("cpowB","Power Fit Coefficient B wrt K3",0,0,600,600);
+
+    cpowA->cd();
+    TGraphErrors *grAy = new TGraphErrors(n, Kyinput, Ay, eKyinput, eAy);
+    grAy->SetTitle("Power Fit Coefficient A wrt K3");
+    grAy->SetMarkerColor(2);
+    grAy->SetLineColor(2);
+    grAy->SetMarkerStyle(8);
+    grAy->GetXaxis()->SetTitle("K3y");
+    grAy->GetYaxis()->SetTitle("Values of Power fit coefficients");
+    grAy->Draw("AP");
+    grAy->GetYaxis()->SetRangeUser(-0.1,1.1);
+    grAy->Draw("AP");
+
+    
+    TF1 *fAy = new TF1("f1","2.30695e-01",0,1.2);
+    fAy->SetLineColor(2);
+    fAy->SetLineStyle(1);
+    fAy->Draw("SAME");
+    
+    TF1 *fAyup = new TF1("f1","2.30695e-01 + 2.47938e-01",0,1.2);
+    fAyup->SetLineColor(2);
+    fAyup->SetLineStyle(2);
+    fAyup->Draw("SAME");
+    
+    TF1 *fAydown = new TF1("f1","2.30695e-01 - 2.47938e-01",0,1.2);
+    fAydown->SetLineColor(2);
+    fAydown->SetLineStyle(2);
+    fAydown->Draw("SAME");
+    
+    
+    auto legendA = new TLegend(0.7,0.7,0.9,0.9);
+                    legendA->SetHeader("Fit coefficients"); // option "C" allows to center the header
+                    legendA->AddEntry(grAy, "Constant A - NYhits - Simulations","lep");
+                    legendA->AddEntry(fAy, "Constant A - NYHits - TB data","l");
+                    legendA->Draw();
+    
+    
+    cpowB->cd();
+    TGraphErrors *grBy = new TGraphErrors(n, Kyinput, By, eKyinput, eBy);
+     grBy->SetTitle("Power Fit Coefficient B wrt K3");
+     grBy->SetMarkerColor(2);
+     grBy->SetLineColor(2);
+     grBy->SetMarkerStyle(5);
+    grBy->GetXaxis()->SetTitle("K3y");
+    grBy->GetYaxis()->SetTitle("Values of Power fit coefficients");
+    grBy->Draw("AP");
+    grBy->GetYaxis()->SetRangeUser(0,0.3);
+    grBy->Draw("AP");
+    
+    TF1 *fBy = new TF1("f1","1.35156e-01",0,1.2);
+    fBy->SetLineColor(2);
+    fBy->SetLineStyle(1);
+    fBy->Draw("SAME");
+    
+    TF1 *fByup = new TF1("f1","1.35156e-01 + 1.25527e-02",0,1.2);
+    fByup->SetLineColor(2);
+    fByup->SetLineStyle(2);
+    fByup->Draw("SAME");
+    
+    TF1 *fBydown = new TF1("f1","1.35156e-01 - 1.25527e-02",0,1.2);
+    fBydown->SetLineColor(2);
+    fBydown->SetLineStyle(2);
+    fBydown->Draw("SAME");
+
+    auto legendB = new TLegend(0.7,0.7,0.9,0.9);
+                    legendB->SetHeader("Fit coefficients"); // option "C" allows to center the header
+                    legendB->AddEntry(grBy, "Constant B - NYhits - Simulations","lep");
+                    legendB->AddEntry(fBy, "Constant B - NYHits - TB data","l");
                     legendB->Draw();
 
     cpowA->Update();

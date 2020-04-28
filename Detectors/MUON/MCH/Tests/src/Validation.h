@@ -36,13 +36,14 @@ void ResidualsCompare();
 void ResidualsPlot(double yarray[], double resyfound[], double eyfound[], const int size);
 void PlotWidthWrtCharge();
 bool GradualAcceptance(int charge, double dice);
-void PowFitHitsWrtChg();
+void PowFitHitsWrtChg_1650V();
+void PowFitHitsWrtChg_1700V_Thr3();
 
 class Validation
 {
 public:
   Validation();
-  void PlotMathieson2D(TH1F* hchgpads, TH1F* hchgafter, TH1F* hchmaxafter, TH1F* hNbinsafter, TH1F* hNbinsX, TH1F* hNbinsXafter, TH1F* hNbinsY, TH1F* hNbinsYafter, TH1F* hMeanYbins, TH1F* hMeanbins, TH1F* hNhits0_300, TH1F* hNhits300_600, TH1F* hNhits600_1000, TH1F* hNhits1000_3000, TH1F* hYNhits0_300, TH1F* hYNhits300_600, TH1F* hYNhits600_1000, TH1F* hYNhits1000_3000, Double_t x, Double_t y, int nsamples, int SeedMath = 0);
+  void PlotMathieson2D(TH1F* hchgpads, TH1F* hchgafter, TH1F* hchmaxafter, TH1F* hNbinsafter, TH1F* hNbinsX, TH1F* hNbinsXafter, TH1F* hNbinsY, TH1F* hNbinsYafter, TH1F* hMeanYbins, TH1F* hMeanbins, TH1F* hNhits0_600, TH1F* hNhits600_1200, TH1F* hNhits1200_2000, TH1F* hNhits2000_6000, TH1F* hYNhits0_600, TH1F* hYNhits600_1200, TH1F* hYNhits1200_2000, TH1F* hYNhits2000_6000, Double_t x, Double_t y, int nsamples, int SeedMath = 0);
   void InfoDE819b();
   void InfoDE819nb();
   std::vector<Clustering::Cluster> TestClustering();
