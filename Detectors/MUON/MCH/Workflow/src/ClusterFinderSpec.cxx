@@ -40,7 +40,7 @@ using namespace o2::framework;
 
 class ClusterFinderTask
 {
-public:
+ public:
   //_________________________________________________________________________________________________
   void init(framework::InitContext& ic)
   {
@@ -57,26 +57,25 @@ public:
     auto preClusters = pc.inputs().get<gsl::span<PreCluster>>("preclusters");
     auto digits = pc.inputs().get<gsl::span<Digit>>("preclusterdigits");
 
-    if( mPrint ) {
-      std::cout<<"Number of pre-clusters: "<<preClusters.length()<<std::endl;
+    if (mPrint) {
+      std::cout << "Number of pre-clusters: " << preClusters.length() << std::endl;
     }
-
 
     std::vector<Cluster> clusters(0);
-    switch(mMethod) {
-    case 0: {
-      ClusteringCoG clustering;
-      clustering.run(preClusters, digits, clusters);
-      break;
-    }
+    switch (mMethod) {
+      case 0: {
+        ClusteringCoG clustering;
+        clustering.run(preClusters, digits, clusters);
+        break;
+      }
     }
 
-    if( mPrint ) {
-      std::cout<<"Number of clusters: "<<clusters.size()<<std::endl;
+    if (mPrint) {
+      std::cout << "Number of clusters: " << clusters.size() << std::endl;
       int ci{0};
       for (const auto& cluster : clusters) {
-        std::cout<<"Cluster "<<ci<<std::endl;
-        std::cout<<"  "<<cluster.getDetID()<<"  "<<cluster.getX()<<","<<cluster.getY()<<"\n";
+        std::cout << "Cluster " << ci << std::endl;
+        std::cout << "  " << cluster.getDetID() << "  " << cluster.getX() << "," << cluster.getY() << "\n";
       }
     }
 
@@ -86,12 +85,12 @@ public:
 
     // create the output message
     auto freefct = [](void* data, void* /*hint*/) { free(data); };
-    pc.outputs().adoptChunk(Output{ "MCH", "CLUSTERS" }, reinterpret_cast<char*>(clustersBuffer), bufSize, freefct, nullptr);
+    pc.outputs().adoptChunk(Output{"MCH", "CLUSTERS"}, reinterpret_cast<char*>(clustersBuffer), bufSize, freefct, nullptr);
   }
 
-private:
+ private:
   int mMethod = 2;
-  bool mPrint = false;                    ///< print preclusters
+  bool mPrint = false; ///< print preclusters
 };
 
 //_________________________________________________________________________________________________
@@ -100,12 +99,11 @@ DataProcessorSpec getClusterFinderSpec()
   return DataProcessorSpec{
     "ClusterFinder",
     Inputs{InputSpec{"preclusters", "MCH", "PRECLUSTERS", 0, Lifetime::Timeframe},
-      InputSpec{"preclusterdigits", "MCH", "PRECLUSTERDIGITS", 0, Lifetime::Timeframe}
-    },
+           InputSpec{"preclusterdigits", "MCH", "PRECLUSTERDIGITS", 0, Lifetime::Timeframe}},
     Outputs{OutputSpec{"MCH", "CLUSTERS", 0, Lifetime::Timeframe}},
     AlgorithmSpec{adaptFromTask<ClusterFinderTask>()},
     Options{{"print", VariantType::Bool, false, {"print clusters"}},
-      {"method", VariantType::Int, 2, {"clustering method [0=CoG, 1=Gauss, 2=Mathieson simple"}}}};
+            {"method", VariantType::Int, 2, {"clustering method [0=CoG, 1=Gauss, 2=Mathieson simple"}}}};
 }
 
 } // end namespace mch

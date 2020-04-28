@@ -80,7 +80,7 @@ class ClusterSinkTask
       mOutputFile << clusters.size() << " clusters:" << endl;
       for (const auto& cluster : clusters) {
         mOutputFile << cluster.getDetID() << "  " << cluster.getCharge() << "  " << cluster.getTimeStamp()
-            <<"  " << cluster.getX() << "," << cluster.getY() << " +/- " << cluster.getSigmaX() << "," << cluster.getSigmaY() << endl;
+                    << "  " << cluster.getX() << "," << cluster.getY() << " +/- " << cluster.getSigmaX() << "," << cluster.getSigmaY() << endl;
       }
     } else {
       // write the number of clusters
@@ -93,9 +93,8 @@ class ClusterSinkTask
   }
 
  private:
-
-  std::ofstream mOutputFile{};   ///< output file
-  bool mText = false;            ///< output clusters in text format
+  std::ofstream mOutputFile{}; ///< output file
+  bool mText = false;          ///< output clusters in text format
 };
 
 //_________________________________________________________________________________________________
