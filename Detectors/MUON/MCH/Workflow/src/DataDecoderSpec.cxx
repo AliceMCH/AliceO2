@@ -37,6 +37,9 @@
 #include "MCHRawCommon/RDHManip.h"
 #include "MCHMappingInterface/Segmentation.h"
 #include "MCHWorkflow/DataDecoderSpec.h"
+#include <array>
+#include "MapCRU.h"
+#include "MapFEC.h"
 
 namespace o2::header
 {
@@ -72,140 +75,6 @@ int ds2manu(int i)
   return refDs2manu_st345[i];
 }
 
-//=============
-// Classes for custom mapping implementation
-#define MCH_MAX_FEEID 64
-#define MCH_MAX_CRU_LINK 12
-#define LINKID_MAX 0x7FF
-
-// CRU mapping
-class MapCRU
-{
-  bool mInitialized = {false};
-  uint16_t mSolarMap[MCH_MAX_FEEID][MCH_MAX_CRU_LINK];
-
- public:
-  MapCRU() = default;
-  ~MapCRU() = default;
-  bool load(std::string mapFile);
-  bool initialized() const { return mInitialized; }
-  std::optional<uint16_t> operator()(const FeeLinkId& feeLinkId) const;
-};
-
-bool MapCRU::load(std::string mapFile)
-{
-  std::ifstream file;
-  file.open(mapFile);
-  if (!file) {
-    std::cout << "[MapCRU::readMapping] can't open file " << mapFile << std::endl;
-    return false;
-  }
-
-  int c, l, link_id;
-  char tstr[500];
-  while (file.getline(tstr, 499)) {
-    std::string s(tstr);
-    std::istringstream line(s);
-    line >> link_id >> c >> l;
-    if (c < 0 || c >= MCH_MAX_FEEID) {
-      continue;
-    }
-    if (l < 0 || l >= MCH_MAX_CRU_LINK) {
-      continue;
-    }
-    mSolarMap[c][l] = link_id;
-  }
-  mInitialized = true;
-  return true;
-}
-
-std::optional<uint16_t> MapCRU::operator()(const FeeLinkId& feeLinkId) const
-{
-  if (!initialized()) {
-    return std::nullopt;
-  }
-  auto f = feeLinkId.feeId();
-  auto l = feeLinkId.linkId();
-  if (f < 0 || f >= MCH_MAX_FEEID) {
-    return std::nullopt;
-  }
-  if (l < 0 || l >= MCH_MAX_CRU_LINK) {
-    return std::nullopt;
-  }
-  return mSolarMap[f][l];
-}
-
-class MapDualSampa
-{
- public:
-  int mDE = -1;    // detector element
-  int mIndex = -1; // DS index
-  int mBad = -1;   // if = 1 bad pad (not used for analysis)
-
-  MapDualSampa() = default;
-  ~MapDualSampa() = default;
-};
-
-// Electronics mapping
-class MapFEC
-{
-  bool mInitialized = false;
-  MapDualSampa mDsMap[LINKID_MAX + 1][40];
-
- public:
-  MapFEC() = default;
-  ~MapFEC() = default;
-  bool load(std::string mapFile);
-  bool initialized() { return mInitialized; }
-  bool getDsId(uint32_t link_id, uint32_t ds_addr, int& de, int& dsid);
-};
-
-bool MapFEC::load(std::string mapFile)
-{
-  std::ifstream file;
-  file.open(mapFile);
-  if (!file) {
-    std::cout << "[MapFEC::readDSMapping] can't open file " << mapFile << std::endl;
-    return false;
-  }
-
-  int link_id, group_id, de, ds_id[5];
-  while (!file.eof()) {
-    file >> link_id >> group_id >> de >> ds_id[0] >> ds_id[1] >> ds_id[2] >> ds_id[3] >> ds_id[4];
-    if (link_id < 0 || link_id > LINKID_MAX) {
-      continue;
-    }
-    for (int i = 0; i < 5; i++) {
-      if (ds_id[i] <= 0) {
-        continue;
-      }
-      int ds_addr = group_id * 5 + i;
-      if (ds_addr < 0 || ds_addr >= 40) {
-        continue;
-      }
-      mDsMap[link_id][ds_addr].mDE = de;
-      mDsMap[link_id][ds_addr].mIndex = ds_id[i];
-      mDsMap[link_id][ds_addr].mBad = 0;
-    }
-  }
-  mInitialized = true;
-  return true;
-}
-
-bool MapFEC::getDsId(uint32_t link_id, uint32_t ds_addr, int& de, int& dsid)
-{
-  if (!initialized()) {
-    return false;
-  }
-
-  if (mDsMap[link_id][ds_addr].mBad == 1) {
-    return false;
-  }
-  de = mDsMap[link_id][ds_addr].mDE;
-  dsid = mDsMap[link_id][ds_addr].mIndex;
-  return true;
-}
-
 //=======================
 // Data decoder
 class DataDecoderTask
@@ -231,7 +100,7 @@ class DataDecoderTask
 
       int deId;
       int dsIddet;
-      if (mMapFEC.initialized()) {
+      if (mMapFEC.size()) {
         if (!mMapFEC.getDsId(dsElecId.solarId(), dsElecId.elinkId(), deId, dsIddet)) {
           deId = dsIddet = -1;
         }
@@ -274,7 +143,7 @@ class DataDecoderTask
     };
 
     o2::mch::raw::PageDecoder decode =
-      mMapCRU.initialized() ? o2::mch::raw::createPageDecoder(page, channelHandler, mMapCRU) : o2::mch::raw::createPageDecoder(page, channelHandler);
+      mMapCRU.size() ? o2::mch::raw::createPageDecoder(page, channelHandler, mMapCRU) : o2::mch::raw::createPageDecoder(page, channelHandler);
     patchPage(page);
     decode(page);
   }
@@ -303,10 +172,16 @@ class DataDecoderTask
     auto mapFECfile = ic.options().get<std::string>("fec-map");
 
     if (!mapCRUfile.empty()) {
-      mMapCRU.load(mapCRUfile);
+      std::ifstream in(mapCRUfile);
+      if (in.is_open()) {
+        mMapCRU.load(in);
+      }
     }
     if (!mapFECfile.empty()) {
-      mMapFEC.load(mapFECfile);
+      std::ifstream in(mapFECfile);
+      if (in.is_open()) {
+        mMapFEC.load(in);
+      }
     }
   }
 
