@@ -28,12 +28,11 @@ struct HitTime {
     // default value
     uint64_t time = 0x0000000000000000;
     struct {                       ///
-      uint32_t reserved : 2;       /// bit 0 to 1: reserved
-      uint32_t sampaTime : 10;     /// bit 2 to 11: sampa time
-      uint32_t bunchCrossing : 20; /// bit 12 to 31: bunch crossing counter
+      uint32_t sampaTime : 10;     /// bit 0 to 9: sampa time
+      uint32_t bunchCrossing : 20; /// bit 10 to 29: bunch crossing counter
       uint32_t orbit;              /// bit 32 to 63: orbit
     };                             ///
-  };                               ///
+  };
 };
 
 } //namespace mch
