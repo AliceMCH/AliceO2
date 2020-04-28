@@ -15,6 +15,14 @@
 #include <algorithm>
 #include <limits>
 
+namespace
+{
+bool isValid(uint16_t solarId)
+{
+  return solarId != std::numeric_limits<uint16_t>::max();
+}
+} // namespace
+
 namespace o2::mch
 {
 
@@ -68,6 +76,10 @@ std::optional<uint16_t> MapCRU::operator()(const o2::mch::raw::FeeLinkId& feeLin
   if (ix < 0) {
     return std::nullopt;
   }
-  return mFeeLink2Solar.at(ix);
+  auto solarId = mFeeLink2Solar.at(ix);
+  if (isValid(solarId)) {
+    return solarId;
+  }
+  return std::nullopt;
 }
 } // namespace o2::mch

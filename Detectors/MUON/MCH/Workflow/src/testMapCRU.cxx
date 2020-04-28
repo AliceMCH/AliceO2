@@ -25,7 +25,7 @@ struct STREAM {
   {
     refStream << R"(
 1       0       0       0       af:0.0  bf:0.0
-2       0      11       1       af:0.0  bf:0.0
+20      3      11       1       af:0.0  bf:0.0
 )";
   }
 };
@@ -38,10 +38,21 @@ BOOST_AUTO_TEST_CASE(DefautCtorCreatesAnEmptyMap)
   BOOST_CHECK_EQUAL(cru.size(), 0);
 }
 
-BOOST_AUTO_TEST_CASE(RequestingInvalidLinkMustYieldInvalidDeDs)
+BOOST_AUTO_TEST_CASE(ReadMapCRUSize)
 {
   o2::mch::MapCRU cru;
   BOOST_CHECK_EQUAL(cru.load(refStream), 2);
+  BOOST_CHECK_EQUAL(cru.size(), 2);
+}
+
+BOOST_AUTO_TEST_CASE(GetSolarId)
+{
+  o2::mch::MapCRU cru;
+  cru.load(refStream);
+  o2::mch::raw::FeeLinkId fl(3, 11);
+  auto solarId = cru(fl);
+  BOOST_CHECK_EQUAL(solarId.has_value(), true);
+  BOOST_CHECK_EQUAL(solarId.value(), 20);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
