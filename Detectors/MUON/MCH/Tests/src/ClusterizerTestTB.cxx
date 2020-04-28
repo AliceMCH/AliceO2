@@ -36,16 +36,16 @@ int main(int argc, char** argv)
     float ytrks[7000];
     int count = 0;
     
-//   TFile *f = new TFile("ComparisonSimuTB/ReferenceTB.root", "NEW");
+  // TFile *f = new TFile("ComparisonSimuTB/AdaptedReferenceTB_1700V_Thr3.root", "NEW");
     
     TApplication app ("app",&argc,argv);
     
     TCanvas *cResDistrib = new TCanvas("cResDistrib","Residuals Distribution",0,0,600,600);
     TH1F *hResDist_Seb = new TH1F("hResDist_Seb", "Residuals distribution from TB data - My Clustering", 50, -0.1, 0.1);
     TH1F *hResDist_Alberto = new TH1F("hResDist_Alberto", "Residuals distribution from TB data - Alberto Clustering", 50, -0.1, 0.1);
-    TH1F *hTB_ClusterChg = new TH1F("hTB_ClusterChg", "TB data cluster charge distribution", 300, 0, 3000);
-    TH1F *hTB_MeanYNHits = new TH1F("hTB_MeanYNHits", "Mean YNHits as a function of charge", 300, 0, 3000);
-    TH1F *hTB_MeanNHits = new TH1F("hTB_MeanNHits", "Mean NHits as a function of charge", 300, 0, 3000);
+    TH1F *hTB_ClusterChg = new TH1F("hTB_ClusterChg", "TB data cluster charge distribution", 300, 0, 6000);
+    TH1F *hTB_MeanYNHits = new TH1F("hTB_MeanYNHits", "Mean YNHits as a function of charge", 300, 0, 6000);
+    TH1F *hTB_MeanNHits = new TH1F("hTB_MeanNHits", "Mean NHits as a function of charge", 300, 0, 6000);
     
     cResDistrib->Divide(2,1);
     
@@ -59,22 +59,22 @@ int main(int argc, char** argv)
     TH1F *hNhitsTB = new TH1F("hNhitsTB", "TB data NHits distribution", 12, 0.5, 12.5);
     
     TCanvas *cchmax = new TCanvas("cchmax","cchmax",0,0,600,600);
-    TH1F *hchmax = new TH1F("hchmax", "TB data charge max on a pad distribution", 300, 0, 3000);
+    TH1F *hchmax = new TH1F("hchmax", "TB data charge max on a pad distribution", 300, 0, 6000);
     
     TCanvas *cytrkspread = new TCanvas("cytrkspread","cytrkspread",0,0,600,600);
     TH1F *hytrkspread = new TH1F("hytrkspread", "Spread of y trk", 500, 10, 15);
     
     TCanvas *cChargeIntervals = new TCanvas("cChargeIntervals","NHits wrt K3 for different charge intervals",0,0,600,600);
-    TH1F *hNhitsTB0_300 = new TH1F("hNhitsTB0_300", "TB data NHits distribution - Charge 0 to 300 ADC", 8, 0.5, 8.5);
-    TH1F *hNhitsTB300_600 = new TH1F("hNhitsTB300_600", "TB data NHits distribution - Charge 300 to 600 ADC", 8, 0.5, 8.5);
-    TH1F *hNhitsTB600_1000 = new TH1F("hNhitsTB600_1000", "TB data NHits distribution - Charge 600 to 1000 ADC", 8, 0.5, 8.5);
-    TH1F *hNhitsTB1000_3000 = new TH1F("hNhitsTB1000_3000", "TB data NHits distribution - Charge 1000 to 3000 ADC", 8, 0.5, 8.5);
+    TH1F *hNhitsTB0_600 = new TH1F("hNhitsTB0_600", "TB data NHits distribution - Charge 0 to 600 ADC", 8, 0.5, 8.5);
+    TH1F *hNhitsTB600_1200 = new TH1F("hNhitsTB600_1200", "TB data NHits distribution - Charge 600 to 1200 ADC", 8, 0.5, 8.5);
+    TH1F *hNhitsTB1200_2000 = new TH1F("hNhitsTB1200_2000", "TB data NHits distribution - Charge 1200 to 2000 ADC", 8, 0.5, 8.5);
+    TH1F *hNhitsTB2000_6000 = new TH1F("hNhitsTB2000_6000", "TB data NHits distribution - Charge 2000 to 6000 ADC", 8, 0.5, 8.5);
     
     TCanvas *cChargeIntervals_Y = new TCanvas("cChargeIntervals_Y","NYHits wrt K3 for different charge intervals",0,0,600,600);
-    TH1F *hYNhitsTB0_300 = new TH1F("hYNhitsTB0_300", "TB data NHitsY distribution - Charge 0 to 300 ADC", 8, 0.5, 8.5);
-    TH1F *hYNhitsTB300_600 = new TH1F("hYNhitsTB300_600", "TB data NHitsY distribution - Charge 300 to 600 ADC", 8, 0.5, 8.5);
-    TH1F *hYNhitsTB600_1000 = new TH1F("hYNhitsTB600_1000", "TB data NHitsY distribution - Charge 600 to 1000 ADC", 8, 0.5, 8.5);
-    TH1F *hYNhitsTB1000_3000 = new TH1F("hYNhitsTB1000_3000", "TB data NHitsY distribution - Charge 1000 to 3000 ADC", 8, 0.5, 8.5);
+    TH1F *hYNhitsTB0_600 = new TH1F("hYNhitsTB0_600", "TB data NHitsY distribution - Charge 0 to 600 ADC", 8, 0.5, 8.5);
+    TH1F *hYNhitsTB600_1200 = new TH1F("hYNhitsTB600_1200", "TB data NHitsY distribution - Charge 600 to 1200 ADC", 8, 0.5, 8.5);
+    TH1F *hYNhitsTB1200_2000 = new TH1F("hYNhitsTB1200_2000", "TB data NHitsY distribution - Charge 1200 to 2000 ADC", 8, 0.5, 8.5);
+    TH1F *hYNhitsTB2000_6000 = new TH1F("hYNhitsTB2000_6000", "TB data NHitsY distribution - Charge 2000 to 6000 ADC", 8, 0.5, 8.5);
   
   preClusterFinder.init();
 
@@ -156,21 +156,21 @@ int main(int argc, char** argv)
           residualsDifference[count] = differenceMoi-differenceAlberto;
           
           
-          if(chargeAlberto < 300){
-              hNhitsTB0_300->Fill(tbclusters[0].fNhits);
-              hYNhitsTB0_300->Fill(tbclusters[0].fYNhits);
+          if(chargeAlberto < 600){
+              hNhitsTB0_600->Fill(tbclusters[0].fNhits);
+              hYNhitsTB0_600->Fill(tbclusters[0].fYNhits);
           }
-          else if(300 <= chargeAlberto && chargeAlberto < 600){
-              hNhitsTB300_600->Fill(tbclusters[0].fNhits);
-              hYNhitsTB300_600->Fill(tbclusters[0].fYNhits);
+          else if(600 <= chargeAlberto && chargeAlberto < 1200){
+              hNhitsTB600_1200->Fill(tbclusters[0].fNhits);
+              hYNhitsTB600_1200->Fill(tbclusters[0].fYNhits);
           }
-          else if(600 <= chargeAlberto && chargeAlberto < 1000){
-              hNhitsTB600_1000->Fill(tbclusters[0].fNhits);
-              hYNhitsTB600_1000->Fill(tbclusters[0].fYNhits);
+          else if(1200 <= chargeAlberto && chargeAlberto < 2000){
+              hNhitsTB1200_2000->Fill(tbclusters[0].fNhits);
+              hYNhitsTB1200_2000->Fill(tbclusters[0].fYNhits);
           }
-          else if(1000 <= chargeAlberto && chargeAlberto < 3000){
-              hNhitsTB1000_3000->Fill(tbclusters[0].fNhits);
-              hYNhitsTB1000_3000->Fill(tbclusters[0].fYNhits);
+          else if(2000 <= chargeAlberto && chargeAlberto < 6000){
+              hNhitsTB2000_6000->Fill(tbclusters[0].fNhits);
+              hYNhitsTB2000_6000->Fill(tbclusters[0].fYNhits);
           }
           
           
@@ -241,7 +241,7 @@ int main(int argc, char** argv)
     cMeanHits_Y->cd(1);
     hTB_ClusterChg->Draw();
     
-    double custombins[5]{0,300,600,1000,3000};
+    double custombins[5]{0,600,1200,2000,6000};
     TH1F* hTB_ClusterChg_60bins = (TH1F*)hTB_ClusterChg->Rebin(5, "hTB_ClusterChg_60bins");
     TH1F* hTB_ClusterChg_custombins = (TH1F*)hTB_ClusterChg->Rebin(4, "hTB_ClusterChg_custombins",custombins);
     
@@ -312,41 +312,41 @@ int main(int argc, char** argv)
     
     cChargeIntervals->Divide(2,2);
     cChargeIntervals->cd(1);
-    hNhitsTB0_300->GetXaxis()->SetTitle("Number of pads fired");
-    hNhitsTB0_300->GetYaxis()->SetTitle("Count");
-    hNhitsTB0_300->Draw();
+    hNhitsTB0_600->GetXaxis()->SetTitle("Number of pads fired");
+    hNhitsTB0_600->GetYaxis()->SetTitle("Count");
+    hNhitsTB0_600->Draw();
     cChargeIntervals->cd(2);
-    hNhitsTB300_600->GetXaxis()->SetTitle("Number of pads fired");
-    hNhitsTB300_600->GetYaxis()->SetTitle("Count");
-    hNhitsTB300_600->Draw();
+    hNhitsTB600_1200->GetXaxis()->SetTitle("Number of pads fired");
+    hNhitsTB600_1200->GetYaxis()->SetTitle("Count");
+    hNhitsTB600_1200->Draw();
     cChargeIntervals->cd(3);
-    hNhitsTB600_1000->GetXaxis()->SetTitle("Number of pads fired");
-    hNhitsTB600_1000->GetYaxis()->SetTitle("Count");
-    hNhitsTB600_1000->Draw();
+    hNhitsTB1200_2000->GetXaxis()->SetTitle("Number of pads fired");
+    hNhitsTB1200_2000->GetYaxis()->SetTitle("Count");
+    hNhitsTB1200_2000->Draw();
     cChargeIntervals->cd(4);
-    hNhitsTB1000_3000->GetXaxis()->SetTitle("Number of pads fired");
-    hNhitsTB1000_3000->GetYaxis()->SetTitle("Count");
-    hNhitsTB1000_3000->Draw();
+    hNhitsTB2000_6000->GetXaxis()->SetTitle("Number of pads fired");
+    hNhitsTB2000_6000->GetYaxis()->SetTitle("Count");
+    hNhitsTB2000_6000->Draw();
     cChargeIntervals->Update();
     cChargeIntervals->Draw();
     
     cChargeIntervals_Y->Divide(2,2);
     cChargeIntervals_Y->cd(1);
-    hYNhitsTB0_300->GetXaxis()->SetTitle("Number of pads fired on Y");
-    hYNhitsTB0_300->GetYaxis()->SetTitle("Count");
-    hYNhitsTB0_300->Draw();
+    hYNhitsTB0_600->GetXaxis()->SetTitle("Number of pads fired on Y");
+    hYNhitsTB0_600->GetYaxis()->SetTitle("Count");
+    hYNhitsTB0_600->Draw();
     cChargeIntervals_Y->cd(2);
-    hYNhitsTB300_600->GetXaxis()->SetTitle("Number of pads fired on Y");
-    hYNhitsTB300_600->GetYaxis()->SetTitle("Count");
-    hYNhitsTB300_600->Draw();
+    hYNhitsTB600_1200->GetXaxis()->SetTitle("Number of pads fired on Y");
+    hYNhitsTB600_1200->GetYaxis()->SetTitle("Count");
+    hYNhitsTB600_1200->Draw();
     cChargeIntervals_Y->cd(3);
-    hYNhitsTB600_1000->GetXaxis()->SetTitle("Number of pads fired on Y");
-    hYNhitsTB600_1000->GetYaxis()->SetTitle("Count");
-    hYNhitsTB600_1000->Draw();
+    hYNhitsTB1200_2000->GetXaxis()->SetTitle("Number of pads fired on Y");
+    hYNhitsTB1200_2000->GetYaxis()->SetTitle("Count");
+    hYNhitsTB1200_2000->Draw();
     cChargeIntervals_Y->cd(4);
-    hYNhitsTB1000_3000->GetXaxis()->SetTitle("Number of pads fired on Y");
-    hYNhitsTB1000_3000->GetYaxis()->SetTitle("Count");
-    hYNhitsTB1000_3000->Draw();
+    hYNhitsTB2000_6000->GetXaxis()->SetTitle("Number of pads fired on Y");
+    hYNhitsTB2000_6000->GetYaxis()->SetTitle("Count");
+    hYNhitsTB2000_6000->Draw();
     cChargeIntervals_Y->Update();
     cChargeIntervals_Y->Draw();
     
