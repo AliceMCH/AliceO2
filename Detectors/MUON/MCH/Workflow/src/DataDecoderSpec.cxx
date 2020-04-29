@@ -38,8 +38,6 @@
 #include "MCHMappingInterface/Segmentation.h"
 #include "MCHWorkflow/DataDecoderSpec.h"
 #include <array>
-#include "MapCRU.h"
-#include "MapFEC.h"
 
 namespace o2::header
 {
@@ -79,6 +77,7 @@ int ds2manu(int i)
 // Data decoder
 class DataDecoderTask
 {
+ private:
   void decodeBuffer(gsl::span<const std::byte> page, std::vector<o2::mch::Digit>& digits)
   {
     size_t ndigits{0};
@@ -98,13 +97,9 @@ class DataDecoderTask
         digitadc += sc.samples[d];
       }
 
-      int deId;
-      int dsIddet;
-      if (mMapFEC.size()) {
-        if (!mMapFEC.getDsId(dsElecId.solarId(), dsElecId.elinkId(), deId, dsIddet)) {
-          deId = dsIddet = -1;
-        }
-      } else if (auto opt = mElec2Det(dsElecId); opt.has_value()) {
+      int deId{-1};
+      int dsIddet{-1};
+      if (auto opt = mElec2Det(dsElecId); opt.has_value()) {
         DsDetId dsDetId = opt.value();
         dsIddet = dsDetId.dsId();
         deId = dsDetId.deId();
@@ -143,16 +138,48 @@ class DataDecoderTask
     };
 
     o2::mch::raw::PageDecoder decode =
-      mMapCRU.size() ? o2::mch::raw::createPageDecoder(page, channelHandler, mMapCRU) : o2::mch::raw::createPageDecoder(page, channelHandler);
+      mFee2Solar ? o2::mch::raw::createPageDecoder(page, channelHandler, mFee2Solar)
+                 : o2::mch::raw::createPageDecoder(page, channelHandler);
     patchPage(page);
     decode(page);
+  }
+
+ private:
+  std::string readFileContent(std::string_view filename)
+  {
+    std::string content;
+    std::string s;
+    std::ifstream in(filename);
+    while (std::getline(in, s)) {
+      content += s;
+    }
+    return s;
+  }
+
+  void initElec2DetMapper(std::string_view filename)
+  {
+    if (filename.empty()) {
+      mElec2Det = createElec2DetMapper<ElectronicMapperGenerated>();
+    } else {
+      ElectronicMapperString::sCruMap = readFileContent(filename);
+      mElec2Det = createElec2DetMapper<ElectronicMapperString>();
+    }
+  }
+
+  void initFee2SolarMapper(std::string_view filename)
+  {
+    if (filename.empty()) {
+      mFee2Solar = createFeeLink2SolarMapper<ElectronicMapperGenerated>();
+    } else {
+      ElectronicMapperString::sFecMap = readFileContent(filename);
+      mFee2Solar = createFeeLink2SolarMapper<ElectronicMapperString>();
+    }
   }
 
  public:
   //_________________________________________________________________________________________________
   void init(framework::InitContext& ic)
   {
-    mElec2Det = createElec2DetMapper<ElectronicMapperGenerated>();
     mNrdhs = 0;
 
     for (int i = 0; i < 64; i++) {
@@ -171,22 +198,13 @@ class DataDecoderTask
     auto mapCRUfile = ic.options().get<std::string>("cru-map");
     auto mapFECfile = ic.options().get<std::string>("fec-map");
 
-    if (!mapCRUfile.empty()) {
-      std::ifstream in(mapCRUfile);
-      if (in.is_open()) {
-        mMapCRU.load(in);
-      }
-    }
-    if (!mapFECfile.empty()) {
-      std::ifstream in(mapFECfile);
-      if (in.is_open()) {
-        mMapFEC.load(in);
-      }
-    }
+    initElec2DetMapper(mapCRUfile);
+    initFee2SolarMapper(mapFECfile);
   }
 
   //_________________________________________________________________________________________________
-  void decodeTF(framework::ProcessingContext& pc, std::vector<o2::mch::Digit>& digits)
+  void
+    decodeTF(framework::ProcessingContext& pc, std::vector<o2::mch::Digit>& digits)
   {
     // get the input buffer
     auto& inputs = pc.inputs();
@@ -269,16 +287,14 @@ class DataDecoderTask
   }
 
  private:
-  std::function<std::optional<DsDetId>(DsElecId)> mElec2Det;
-  FeeLink2SolarMapper mFee2SolarMapper{nullptr};
+  Elec2DetMapper mElec2Det{nullptr};
+  FeeLink2SolarMapper mFee2Solar{nullptr};
   size_t mNrdhs{0};
 
   std::ifstream mInputFile{}; ///< input file
   bool mDs2manu = false;      ///< print convert channel numbering from Run3 to Run1-2 order
   bool mPrint = false;        ///< print digits
-  MapCRU mMapCRU;
-  MapFEC mMapFEC;
-};
+};                            // namespace raw
 
 //_________________________________________________________________________________________________
 o2::framework::DataProcessorSpec getDecodingSpec()
@@ -295,6 +311,6 @@ o2::framework::DataProcessorSpec getDecodingSpec()
             {"ds2manu", VariantType::Bool, false, {"convert channel numbering from Run3 to Run1-2 order"}}}};
 }
 
-} // end namespace raw
-} // end namespace mch
+} // namespace raw
+} // namespace mch
 } // end namespace o2

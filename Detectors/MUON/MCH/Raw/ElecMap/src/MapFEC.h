@@ -8,22 +8,26 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-#ifndef O2_MCH_WORKFLOW_MAPFEC_H
-#define O2_MCH_WORKFLOW_MAPFEC_H
+#ifndef O2_MCH_RAW_ELECMAP_MAP_FEC_H
+#define O2_MCH_RAW_ELECMAP_MAP_FEC_H
 
-#include <string>
 #include <array>
 #include <istream>
+#include "MCHRawElecMap/DsDetId.h"
+#include "MCHRawElecMap/DsElecId.h"
+#include <optional>
 
-namespace o2::mch
+namespace o2::mch::raw
 {
 class MapFEC
 {
  public:
-  MapFEC();
-  int load(std::istream& in);
-  bool getDsId(uint32_t link_id, uint32_t ds_addr, int& de, int& dsid) const;
+  MapFEC(std::string_view content);
+  std::optional<DsDetId> operator()(const DsElecId& elecId) const;
   size_t size() const;
+
+ private:
+  int index(uint32_t linkId, uint32_t dsAddr) const;
 
  private:
   struct MapDualSampa {
@@ -31,12 +35,13 @@ class MapFEC
     int dsId = -1; // DS index
     int bad = -1;  // if = 1 bad pad (not used for analysis)
   };
-  int index(uint32_t linkId, uint32_t dsAddr) const;
+
+ private:
   static constexpr int sMaxLinkId = 0x7ff;
   static constexpr int sMaxDs = 40;
   std::array<MapDualSampa, (sMaxLinkId + 1) * sMaxDs> mDsMap;
 };
 
-} // namespace o2::mch
+} // namespace o2::mch::raw
 
 #endif

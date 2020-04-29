@@ -12,29 +12,17 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
+#include <string>
+#include <sstream>
 
-namespace o2::mch
+namespace o2::mch::raw
 {
 
-MapFEC::MapFEC()
+MapFEC::MapFEC(std::string_view content)
 {
   mDsMap.fill({-1, -1, -1});
-}
-
-int MapFEC::index(uint32_t linkId, uint32_t dsAddr) const
-{
-  if (linkId < 0 || linkId > sMaxLinkId) {
-    return -1;
-  }
-  if (dsAddr < 0 || dsAddr >= sMaxDs) {
-    return -1;
-  }
-  return linkId * sMaxDs + dsAddr;
-}
-
-int MapFEC::load(std::istream& in)
-{
   int link_id, group_id, de, ds_id[5];
+  std::istringstream in(std::string{content});
   while (in >> link_id >> group_id >> de >> ds_id[0] >> ds_id[1] >> ds_id[2] >> ds_id[3] >> ds_id[4]) {
     for (int i = 0; i < 5; i++) {
       if (ds_id[i] <= 0) {
@@ -48,7 +36,17 @@ int MapFEC::load(std::istream& in)
       mDsMap.at(ix) = {de, ds_id[i], 0};
     }
   }
-  return size();
+}
+
+int MapFEC::index(uint32_t linkId, uint32_t dsAddr) const
+{
+  if (linkId < 0 || linkId > sMaxLinkId) {
+    return -1;
+  }
+  if (dsAddr < 0 || dsAddr >= sMaxDs) {
+    return -1;
+  }
+  return linkId * sMaxDs + dsAddr;
 }
 
 size_t MapFEC::size() const
@@ -58,23 +56,29 @@ size_t MapFEC::size() const
   });
 }
 
-bool MapFEC::getDsId(uint32_t link_id, uint32_t ds_addr, int& de, int& dsid) const
+std::optional<o2::mch::raw::DsDetId> MapFEC::operator()(const o2::mch::raw::DsElecId& dsElecId) const
 {
+  auto link_id = dsElecId.solarId();
+  auto ds_addr = dsElecId.elinkId();
+
   if (!size()) {
-    return false;
+    return std::nullopt;
   }
 
   int ix = index(link_id, ds_addr);
   std::cout << "link_id=" << link_id << " ds_addr=" << ds_addr
             << " ix=" << ix << "\n";
   if (ix < 0) {
-    return false;
+    return std::nullopt;
   }
   if (mDsMap.at(ix).bad == 1) {
-    return false;
+    return std::nullopt;
   }
-  de = mDsMap.at(ix).deId;
-  dsid = mDsMap.at(ix).dsId;
-  return de >= 0 && dsid >= 0;
+  auto de = mDsMap.at(ix).deId;
+  auto dsid = mDsMap.at(ix).dsId;
+  if (de >= 0 && dsid >= 0) {
+    return o2::mch::raw::DsDetId(de, dsid);
+  }
+  return std::nullopt;
 }
-} // namespace o2::mch
+} // namespace o2::mch::raw

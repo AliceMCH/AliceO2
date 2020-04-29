@@ -23,12 +23,28 @@ bool isValid(uint16_t solarId)
 }
 } // namespace
 
-namespace o2::mch
+namespace o2::mch::raw
 {
 
-MapCRU::MapCRU()
+MapCRU::MapCRU(std::string_view content)
 {
   mFeeLink2Solar.fill(std::numeric_limits<uint16_t>::max());
+  std::istringstream input(content.data());
+  std::string s;
+  while (std::getline(input, s)) {
+    if (s.empty()) {
+      continue;
+    }
+    std::istringstream line(s);
+    int f, l, link_id, dummy;
+    std::string a1, a2;
+    line >> link_id >> f >> l >> dummy >> a1 >> a2;
+    auto ix = indexFeeLink(f, l);
+    if (ix < 0) {
+      continue;
+    }
+    mFeeLink2Solar.at(ix) = link_id;
+  }
 }
 
 int MapCRU::indexFeeLink(int feeid, int linkid) const
@@ -40,26 +56,6 @@ int MapCRU::indexFeeLink(int feeid, int linkid) const
     return -1;
   }
   return feeid * sMaxLinkId + linkid;
-}
-
-int MapCRU::load(std::istream& in)
-{
-  int f, l, link_id, dummy;
-  std::string a1, a2;
-  std::string s;
-  while (std::getline(in, s)) {
-    if (s.empty()) {
-      continue;
-    }
-    std::istringstream line(s);
-    line >> link_id >> f >> l >> dummy >> a1 >> a2;
-    auto ix = indexFeeLink(f, l);
-    if (ix < 0) {
-      continue;
-    }
-    mFeeLink2Solar.at(ix) = link_id;
-  }
-  return size();
 }
 
 size_t MapCRU::size() const
@@ -82,4 +78,4 @@ std::optional<uint16_t> MapCRU::operator()(const o2::mch::raw::FeeLinkId& feeLin
   }
   return std::nullopt;
 }
-} // namespace o2::mch
+} // namespace o2::mch::raw

@@ -38,8 +38,9 @@ extern std::array<int, 156> deIdsForAllMCH;
 /// From (solarId,groupdId,index) to (deId,dsId)
 /// timestamp is foreseen to specify a data taking period (not used for the moment)
 /// use 0 to get the latest mapping
+using Elec2DetMapper = std::function<std::optional<DsDetId>(DsElecId)>;
 template <typename T>
-std::function<std::optional<DsDetId>(DsElecId)> createElec2DetMapper(uint64_t timestamp = 0);
+Elec2DetMapper createElec2DetMapper(uint64_t timestamp = 0);
 
 /// From (deId,dsId) to (solarId,groupId,index) for all detection elements
 template <typename T>
@@ -62,6 +63,10 @@ std::function<std::optional<FeeLinkId>(uint16_t solarId)> createSolar2FeeLinkMap
 struct ElectronicMapperDummy {
 };
 struct ElectronicMapperGenerated {
+};
+struct ElectronicMapperString {
+  static std::string sCruMap;
+  static std::string sFecMap;
 };
 ///@}
 

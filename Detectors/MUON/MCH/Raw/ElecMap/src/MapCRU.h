@@ -11,20 +11,19 @@
 #ifndef O2_MCH_WORKFLOW_MAPCRU_H
 #define O2_MCH_WORKFLOW_MAPCRU_H
 
-#include <string>
+#include <string_view>
 #include <array>
 #include <cstdlib>
 #include <optional>
 #include "MCHRawElecMap/FeeLinkId.h"
 
-namespace o2::mch
+namespace o2::mch::raw
 {
 class MapCRU
 {
  public:
-  MapCRU();
-  int load(std::istream& in);
-  std::optional<uint16_t> operator()(const o2::mch::raw::FeeLinkId& feeLinkId) const;
+  MapCRU(std::string_view content);
+  std::optional<uint16_t> operator()(const FeeLinkId& feeLinkId) const;
   size_t size() const;
 
  private:
@@ -36,5 +35,5 @@ class MapCRU
   std::array<uint16_t, sMaxFeeId * sMaxLinkId> mFeeLink2Solar;
 };
 
-} // namespace o2::mch
+} // namespace o2::mch::raw
 #endif
