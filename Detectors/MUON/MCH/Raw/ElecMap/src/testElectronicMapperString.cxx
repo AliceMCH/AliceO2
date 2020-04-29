@@ -18,18 +18,27 @@
 #include <sstream>
 #include <string>
 
-// cruId cruLink s/n endpoint endpoint0_addr endpoint1_addr
-//   #    0..11  #    0..1     xx:#.#           yy:#.#
+// clang-format off
+// solarId feeId cruLink  
+//       #     #   0..11
 std::string cruString = R"(
-1       0       0       0       af:0.0  bf:0.0
-20      3      11       1       af:0.0  bf:0.0
+      1        0       0
+     20        3      11
 )";
+std::string cruString2 = R"(
+      1        0       0    anything
+     20        3      11    anything extra will not matter
+)";
+// clang-format on
 
-// link group   de      dsid0   dsid1   dsid2   dsid3   dsid4
+// clang-format off
+// solarId   groupId    de   dsid0   dsid1   dsid2   dsid3   dsid4
+//                         index=0 index=1 index=2 index=3 index=4
 std::string fecString = R"(
-1       0       819     108     0       107     0       106
-1       1       919     1133    0       1134    0       0
+         1         0   819     108       0     107       0     106
+         1         1   919    1133       0    1134       0       0
 )";
+// clang-format on
 
 using namespace o2::mch::raw;
 
@@ -54,6 +63,15 @@ BOOST_AUTO_TEST_CASE(GetSolarId)
   BOOST_CHECK_EQUAL(solarId.value(), 20);
 }
 
+BOOST_AUTO_TEST_CASE(GetSolarIdIsOKEvenIfLineContainsMoreInformation)
+{
+  MapCRU cru(cruString2);
+  FeeLinkId fl(3, 11);
+  auto solarId = cru(fl);
+  BOOST_CHECK_EQUAL(solarId.has_value(), true);
+  BOOST_CHECK_EQUAL(solarId.value(), 20);
+}
+
 BOOST_AUTO_TEST_CASE(ObjectFromStringShouldHaveFiveFEC)
 {
   MapFEC fec(fecString);
@@ -63,7 +81,6 @@ BOOST_AUTO_TEST_CASE(ObjectFromStringShouldHaveFiveFEC)
 BOOST_AUTO_TEST_CASE(RequestingInvalidLinkMustYieldInvalidDeDs)
 {
   MapFEC fec(fecString);
-  int deId, dsId;
   auto dsDetId = fec(DsElecId(2, 0, 0));
   BOOST_CHECK_EQUAL(dsDetId.has_value(), false);
 }
@@ -71,7 +88,6 @@ BOOST_AUTO_TEST_CASE(RequestingInvalidLinkMustYieldInvalidDeDs)
 BOOST_AUTO_TEST_CASE(RequestingInvalidDsAddressMustYieldInvalidDeDs)
 {
   MapFEC fec(fecString);
-  int deId, dsId;
   auto dsDetId = fec(DsElecId(1, 6, 0));
   BOOST_CHECK_EQUAL(dsDetId.has_value(), false);
 }
@@ -79,8 +95,10 @@ BOOST_AUTO_TEST_CASE(RequestingInvalidDsAddressMustYieldInvalidDeDs)
 BOOST_AUTO_TEST_CASE(GetValidDeDs)
 {
   MapFEC fec(fecString);
-  int deId, dsId;
-  auto dsDetId = fec(DsElecId(1, 7, 0));
+  uint16_t solarId = 1;
+  uint8_t elinkGroupId = 1;
+  uint8_t elinkIndex = 2;
+  auto dsDetId = fec(DsElecId(solarId, elinkGroupId, elinkIndex));
   BOOST_CHECK_EQUAL(dsDetId.has_value(), true);
   BOOST_CHECK_EQUAL(dsDetId->deId(), 919);
   BOOST_CHECK_EQUAL(dsDetId->dsId(), 1134);

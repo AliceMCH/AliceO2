@@ -36,9 +36,8 @@ MapCRU::MapCRU(std::string_view content)
       continue;
     }
     std::istringstream line(s);
-    int f, l, link_id, dummy;
-    std::string a1, a2;
-    line >> link_id >> f >> l >> dummy >> a1 >> a2;
+    int f, l, link_id;
+    line >> link_id >> f >> l;
     auto ix = indexFeeLink(f, l);
     if (ix < 0) {
       continue;

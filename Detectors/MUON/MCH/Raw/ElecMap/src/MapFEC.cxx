@@ -66,8 +66,6 @@ std::optional<o2::mch::raw::DsDetId> MapFEC::operator()(const o2::mch::raw::DsEl
   }
 
   int ix = index(link_id, ds_addr);
-  std::cout << "link_id=" << link_id << " ds_addr=" << ds_addr
-            << " ix=" << ix << "\n";
   if (ix < 0) {
     return std::nullopt;
   }
