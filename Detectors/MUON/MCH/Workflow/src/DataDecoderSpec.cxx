@@ -145,33 +145,34 @@ class DataDecoderTask
   }
 
  private:
-  std::string readFileContent(std::string_view filename)
+  std::string readFileContent(std::string& filename)
   {
     std::string content;
     std::string s;
     std::ifstream in(filename);
     while (std::getline(in, s)) {
       content += s;
+      content += " ";
     }
-    return s;
+    return content;
   }
 
-  void initElec2DetMapper(std::string_view filename)
+  void initElec2DetMapper(std::string filename)
   {
     if (filename.empty()) {
       mElec2Det = createElec2DetMapper<ElectronicMapperGenerated>();
     } else {
-      ElectronicMapperString::sCruMap = readFileContent(filename);
+      ElectronicMapperString::sFecMap = readFileContent(filename);
       mElec2Det = createElec2DetMapper<ElectronicMapperString>();
     }
   }
 
-  void initFee2SolarMapper(std::string_view filename)
+  void initFee2SolarMapper(std::string filename)
   {
     if (filename.empty()) {
       mFee2Solar = createFeeLink2SolarMapper<ElectronicMapperGenerated>();
     } else {
-      ElectronicMapperString::sFecMap = readFileContent(filename);
+      ElectronicMapperString::sCruMap = readFileContent(filename);
       mFee2Solar = createFeeLink2SolarMapper<ElectronicMapperString>();
     }
   }
@@ -198,8 +199,8 @@ class DataDecoderTask
     auto mapCRUfile = ic.options().get<std::string>("cru-map");
     auto mapFECfile = ic.options().get<std::string>("fec-map");
 
-    initElec2DetMapper(mapCRUfile);
-    initFee2SolarMapper(mapFECfile);
+    initElec2DetMapper(mapFECfile);
+    initFee2SolarMapper(mapCRUfile);
   }
 
   //_________________________________________________________________________________________________
