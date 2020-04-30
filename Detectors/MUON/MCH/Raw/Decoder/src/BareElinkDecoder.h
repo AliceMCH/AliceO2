@@ -126,6 +126,7 @@ class BareElinkDecoder
   std::vector<uint16_t> mSamples;
   uint32_t mClusterSum;
   uint64_t mMask;
+  uint64_t mSync;
 
   State mState; //< the state we are in
 };
@@ -172,6 +173,7 @@ BareElinkDecoder<CHARGESUM>::BareElinkDecoder(DsElecId dsId,
     mState{State::LookingForSync},
     mMask{1}
 {
+  mSync = sampaSync().uint64();
 }
 
 template <typename CHARGESUM>
@@ -217,9 +219,8 @@ void BareElinkDecoder<CHARGESUM>::clear(int checkpoint)
 template <typename CHARGESUM>
 void BareElinkDecoder<CHARGESUM>::findSync()
 {
-  const uint64_t sync = sampaSync().uint64();
   assert(mState == State::LookingForSync);
-  if (mBitBuffer != sync) {
+  if (mBitBuffer != mSync) {
     mBitBuffer >>= 1;
     mMask /= 2;
     return;
@@ -232,6 +233,13 @@ template <typename CHARGESUM>
 void BareElinkDecoder<CHARGESUM>::handleHeader()
 {
   assert(mState == State::LookingForHeader);
+
+  // check if the current 50-bit word is a SYNC, and skip it if that's the case
+  if (mBitBuffer == mSync) {
+    mNofSync++;
+    softReset();
+    return;
+  }
 
   mSampaHeader.uint64(mBitBuffer);
 
