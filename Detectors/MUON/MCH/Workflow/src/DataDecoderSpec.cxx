@@ -37,6 +37,7 @@
 #include "MCHRawCommon/RDHManip.h"
 #include "MCHMappingInterface/Segmentation.h"
 #include "MCHWorkflow/DataDecoderSpec.h"
+#include <array>
 
 namespace o2::header
 {
@@ -80,139 +81,6 @@ int ds2manu(int i)
   return refDs2manu_st345[i];
 }
 
-//=============
-// Classes for custom mapping implementation
-#define MCH_MAX_FEEID 64
-#define MCH_MAX_CRU_LINK 12
-#define LINKID_MAX 0x7FF
-
-// CRU mapping
-class MapCRU
-{
-  bool mInitialized = {false};
-  uint16_t mSolarMap[MCH_MAX_FEEID][MCH_MAX_CRU_LINK];
-
- public:
-  MapCRU() = default;
-  ~MapCRU() = default;
-  bool load(std::string mapFile);
-  bool initialized() const { return mInitialized; }
-  std::optional<uint16_t> operator()(const FeeLinkId& feeLinkId) const;
-};
-
-bool MapCRU::load(std::string mapFile)
-{
-  std::ifstream file;
-  file.open(mapFile);
-  if (!file) {
-    std::cout << "[MapCRU::readMapping] can't open file " << mapFile << std::endl;
-    return false;
-  }
-
-  int c, l, link_id;
-  char tstr[500];
-  while (file.getline(tstr, 499)) {
-    std::string s(tstr);
-    std::istringstream line(s);
-    line >> link_id >> c >> l;
-    if (c < 0 || c >= MCH_MAX_FEEID) {
-      continue;
-    }
-    if (l < 0 || l >= MCH_MAX_CRU_LINK) {
-      continue;
-    }
-    mSolarMap[c][l] = link_id;
-  }
-  mInitialized = true;
-  return true;
-}
-
-std::optional<uint16_t> MapCRU::operator()(const FeeLinkId& feeLinkId) const
-{
-  if (!initialized()) {
-    return std::nullopt;
-  }
-  auto f = feeLinkId.feeId();
-  auto l = feeLinkId.linkId();
-  if (f < 0 || f >= MCH_MAX_FEEID) {
-    return std::nullopt;
-  }
-  if (l < 0 || l >= MCH_MAX_CRU_LINK) {
-    return std::nullopt;
-  }
-  return mSolarMap[f][l];
-}
-
-class MapDualSampa
-{
- public:
-  int mDE = -1;    // detector element
-  int mIndex = -1; // DS index
-  int mBad = -1;   // if = 1 bad pad (not used for analysis)
-
-  MapDualSampa() = default;
-  ~MapDualSampa() = default;
-};
-
-// Electronics mapping
-class MapFEC
-{
-  bool mInitialized = false;
-  MapDualSampa mDsMap[LINKID_MAX + 1][40];
-
- public:
-  MapFEC() = default;
-  ~MapFEC() = default;
-  bool load(std::string mapFile);
-  bool initialized() { return mInitialized; }
-  bool getDsId(uint32_t link_id, uint32_t ds_addr, int& de, int& dsid);
-};
-
-bool MapFEC::load(std::string mapFile)
-{
-  std::ifstream file;
-  file.open(mapFile);
-  if (!file) {
-    std::cout << "[MapFEC::readDSMapping] can't open file " << mapFile << std::endl;
-    return false;
-  }
-
-  int link_id, group_id, de, ds_id[5];
-  while (!file.eof()) {
-    file >> link_id >> group_id >> de >> ds_id[0] >> ds_id[1] >> ds_id[2] >> ds_id[3] >> ds_id[4];
-    if (link_id < 0 || link_id > LINKID_MAX) {
-      continue;
-    }
-    for (int i = 0; i < 5; i++) {
-      if (ds_id[i] <= 0) {
-        continue;
-      }
-      int ds_addr = group_id * 5 + i;
-      if (ds_addr < 0 || ds_addr >= 40) {
-        continue;
-      }
-      mDsMap[link_id][ds_addr].mDE = de;
-      mDsMap[link_id][ds_addr].mIndex = ds_id[i];
-      mDsMap[link_id][ds_addr].mBad = 0;
-    }
-  }
-  mInitialized = true;
-  return true;
-}
-
-bool MapFEC::getDsId(uint32_t link_id, uint32_t ds_addr, int& de, int& dsid)
-{
-  if (!initialized()) {
-    return false;
-  }
-
-  if (mDsMap[link_id][ds_addr].mBad == 1) {
-    return false;
-  }
-  de = mDsMap[link_id][ds_addr].mDE;
-  dsid = mDsMap[link_id][ds_addr].mIndex;
-  return true;
-}
 
 class DigitInfo
 {
@@ -411,16 +279,21 @@ class DataDecoderTask
         digitadc += sc.samples[d];
       }
 
-      int deId;
-      int dsIddet;
-      if (mMapFEC.initialized()) {
-        if (!mMapFEC.getDsId(dsElecId.solarId(), dsElecId.elinkId(), deId, dsIddet)) {
-          deId = dsIddet = -1;
-        }
-      } else if (auto opt = mElec2Det(dsElecId); opt.has_value()) {
+      int deId{-1};
+      int dsIddet{-1};
+      if (auto opt = mElec2Det(dsElecId); opt.has_value()) {
         DsDetId dsDetId = opt.value();
         dsIddet = dsDetId.dsId();
         deId = dsDetId.deId();
+      }
+
+      if (mPrint) {
+          auto s = asString(dsElecId);
+          auto ch = fmt::format("{}-CH{:02d}", s, channel);
+          std::cout << ch << "  "
+              << fmt::format("PAD {:04d}-{:04d}\tADC {:5.0f}\tTIME {}-{}-{}\tSIZE {}\tEND {}", deId, dsIddet, digitadc, mergers[feeId].getCurrentBuffer().orbit, sc.bunchCrossing, sc.timestamp, sc.nofSamples(), (sc.timestamp+sc.nofSamples()-1))
+          << (((sc.timestamp+sc.nofSamples()-1) >= 98) ? " *" : "") << std::endl;
+        //std::cout << "DS " << (int)dsElecId.elinkId() << "  CHIP " << ((int)channel) / 32 << "  CH " << ((int)channel) % 32 << "  ADC " << digitadc << "  DE# " << deId << "  DSid " << dsIddet << "  PadId " << padId << std::endl;
       }
 
       int padId = -1;
@@ -473,9 +346,10 @@ class DataDecoderTask
       }
     };
 
-
     o2::mch::raw::PageDecoder decode =
-      mMapCRU.initialized() ? o2::mch::raw::createPageDecoder(page, channelHandler, mMapCRU) : o2::mch::raw::createPageDecoder(page, channelHandler);
+      mFee2Solar ? o2::mch::raw::createPageDecoder(page, channelHandler, mFee2Solar)
+                 : o2::mch::raw::createPageDecoder(page, channelHandler);
+
     patchPage(page);
     //std::cout<<"isStopRDH: "<<(int)isStopRDH<<std::endl;
     // skip stop RDHs
@@ -518,11 +392,46 @@ class DataDecoderTask
     }
   }
 
+ private:
+  std::string readFileContent(std::string& filename)
+  {
+    std::string content;
+    std::string s;
+    std::ifstream in(filename);
+    while (std::getline(in, s)) {
+      content += s;
+      content += " ";
+    }
+    std::cout<<"readFileContent("<<filename<<"):"<<std::endl<<content<<std::endl;
+    return content;
+  }
+
+  void initElec2DetMapper(std::string filename)
+  {
+    std::cout<<"[initElec2DetMapper] filename="<<filename<<std::endl;
+    if (filename.empty()) {
+      mElec2Det = createElec2DetMapper<ElectronicMapperGenerated>();
+    } else {
+      ElectronicMapperString::sFecMap = readFileContent(filename);
+      mElec2Det = createElec2DetMapper<ElectronicMapperString>();
+    }
+  }
+
+  void initFee2SolarMapper(std::string filename)
+  {
+    std::cout<<"[initFee2SolarMapper] filename="<<filename<<std::endl;
+    if (filename.empty()) {
+      mFee2Solar = createFeeLink2SolarMapper<ElectronicMapperGenerated>();
+    } else {
+      ElectronicMapperString::sCruMap = readFileContent(filename);
+      mFee2Solar = createFeeLink2SolarMapper<ElectronicMapperString>();
+    }
+  }
+
  public:
   //_________________________________________________________________________________________________
   void init(framework::InitContext& ic)
   {
-    mElec2Det = createElec2DetMapper<ElectronicMapperGenerated>();
     mNrdhs = 0;
 
     for (int i = 0; i < 64; i++) {
@@ -541,12 +450,8 @@ class DataDecoderTask
     auto mapCRUfile = ic.options().get<std::string>("cru-map");
     auto mapFECfile = ic.options().get<std::string>("fec-map");
 
-    if (!mapCRUfile.empty()) {
-      mMapCRU.load(mapCRUfile);
-    }
-    if (!mapFECfile.empty()) {
-      mMapFEC.load(mapFECfile);
-    }
+    initElec2DetMapper(mapFECfile);
+    initFee2SolarMapper(mapCRUfile);
 
     if (mPrint) {
       try {
@@ -564,7 +469,8 @@ class DataDecoderTask
   }
 
   //_________________________________________________________________________________________________
-  void decodeTF(framework::ProcessingContext& pc)
+  void
+  decodeTF(framework::ProcessingContext& pc)
   {
     // get the input buffer
     auto& inputs = pc.inputs();
@@ -577,8 +483,6 @@ class DataDecoderTask
       auto const* raw = it.raw();
       // size of payload
       size_t payloadSize = it.size();
-
-      std::cout << "payloadSize: " << payloadSize << std::endl;
 
       if (payloadSize == 0) {
         continue;
@@ -594,29 +498,26 @@ class DataDecoderTask
   {
     static int nFrame = 1;
     // get the input buffer
-    if (input.spec->binding != "readout")
+    if (input.spec->binding != "readout") {
       return;
+    }
 
     const auto* header = o2::header::get<header::DataHeader*>(input.header);
-    if (false)
-      printf("Header: %p\n", (void*)header);
-    if (!header)
+    if (!header) {
       return;
-
-    if (false)
-      printf("payloadSize: %d\n", (int)header->payloadSize);
-    if (false)
-      printf("payload: %p\n", input.payload);
+    }
 
     auto const* raw = input.payload;
     // size of payload
     size_t payloadSize = header->payloadSize;
 
-    if (false)
+    if (mPrint) {
       std::cout << nFrame << "  payloadSize=" << payloadSize << std::endl;
+    }
     nFrame += 1;
-    if (payloadSize == 0)
+    if (payloadSize == 0) {
       return;
+    }
 
     gsl::span<const std::byte> buffer(reinterpret_cast<const std::byte*>(raw), payloadSize);
     decodeBuffer(buffer);
@@ -646,16 +547,14 @@ class DataDecoderTask
   }
 
  private:
-  std::function<std::optional<DsDetId>(DsElecId)> mElec2Det;
-  FeeLink2SolarMapper mFee2SolarMapper{nullptr};
+  Elec2DetMapper mElec2Det{nullptr};
+  FeeLink2SolarMapper mFee2Solar{nullptr};
   size_t mNrdhs{0};
   std::vector<o2::mch::Digit> outputDigits;
 
   std::ifstream mInputFile{}; ///< input file
   bool mDs2manu = false;      ///< print convert channel numbering from Run3 to Run1-2 order
   bool mPrint = false;        ///< print digits
-  MapCRU mMapCRU;
-  MapFEC mMapFEC;
 
   uint32_t feeId = 0;
   DigitsMerger mergers[64];
@@ -677,6 +576,6 @@ o2::framework::DataProcessorSpec getDecodingSpec()
             {"ds2manu", VariantType::Bool, false, {"convert channel numbering from Run3 to Run1-2 order"}}}};
 }
 
-} // end namespace raw
-} // end namespace mch
+} // namespace raw
+} // namespace mch
 } // end namespace o2
