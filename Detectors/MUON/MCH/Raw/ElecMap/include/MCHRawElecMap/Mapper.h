@@ -46,8 +46,9 @@ template <typename T>
 std::function<std::optional<DsElecId>(DsDetId id)> createDet2ElecMapper();
 
 /// From (feeId,linkId) to solarId
+using FeeLink2SolarMapper = std::function<std::optional<uint16_t>(FeeLinkId id)>;
 template <typename T>
-std::function<std::optional<uint16_t>(FeeLinkId id)> createFeeLink2SolarMapper();
+FeeLink2SolarMapper createFeeLink2SolarMapper();
 
 /// From solarId to (feeId,linkId)
 template <typename T>
