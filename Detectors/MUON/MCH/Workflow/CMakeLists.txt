@@ -9,11 +9,11 @@
 # submit itself to any jurisdiction.
 
 o2_add_library(MCHWorkflow
-               SOURCES src/DataDecoderSpec.cxx src/PreClusterFinderSpec.cxx
+               SOURCES src/DataDecoderSpec.cxx src/PreClusterFinderSpec.cxx src/ClusterFinderSpec.cxx
                TARGETVARNAME targetName
                PUBLIC_LINK_LIBRARIES O2::Framework O2::DPLUtils O2::MCHRawDecoder Boost::program_options
                                      O2::MCHRawImplHelpers RapidJSON::RapidJSON O2::MCHMappingInterface O2::MCHPreClustering
-                                     O2::MCHMappingImpl3 O2::MCHRawElecMap O2::MCHBase O2::MCHPreClustering)
+                                     O2::MCHMappingImpl3 O2::MCHRawElecMap O2::MCHBase O2::MCHPreClustering O2::MCHClustering)
 
 o2_add_executable(
         file-to-digits-workflow
@@ -22,6 +22,12 @@ o2_add_executable(
         PUBLIC_LINK_LIBRARIES O2::Framework O2::DPLUtils O2::MCHRawDecoder Boost::program_options
                               O2::MCHRawImplHelpers O2::MCHMappingInterface
                               O2::MCHMappingImpl3 O2::MCHRawElecMap O2::MCHBase)
+
+o2_add_executable(
+        hbf-reader-workflow
+        SOURCES src/hbf-reader-workflow.cxx
+        COMPONENT_NAME mch
+        PUBLIC_LINK_LIBRARIES O2::Framework O2::DPLUtils Boost::program_options)
 
 o2_add_executable(
         digits-sink-workflow
@@ -42,6 +48,12 @@ o2_add_executable(
         PUBLIC_LINK_LIBRARIES O2::MCHWorkflow)
 
 o2_add_executable(
+        preclusters-to-clusters-workflow
+        SOURCES src/preclusters-to-clusters-workflow.cxx
+        COMPONENT_NAME mch
+        PUBLIC_LINK_LIBRARIES O2::MCHWorkflow)
+
+o2_add_executable(
         digits-reader-workflow
         SOURCES src/DigitSamplerSpec.cxx src/digits-reader-workflow.cxx
         COMPONENT_NAME mch
@@ -50,5 +62,11 @@ o2_add_executable(
 o2_add_executable(
         preclusters-sink-workflow
         SOURCES src/PreClusterSinkSpec.cxx src/preclusters-sink-workflow.cxx
+        COMPONENT_NAME mch
+        PUBLIC_LINK_LIBRARIES O2::MCHWorkflow)
+
+o2_add_executable(
+        clusters-sink-workflow
+        SOURCES src/ClusterSinkSpec.cxx src/clusters-sink-workflow.cxx
         COMPONENT_NAME mch
         PUBLIC_LINK_LIBRARIES O2::MCHWorkflow)
