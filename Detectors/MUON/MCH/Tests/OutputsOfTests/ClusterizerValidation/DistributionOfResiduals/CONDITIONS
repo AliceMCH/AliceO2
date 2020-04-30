@@ -1,0 +1,13 @@
+for(int i=0; i<200; i++){
+  	    yarray[i] = ygen->Uniform(-20,20);
+            xarray[i] = xgen->Uniform(-40,40);
+            chg[i] = chggen->Uniform(20,2000);
+        }
+
+200 évènements
+
+    TRandom *ygen = new TRandom(12345);
+    TRandom *xgen = new TRandom(123456);
+    TRandom *chggen = new TRandom(123);
+
+(Les résultats varieront toujours un peu parce que il y a toujours un tirage random au moment de générer la Mathieson et ses digits. Mais on devrait voire globalement les mêmes tendances)
