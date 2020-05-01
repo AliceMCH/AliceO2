@@ -62,12 +62,11 @@ std::array<int, 64> refManu2ds_st345 = {
   7, 8, 5, 2, 6, 1, 3, 0, 4, 9, 10, 15, 17, 18, 22, 25,
   31, 30, 29, 28, 27, 26, 24, 23, 20, 21, 16, 19, 12, 14, 11, 13};
 
-
 std::array<int, 64> refManu2ds_st345_v2 = {
-    62,61,63,60,59,55,58,57,56,54,50,46,42,39,37,41,
-    35,36,33,34,32,38,43,40,45,44,47,48,49,52,51,53,
-    7, 6, 5, 4, 2, 3, 1, 0, 9,11,13,15,17,19,21,23,
-    31,30,29,28,27,26,25,24,22,20,18,16,14,12,10, 8};
+  62, 61, 63, 60, 59, 55, 58, 57, 56, 54, 50, 46, 42, 39, 37, 41,
+  35, 36, 33, 34, 32, 38, 43, 40, 45, 44, 47, 48, 49, 52, 51, 53,
+  7, 6, 5, 4, 2, 3, 1, 0, 9, 11, 13, 15, 17, 19, 21, 23,
+  31, 30, 29, 28, 27, 26, 25, 24, 22, 20, 18, 16, 14, 12, 10, 8};
 
 std::array<int, 64> refDs2manu_st345;
 
@@ -81,10 +80,9 @@ int ds2manu(int i)
   return refDs2manu_st345[i];
 }
 
-
 class DigitInfo
 {
-public:
+ public:
   DigitInfo() = default;
   ~DigitInfo() = default;
 
@@ -96,13 +94,10 @@ public:
   int chAddr = {-1};
 };
 
-
-struct DigitsBuffer
-{
+struct DigitsBuffer {
   std::vector<DigitInfo> digits;
   uint32_t orbit;
 };
-
 
 class DigitsMerger
 {
@@ -110,13 +105,13 @@ class DigitsMerger
   int currentBufId = {1};
   int previousBufId = {0};
 
-public:
+ public:
   DigitsMerger() = default;
   ~DigitsMerger() = default;
 
   void newPage(uint32_t orbit)
   {
-    currentBufId  = 1 - currentBufId;
+    currentBufId = 1 - currentBufId;
     previousBufId = 1 - previousBufId;
     buffers[currentBufId].digits.clear();
     buffers[currentBufId].orbit = orbit;
@@ -143,7 +138,6 @@ public:
   }
 };
 
-
 //=======================
 // Data decoder
 class DataDecoderTask
@@ -153,7 +147,7 @@ class DataDecoderTask
     auto checkDigits = [](DigitInfo& d1, DigitInfo& d2) -> bool {
       // skip digits that are already merged
       //std::cout<<"merged: "<<d1.merged<<","<<d2.merged<<std::endl;
-      if(d1.merged || d2.merged)
+      if (d1.merged || d2.merged)
         return false;
 
       // skip all digits not matching the detId/padId
@@ -166,36 +160,36 @@ class DataDecoderTask
         return false;
       if (d1.digit.getDetID() != d2.digit.getDetID())
         return false;
-       //std::cout<<"padId: "<<d1.digit.getPadID()<<","<<d2.digit.getPadID()<<std::endl;
-       if (d1.digit.getPadID() != d2.digit.getPadID())
-         return false;
+      //std::cout<<"padId: "<<d1.digit.getPadID()<<","<<d2.digit.getPadID()<<std::endl;
+      if (d1.digit.getPadID() != d2.digit.getPadID())
+        return false;
 
-       // compute time difference
-       HitTime startTime = d1.digit.getTime();
-       uint32_t bxStart = startTime.bunchCrossing;
-       HitTime stopTime = d2.stopTime;
-       uint32_t bxStop = stopTime.bunchCrossing;
-       // correct for value rollover
-       if(bxStart < bxStop)
-         bxStart += 0x100000;
+      // compute time difference
+      HitTime startTime = d1.digit.getTime();
+      uint32_t bxStart = startTime.bunchCrossing;
+      HitTime stopTime = d2.stopTime;
+      uint32_t bxStop = stopTime.bunchCrossing;
+      // correct for value rollover
+      if (bxStart < bxStop)
+        bxStart += 0x100000;
 
-       uint32_t stopTimeFull  = bxStop + (stopTime.sampaTime << 2);
-       uint32_t startTimeFull = bxStart + (startTime.sampaTime << 2);
-       uint32_t timeDiff = startTimeFull - stopTimeFull;
+      uint32_t stopTimeFull = bxStop + (stopTime.sampaTime << 2);
+      uint32_t startTimeFull = bxStart + (startTime.sampaTime << 2);
+      uint32_t timeDiff = startTimeFull - stopTimeFull;
 
-       if (false) {
-         std::cout<<"checkDigits: "<<d1.digit.getDetID()<<"  "<<d1.digit.getPadID()<<"  "<<bxStop<<"  "<<stopTime.sampaTime
-             <<"  "<<bxStart<<"  "<<startTime.sampaTime<<"  "<<timeDiff<<std::endl;
-       }
+      if (false) {
+        std::cout << "checkDigits: " << d1.digit.getDetID() << "  " << d1.digit.getPadID() << "  " << bxStop << "  " << stopTime.sampaTime
+                  << "  " << bxStart << "  " << startTime.sampaTime << "  " << timeDiff << std::endl;
+      }
 
-       // skip if the time difference is not equal to 1 ADC clock cycle
-       if(timeDiff > 8)
-         return false;
+      // skip if the time difference is not equal to 1 ADC clock cycle
+      if (timeDiff > 8)
+        return false;
 
-       // merge digits
-       d2.digit.setADC(d1.digit.getADC() + d2.digit.getADC());
-       d1.merged = true;
-       return true;
+      // merge digits
+      d2.digit.setADC(d1.digit.getADC() + d2.digit.getADC());
+      d1.merged = true;
+      return true;
     };
 
     auto& currentBuffer = mergers[feeId].getCurrentBuffer();
@@ -204,23 +198,23 @@ class DataDecoderTask
     auto previousBufId = mergers[feeId].getPreviousBufId();
 
     if (mPrint) {
-      std::cout<<"Merging digits in "<<previousBufId<<" (orbit="<<previousBuffer.orbit<<")\n";
+      std::cout << "Merging digits in " << previousBufId << " (orbit=" << previousBuffer.orbit << ")\n";
     }
-    for(size_t i = 0; i < previousBuffer.digits.size(); i++) {
+    for (size_t i = 0; i < previousBuffer.digits.size(); i++) {
       DigitInfo& d1 = previousBuffer.digits[i];
 
       // skip digits that do not start at the beginning of the time window
       HitTime startTime = d1.digit.getTime();
-      if(startTime.sampaTime != 0) {
+      if (startTime.sampaTime != 0) {
         continue;
       }
 
-      for(size_t j = 0; j < previousBuffer.digits.size(); j++) {
-        if(i == j) {
+      for (size_t j = 0; j < previousBuffer.digits.size(); j++) {
+        if (i == j) {
           continue;
         }
         DigitInfo& d2 = previousBuffer.digits[j];
-        if(checkDigits(d1, d2)) {
+        if (checkDigits(d1, d2)) {
           break;
         }
       }
@@ -233,29 +227,29 @@ class DataDecoderTask
     // only merge digits from consecutive orbits
     uint32_t orbit_p = previousBuffer.orbit;
     uint32_t orbit_c = currentBuffer.orbit;
-    if(mPrint) {
-      std::cout<<"orbit_c: "<<orbit_c<<"  orbit_p: "<<orbit_p<<std::endl;
+    if (mPrint) {
+      std::cout << "orbit_c: " << orbit_c << "  orbit_p: " << orbit_p << std::endl;
     }
-    if((orbit_c >= orbit_p) && ((orbit_c - orbit_p) > 1)) {
+    if ((orbit_c >= orbit_p) && ((orbit_c - orbit_p) > 1)) {
       return;
     }
 
     if (mPrint) {
-      std::cout<<"Merging digits from "<<currentBufId<<" (orbit="<<currentBuffer.orbit<<") into "
-          <<previousBufId<<" (orbit="<<previousBuffer.orbit<<")\n";
+      std::cout << "Merging digits from " << currentBufId << " (orbit=" << currentBuffer.orbit << ") into "
+                << previousBufId << " (orbit=" << previousBuffer.orbit << ")\n";
     }
-    for(size_t i = 0; i < currentBuffer.digits.size(); i++) {
+    for (size_t i = 0; i < currentBuffer.digits.size(); i++) {
       DigitInfo& d1 = currentBuffer.digits[i];
 
       // skip digits that do not start at the beginning of the time window
       HitTime startTime = d1.digit.getTime();
-      if(startTime.sampaTime != 0) {
+      if (startTime.sampaTime != 0) {
         continue;
       }
 
-      for(size_t j = 0; j < previousBuffer.digits.size(); j++) {
+      for (size_t j = 0; j < previousBuffer.digits.size(); j++) {
         DigitInfo& d2 = previousBuffer.digits[j];
-        if(checkDigits(d1, d2)) {
+        if (checkDigits(d1, d2)) {
           break;
         }
       }
@@ -288,11 +282,11 @@ class DataDecoderTask
       }
 
       if (mPrint) {
-          auto s = asString(dsElecId);
-          auto ch = fmt::format("{}-CH{:02d}", s, channel);
-          std::cout << ch << "  "
-              << fmt::format("PAD {:04d}-{:04d}\tADC {:5.0f}\tTIME {}-{}-{}\tSIZE {}\tEND {}", deId, dsIddet, digitadc, mergers[feeId].getCurrentBuffer().orbit, sc.bunchCrossing, sc.timestamp, sc.nofSamples(), (sc.timestamp+sc.nofSamples()-1))
-          << (((sc.timestamp+sc.nofSamples()-1) >= 98) ? " *" : "") << std::endl;
+        auto s = asString(dsElecId);
+        auto ch = fmt::format("{}-CH{:02d}", s, channel);
+        std::cout << ch << "  "
+                  << fmt::format("PAD {:04d}-{:04d}\tADC {:5.0f}\tTIME {}-{}-{}\tSIZE {}\tEND {}", deId, dsIddet, digitadc, mergers[feeId].getCurrentBuffer().orbit, sc.bunchCrossing, sc.timestamp, sc.nofSamples(), (sc.timestamp + sc.nofSamples() - 1))
+                  << (((sc.timestamp + sc.nofSamples() - 1) >= 98) ? " *" : "") << std::endl;
         //std::cout << "DS " << (int)dsElecId.elinkId() << "  CHIP " << ((int)channel) / 32 << "  CH " << ((int)channel) % 32 << "  ADC " << digitadc << "  DE# " << deId << "  DSid " << dsIddet << "  PadId " << padId << std::endl;
       }
 
@@ -301,11 +295,11 @@ class DataDecoderTask
         const Segmentation& segment = segmentation(deId);
         padId = segment.findPadByFEE(dsIddet, int(channel));
         if (mPrint) {
-            auto s = asString(dsElecId);
-            auto ch = fmt::format("{}-CH{:02d}", s, channel);
-            std::cout << ch << "  "
-                << fmt::format("PAD {:04d}-{:04d}-{:04d}\tADC {:5.0f}\tTIME {}-{}-{}\tSIZE {}\tEND {}", deId, dsIddet, padId, digitadc, mergers[feeId].getCurrentBuffer().orbit, sc.bunchCrossing, sc.timestamp, sc.nofSamples(), (sc.timestamp+sc.nofSamples()-1))
-            << (((sc.timestamp+sc.nofSamples()-1) >= 98) ? " *" : "") << std::endl;
+          auto s = asString(dsElecId);
+          auto ch = fmt::format("{}-CH{:02d}", s, channel);
+          std::cout << ch << "  "
+                    << fmt::format("PAD {:04d}-{:04d}-{:04d}\tADC {:5.0f}\tTIME {}-{}-{}\tSIZE {}\tEND {}", deId, dsIddet, padId, digitadc, mergers[feeId].getCurrentBuffer().orbit, sc.bunchCrossing, sc.timestamp, sc.nofSamples(), (sc.timestamp + sc.nofSamples() - 1))
+                    << (((sc.timestamp + sc.nofSamples() - 1) >= 98) ? " *" : "") << std::endl;
           //std::cout << "DS " << (int)dsElecId.elinkId() << "  CHIP " << ((int)channel) / 32 << "  CH " << ((int)channel) % 32 << "  ADC " << digitadc << "  DE# " << deId << "  DSid " << dsIddet << "  PadId " << padId << std::endl;
         }
       } catch (const std::exception& e) {
@@ -321,11 +315,11 @@ class DataDecoderTask
       stopTime.bunchCrossing = sc.bunchCrossing;
 
       digits.emplace_back(DigitInfo{o2::mch::Digit(time, deId, padId, digitadc),
-        stopTime, false, static_cast<int>(dsElecId.solarId()), static_cast<int>(dsElecId.elinkId()), static_cast<int>(channel)});
+                                    stopTime, false, static_cast<int>(dsElecId.solarId()), static_cast<int>(dsElecId.elinkId()), static_cast<int>(channel)});
 
       if (false && mPrint)
         std::cout << "DIGIT STORED:\nADC " << digits.back().digit.getADC() << " DE# " << digits.back().digit.getDetID() << " PadId " << digits.back().digit.getPadID()
-        << " time " << digits.back().digit.getTimeStamp() << " size " << sc.nofSamples() << std::endl;
+                  << " time " << digits.back().digit.getTimeStamp() << " size " << sc.nofSamples() << std::endl;
       ++ndigits;
     };
 
@@ -337,7 +331,8 @@ class DataDecoderTask
       rdhFeeId(rdh, cruId * 2 + rdhEndpoint(rdh));
       isStopRDH = rdhStop(rdh);
       if (true && mPrint) {
-        std::cout << std::endl << mNrdhs << "--" << rdh << "\n";
+        std::cout << std::endl
+                  << mNrdhs << "--" << rdh << "\n";
       }
 
       feeId = rdhFeeId(rdh);
@@ -353,7 +348,8 @@ class DataDecoderTask
     patchPage(page);
     //std::cout<<"isStopRDH: "<<(int)isStopRDH<<std::endl;
     // skip stop RDHs
-    if(isStopRDH != 0) return;
+    if (isStopRDH != 0)
+      return;
 
     auto& currentBuffer = mergers[feeId].getCurrentBuffer();
     auto currentBufId = mergers[feeId].getCurrentBufId();
@@ -362,30 +358,30 @@ class DataDecoderTask
 
     if (mPrint) {
       std::cout << "decoding page: previousBufId=" << previousBufId << "  previous orbit: "
-          << previousBuffer.orbit << "  digits.size(): " << previousBuffer.digits.size() << std::endl;
-      std::cout << "               currentBufId=" << currentBufId   << "  current orbit: "
-          << currentBuffer.orbit << "  digits.size(): " << currentBuffer.digits.size() << std::endl;
+                << previousBuffer.orbit << "  digits.size(): " << previousBuffer.digits.size() << std::endl;
+      std::cout << "               currentBufId=" << currentBufId << "  current orbit: "
+                << currentBuffer.orbit << "  digits.size(): " << currentBuffer.digits.size() << std::endl;
     }
     decode(page);
     if (mPrint) {
       std::cout << "page decoded: previousBufId=" << previousBufId << "  previous orbit: "
-          << previousBuffer.orbit << "  digits.size(): " << previousBuffer.digits.size() << std::endl;
-      std::cout << "               currentBufId=" << currentBufId   << "  current orbit: "
-          << currentBuffer.orbit << "  digits.size(): " << currentBuffer.digits.size() << std::endl;
+                << previousBuffer.orbit << "  digits.size(): " << previousBuffer.digits.size() << std::endl;
+      std::cout << "               currentBufId=" << currentBufId << "  current orbit: "
+                << currentBuffer.orbit << "  digits.size(): " << currentBuffer.digits.size() << std::endl;
     }
 
     mergeDigits();
 
-    for(size_t i = 0; i < previousBuffer.digits.size(); i++) {
+    for (size_t i = 0; i < previousBuffer.digits.size(); i++) {
       Digit& d = previousBuffer.digits[i].digit;
-      if(previousBuffer.digits[i].merged)
+      if (previousBuffer.digits[i].merged)
         continue;
       outputDigits.emplace_back(d);
     }
 
     if (mPrint) {
       std::cout << "previousBufId: " << previousBufId << "  digits.size(): " << previousBuffer.digits.size()
-          << "  orbit: " << previousBuffer.orbit << std::endl;
+                << "  orbit: " << previousBuffer.orbit << std::endl;
       for (auto d : outputDigits) {
         std::cout << "  DE# " << d.getDetID() << " PadId " << d.getPadID() << " ADC " << d.getADC() << " time " << d.getTimeStamp() << std::endl;
       }
@@ -402,13 +398,14 @@ class DataDecoderTask
       content += s;
       content += " ";
     }
-    std::cout<<"readFileContent("<<filename<<"):"<<std::endl<<content<<std::endl;
+    std::cout << "readFileContent(" << filename << "):" << std::endl
+              << content << std::endl;
     return content;
   }
 
   void initElec2DetMapper(std::string filename)
   {
-    std::cout<<"[initElec2DetMapper] filename="<<filename<<std::endl;
+    std::cout << "[initElec2DetMapper] filename=" << filename << std::endl;
     if (filename.empty()) {
       mElec2Det = createElec2DetMapper<ElectronicMapperGenerated>();
     } else {
@@ -419,7 +416,7 @@ class DataDecoderTask
 
   void initFee2SolarMapper(std::string filename)
   {
-    std::cout<<"[initFee2SolarMapper] filename="<<filename<<std::endl;
+    std::cout << "[initFee2SolarMapper] filename=" << filename << std::endl;
     if (filename.empty()) {
       mFee2Solar = createFeeLink2SolarMapper<ElectronicMapperGenerated>();
     } else {
@@ -458,7 +455,7 @@ class DataDecoderTask
         int deId = 819;
         int dsIddet = 1133;
         const Segmentation& segment = segmentation(deId);
-        for(int channel = 0; channel < 64; channel++) {
+        for (int channel = 0; channel < 64; channel++) {
           int padId = segment.findPadByFEE(dsIddet, int(channel));
           std::cout << "DE# " << deId << "  DSid " << dsIddet << "  channel " << channel << "  PadId " << padId << std::endl;
         }
@@ -470,7 +467,7 @@ class DataDecoderTask
 
   //_________________________________________________________________________________________________
   void
-  decodeTF(framework::ProcessingContext& pc)
+    decodeTF(framework::ProcessingContext& pc)
   {
     // get the input buffer
     auto& inputs = pc.inputs();
