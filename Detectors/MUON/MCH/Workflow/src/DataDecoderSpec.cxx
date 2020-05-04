@@ -424,7 +424,7 @@ class DataDecoderTask
           auto s = asString(dsElecId);
           auto ch = fmt::format("{}-CH{:02d}", s, channel);
           std::cout << ch << "  "
-                    << fmt::format("PAD {:04d}-{:04d}-{:04d}\tADC {:5.0f}\tTIME {}-{}-{}\tSIZE {}\tEND {}", deId, dsIddet, padId, digitadc, orbit, sc.bunchCrossing, sc.timestamp, sc.nofSamples(), (sc.timestamp + sc.nofSamples() - 1))
+                    << fmt::format("PAD ({:04d} {:04d} {:04d})\tADC {:5.0f}\tTIME ({} {} {})\tSIZE {}\tEND {}", deId, dsIddet, padId, digitadc, orbit, sc.bunchCrossing, sc.timestamp, sc.nofSamples(), (sc.timestamp + sc.nofSamples() - 1))
                     << (((sc.timestamp + sc.nofSamples() - 1) >= 98) ? " *" : "") << std::endl;
           //std::cout << "DS " << (int)dsElecId.elinkId() << "  CHIP " << ((int)channel) / 32 << "  CH " << ((int)channel) % 32 << "  ADC " << digitadc << "  DE# " << deId << "  DSid " << dsIddet << "  PadId " << padId << std::endl;
           if (padId == 994) {
@@ -520,7 +520,7 @@ class DataDecoderTask
         bool bend = !segment.isBendingPad(d.getPadID());
         if(bend) continue;
         std::cout << fmt::format("  DE {:4d}  PAD {:5d}  ADC {:6d}  TIME {:4d}", d.getDetID(), d.getPadID(), d.getADC(), d.getTimeStamp());
-        std::cout << fmt::format("    {} {:+.2f} {:+.2f}", (int)bend, X, Y);
+        std::cout << fmt::format("    CATHODE {}  PAD_XY {:+2.2f} , {:+2.2f}", (int)bend, X, Y);
         std::cout << std::endl;
       }
       for (auto d : outputDigits) {
@@ -531,7 +531,7 @@ class DataDecoderTask
         bool bend = !segment.isBendingPad(d.getPadID());
         if(!bend) continue;
         std::cout << fmt::format("  DE {:4d}  PAD {:5d}  ADC {:6d}  TIME {:4d}", d.getDetID(), d.getPadID(), d.getADC(), d.getTimeStamp());
-        std::cout << fmt::format("    {} {:+.2f} {:+.2f}", (int)bend, X, Y);
+        std::cout << fmt::format("    CATHODE {}  PAD_XY {:+2.2f} , {:+2.2f}", (int)bend, X, Y);
         std::cout << std::endl;
       }
       for (auto d : outputDigits) {
