@@ -11,14 +11,15 @@
 o2_add_executable(print-preclusters-run2
                   COMPONENT_NAME mch
                   SOURCES src/PrintPreclustersRun2.cxx src/DigitsFileReader.cxx
-                  PUBLIC_LINK_LIBRARIES O2::MCHBase O2::MCHMappingFactory O2::MCHMappingImpl3 O2::MCHMappingSegContour O2::MCHPreClustering O2::MCHClustering)
+                  PUBLIC_LINK_LIBRARIES O2::MCHBase O2::MCHMappingInterface O2::MCHMappingImpl3 
+                  O2::MCHPreClustering O2::MCHClustering)
 
 
 o2_add_executable(
         digits-reader-tb-workflow
         SOURCES src/TBDigitsFileReader.cxx src/TBDigitsFileReaderSpec.cxx src/digits-reader-tb-workflow.cxx
         COMPONENT_NAME mch
-        PUBLIC_LINK_LIBRARIES O2::Framework O2::DPLUtils Boost::program_options O2::MCHBase O2::MCHMappingInterface O2::MCHMappingFactory O2::MCHMappingImpl3)
+        PUBLIC_LINK_LIBRARIES O2::Framework O2::DPLUtils Boost::program_options O2::MCHBase O2::MCHMappingInterface O2::MCHMappingImpl3)
                   
 o2_add_executable(clusterizer-test-tb
                   COMPONENT_NAME mch
@@ -29,13 +30,13 @@ o2_add_executable(
         digits2-sink-workflow
         SOURCES src/digits2-sink-workflow.cxx
         COMPONENT_NAME mch
-        PUBLIC_LINK_LIBRARIES O2::Framework O2::DPLUtils Boost::program_options O2::MCHBase O2::MCHMappingFactory O2::MCHMappingImpl3 O2::MCHMappingSegContour)
+        PUBLIC_LINK_LIBRARIES O2::Framework O2::DPLUtils Boost::program_options O2::MCHBase O2::MCHMappingInterface O2::MCHMappingImpl3)
 
 o2_add_executable(
         preclusters-sink-alt-workflow
         SOURCES src/PreClusterSinkSpec.cxx src/preclusters-sink-workflow.cxx
         COMPONENT_NAME mch
-        PUBLIC_LINK_LIBRARIES  O2::MCHBase O2::MCHMappingFactory O2::MCHMappingImpl3 O2::MCHMappingSegContour O2::MCHPreClustering O2::MCHClustering)
+        PUBLIC_LINK_LIBRARIES  O2::MCHBase O2::MCHMappingInterface O2::MCHMappingImpl3 O2::MCHPreClustering O2::MCHClustering)
 
 #o2_add_executable(print-preclusters-tb
 #                  COMPONENT_NAME mch

@@ -38,7 +38,7 @@
 
 #include "DPLUtils/DPLRawParser.h"
 #include "MCHBase/Digit.h"
-#include "MCHMappingFactory/CreateSegmentation.h"
+#include "MCHMappingInterface/Segmentation.h"
 
 using namespace o2;
 using namespace o2::framework;

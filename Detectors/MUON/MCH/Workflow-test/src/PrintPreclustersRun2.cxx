@@ -15,7 +15,7 @@
 
 #include "DigitsFileReader.h"
 #include "MCHPreClustering/PreClusterFinder.h"
-#include "MCHMappingFactory/CreateSegmentation.h"
+#include "MCHMappingInterface/Segmentation.h"
 #include "MCHClustering/ClusteringForTest.h"
 
 using namespace o2::mch;

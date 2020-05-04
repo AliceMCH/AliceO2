@@ -11,8 +11,7 @@
 #include <iostream>
 
 #include "DigitsFileReader.h"
-//#include "MCHMappingInterface/Segmentation.h"
-#include "MCHMappingFactory/CreateSegmentation.h"
+#include "MCHMappingInterface/Segmentation.h"
 
 using namespace o2::mch;
 using namespace std;
