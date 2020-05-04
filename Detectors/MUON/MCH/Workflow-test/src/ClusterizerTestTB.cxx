@@ -121,14 +121,14 @@ int main(int argc, char** argv)
       printf("\n\n==========\nRunning Clustering\n\n");
 
       // Fit Mathieson
-      clustering.runFinderSimpleFit(preClusters, digits, clusters);
+      //clustering.runFinderSimpleFit(preClusters, digits, clusters);
 
       
       
        //Uncomment the method you wish to use to clusterize
             
           //Runs the clustering of preClusters following a CenterOfGravity algorithm. Fills clusters.
-          clustering.runFinderCOG(preClusters, digits, clusters);
+          //clustering.runFinderCOG(preClusters, digits, clusters);
 //          printf("Number of clusters obtained and saved: %lu\n", clusters.size());
             
             // Fit Mathieson
@@ -208,7 +208,7 @@ int main(int argc, char** argv)
           count++;
       }
       
-    //break;
+    break;
   }
     cResDistrib->cd(1);
     hResDist_Seb->Draw();
