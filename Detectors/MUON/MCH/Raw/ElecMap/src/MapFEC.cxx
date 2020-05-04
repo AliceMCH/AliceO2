@@ -63,8 +63,6 @@ std::optional<o2::mch::raw::DsDetId> MapFEC::operator()(const o2::mch::raw::DsEl
   auto link_id = dsElecId.solarId();
   auto ds_addr = dsElecId.elinkId();
 
-  std::cout<<"[MapFEC] link_id="<<(int)link_id<<"  ds_addr="<<(int)ds_addr<<"  size="<<size()<<std::endl;
-
   if (!size()) {
     return std::nullopt;
   }
