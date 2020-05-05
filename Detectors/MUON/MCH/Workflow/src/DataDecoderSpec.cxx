@@ -114,7 +114,7 @@ class FeeIdMerger
   FeeIdMerger() = default;
   ~FeeIdMerger() = default;
 
-  void newFrame(uint32_t orbit)
+  void setOrbit(uint32_t orbit)
   {
     currentBufId = 1 - currentBufId;
     previousBufId = 1 - previousBufId;
@@ -268,7 +268,7 @@ class MergerBase
   MergerBase() = default;
   ~MergerBase() = default;
 
-  virtual void newFrame(int feeId, uint32_t orbit) = 0;
+  virtual void setOrbit(int feeId, uint32_t orbit) = 0;
 
   virtual void addDigit(int feeId, int solarId, int dsAddr, int chAddr,
                         int deId, int padId, int adc, HitTime time, HitTime stopTime) = 0;
@@ -286,7 +286,7 @@ class MergerSimple : public MergerBase
   MergerSimple() = default;
   ~MergerSimple() = default;
 
-  void newFrame(int feeId, uint32_t orbit)
+  void setOrbit(int feeId, uint32_t orbit)
   {
     digits.clear();
   }
@@ -317,7 +317,7 @@ class Merger : public MergerBase
   Merger() = default;
   ~Merger() = default;
 
-  void newFrame(int feeId, uint32_t orbit);
+  void setOrbit(int feeId, uint32_t orbit);
 
   void addDigit(int feeId, int solarId, int dsAddr, int chAddr,
                 int deId, int padId, int adc, HitTime time, HitTime stopTime);
@@ -327,13 +327,13 @@ class Merger : public MergerBase
   void storeDigits(int feeId, std::vector<Digit>& digits);
 };
 
-void Merger::newFrame(int feeId, uint32_t orbit)
+void Merger::setOrbit(int feeId, uint32_t orbit)
 {
   if (feeId < 0 || feeId > MCH_MERGER_FEEID_MAX) {
     return;
   }
 
-  mergers[feeId].newFrame(orbit);
+  mergers[feeId].setOrbit(orbit);
 }
 
 void Merger::addDigit(int feeId, int solarId, int dsAddr, int chAddr,
@@ -368,7 +368,7 @@ void Merger::storeDigits(int feeId, std::vector<Digit>& outputDigits)
   }
   int nDigits = {0};
   for (auto& d : digits) {
-    if (!d.merged) {
+    if (!d.merged && (d.digit.getPadID() >= 0)) {
       outputDigits.emplace_back(d.digit);
     }
   }
@@ -479,7 +479,7 @@ class DataDecoderTask
       }
 
       if (isStopRDH == 0 && (feeId < 64)) {
-        mMerger->newFrame(feeId, orbit);
+        mMerger->setOrbit(feeId, orbit);
       }
     };
 
