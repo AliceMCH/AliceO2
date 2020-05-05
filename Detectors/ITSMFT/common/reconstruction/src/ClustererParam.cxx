@@ -8,22 +8,15 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-/// \file   MIDWorkflow/RawReaderSpec.h
-/// \brief  Data processor specs for MID digits reader device
-/// \author Diego Stocco <Diego.Stocco at cern.ch>
-/// \date   11 April 2019
-
-#ifndef O2_MID_RAWREADERSPEC_H
-#define O2_MID_RAWREADERSPEC_H
-
-#include "Framework/DataProcessorSpec.h"
+#include "ITSMFTReconstruction/ClustererParam.h"
 
 namespace o2
 {
-namespace mid
+namespace itsmft
 {
-framework::DataProcessorSpec getRawReaderSpec();
-}
+// this makes sure that the constructor of the parameters is statically called
+// so that these params are part of the parameter database
+static auto& sClustererParamITS = o2::itsmft::ClustererParam<o2::detectors::DetID::ITS>::Instance();
+static auto& sClustererParamMFT = o2::itsmft::ClustererParam<o2::detectors::DetID::MFT>::Instance();
+} // namespace itsmft
 } // namespace o2
-
-#endif //O2_MID_RAWREADERSPEC_H

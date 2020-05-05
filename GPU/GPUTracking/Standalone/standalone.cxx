@@ -19,7 +19,6 @@
 #include "GPUTPCDef.h"
 #include "GPUQA.h"
 #include "GPUDisplayBackend.h"
-#include "TPCClusterDecompressor.h"
 #include "genEvents.h"
 
 #include <iostream>
@@ -56,6 +55,7 @@
 #include "GPUO2DataTypes.h"
 #ifdef HAVE_O2HEADERS
 #include "GPUChainITS.h"
+#include "TPCClusterDecompressor.h"
 #endif
 
 #ifdef GPUCA_BUILD_EVENT_DISPLAY
@@ -156,7 +156,11 @@ int ReadConfiguration(int argc, char** argv)
   }
 #endif
 #ifndef HAVE_O2HEADERS
-  configStandalone.configRec.runTRD = configStandalone.configRec.rundEdx = configStandalone.configRec.runCompression = configStandalone.configRec.runTransformation = 0;
+  configStandalone.configRec.runTRD = configStandalone.configRec.rundEdx = configStandalone.configRec.runCompression = configStandalone.configRec.runTransformation = configStandalone.testSyncAsync = 0;
+  configStandalone.configRec.ForceEarlyTPCTransform = 1;
+#endif
+#ifndef GPUCA_TPC_GEOMETRY_O2
+  configStandalone.configRec.mergerReadFromTrackerDirectly = 0;
 #endif
 #ifndef GPUCA_BUILD_QA
   if (configStandalone.qa || configStandalone.eventGenerator) {
@@ -241,7 +245,10 @@ int SetupReconstruction()
   if (!configStandalone.eventGenerator) {
     char filename[256];
     snprintf(filename, 256, "events/%s/", configStandalone.EventsDir);
-    rec->ReadSettings(filename);
+    if (rec->ReadSettings(filename)) {
+      printf("Error reading event config file\n");
+      return 1;
+    }
     printf("Read event settings from dir %s (solenoidBz: %f, home-made events %d, constBz %d, maxTimeBin %d)\n", filename, rec->GetEventSettings().solenoidBz, (int)rec->GetEventSettings().homemadeEvents, (int)rec->GetEventSettings().constBz, rec->GetEventSettings().continuousMaxTimeBin);
     if (configStandalone.testSyncAsync) {
       recAsync->ReadSettings(filename);
@@ -317,6 +324,9 @@ int SetupReconstruction()
     recSet.loopInterpolationInExtraPass = configStandalone.configRec.loopInterpolationInExtraPass;
   }
   recSet.mergerReadFromTrackerDirectly = configStandalone.configRec.mergerReadFromTrackerDirectly;
+  if (!recSet.mergerReadFromTrackerDirectly) {
+    devProc.fullMergerOnGPU = false;
+  }
 
   if (configStandalone.OMPThreads != -1) {
     devProc.nThreads = configStandalone.OMPThreads;
@@ -706,6 +716,7 @@ int main(int argc, char** argv)
             }
           }
 
+#ifdef HAVE_O2HEADERS
           if (tmpRetVal == 0 && configStandalone.testSyncAsync) {
             if (configStandalone.testSyncAsync) {
               printf("Running asynchronous phase\n");
@@ -744,6 +755,7 @@ int main(int argc, char** argv)
             }
             recAsync->ClearAllocatedMemory();
           }
+#endif
           rec->ClearAllocatedMemory();
 
           if (tmpRetVal == 2) {

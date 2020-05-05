@@ -166,6 +166,18 @@ int GPUReconstruction::InitPhaseBeforeDevice()
   }
   if (GetDeviceProcessingSettings().debugLevel >= 6 && GetDeviceProcessingSettings().comparableDebutOutput) {
     mDeviceProcessingSettings.nTPCClustererLanes = 1;
+    if (mDeviceProcessingSettings.trackletConstructorInPipeline < 0) {
+      mDeviceProcessingSettings.trackletConstructorInPipeline = 1;
+    }
+    if (mDeviceProcessingSettings.trackletSelectorInPipeline < 0) {
+      mDeviceProcessingSettings.trackletSelectorInPipeline = 1;
+    }
+    if (mDeviceProcessingSettings.trackletSelectorSlices < 0) {
+      mDeviceProcessingSettings.trackletSelectorSlices = 1;
+    }
+  }
+  if (mDeviceProcessingSettings.tpcCompressionGatherMode < 0) {
+    mDeviceProcessingSettings.tpcCompressionGatherMode = (mRecoStepsGPU & GPUDataTypes::RecoStep::TPCCompression) ? 2 : 0;
   }
   if (!(mRecoStepsGPU & GPUDataTypes::RecoStep::TPCMerging)) {
     mDeviceProcessingSettings.mergerSortTracks = false;
@@ -188,6 +200,9 @@ int GPUReconstruction::InitPhaseBeforeDevice()
   }
   if (param().rec.NonConsecutiveIDs) {
     param().rec.DisableRefitAttachment = 0xFF;
+  }
+  if (!(mRecoStepsGPU & RecoStep::TPCMerging)) {
+    mDeviceProcessingSettings.fullMergerOnGPU = false;
   }
   mMemoryScalers->factor = GetDeviceProcessingSettings().memoryScalingFactor;
 
@@ -590,17 +605,20 @@ void GPUReconstruction::UpdateEventSettings(const GPUSettingsEvent* e, const GPU
   }
 }
 
-void GPUReconstruction::ReadSettings(const char* dir)
+int GPUReconstruction::ReadSettings(const char* dir)
 {
   std::string f;
   f = dir;
   f += "settings.dump";
   mEventSettings.SetDefaults();
-  ReadStructFromFile(f.c_str(), &mEventSettings);
+  if (ReadStructFromFile(f.c_str(), &mEventSettings)) {
+    return 1;
+  }
   param().UpdateEventSettings(&mEventSettings);
   for (unsigned int i = 0; i < mChains.size(); i++) {
     mChains[i]->ReadSettings(dir);
   }
+  return 0;
 }
 
 void GPUReconstruction::SetSettings(float solenoidBz)

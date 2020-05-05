@@ -35,6 +35,9 @@
 #include "GPUReconstructionCUDAInternals.h"
 #include "GPUReconstructionIncludes.h"
 
+static constexpr size_t REQUIRE_MIN_MEMORY = 1024u * 1024 * 1024;
+static constexpr size_t REQUIRE_FREE_MEMORY_RESERVED = 2048u * 1024 * 1024;
+
 using namespace GPUCA_NAMESPACE::gpu;
 
 #ifdef GPUCA_USE_TEXTURES
@@ -69,10 +72,10 @@ class VertexerTraitsGPU : public VertexerTraits
 /*
 // Not using templated kernel any more, since nvidia profiler does not resolve template names
 template <class T, int I, typename... Args>
-GPUg() void runKernelCUDA(GPUCA_CONSMEM_PTR int iSlice, Args... args)
+GPUg() void runKernelCUDA(GPUCA_CONSMEM_PTR int iSlice_internal, Args... args)
 {
   GPUshared() typename T::GPUSharedMemory smem;
-  T::template Thread<I>(get_num_groups(0), get_local_size(0), get_group_id(0), get_local_id(0), smem, T::Processor(GPUCA_CONSMEM)[iSlice], args...);
+  T::template Thread<I>(get_num_groups(0), get_local_size(0), get_group_id(0), get_local_id(0), smem, T::Processor(GPUCA_CONSMEM)[iSlice_internal], args...);
 }
 */
 
@@ -221,7 +224,7 @@ int GPUReconstructionCUDABackend::InitDevice_Runtime()
       } else if (cudaDeviceProp.major < reqVerMaj || (cudaDeviceProp.major == reqVerMaj && cudaDeviceProp.minor < reqVerMin)) {
         deviceOK = false;
         deviceFailure = "Too low device revision";
-      } else if (free < std::max(mDeviceMemorySize, (size_t)1024 * 1024 * 1024)) {
+      } else if (free < std::max(mDeviceMemorySize, REQUIRE_MIN_MEMORY)) {
         deviceOK = false;
         deviceFailure = "Insufficient GPU memory";
       }
@@ -234,7 +237,7 @@ int GPUReconstructionCUDABackend::InitDevice_Runtime()
         continue;
       }
       devicesOK[i] = true;
-      devMemory[i] = std::min(free, total - 512 * 1024 * 1024);
+      devMemory[i] = std::min(free, total - REQUIRE_FREE_MEMORY_RESERVED);
       if (deviceSpeed > bestDeviceSpeed) {
         bestDevice = i;
         bestDeviceSpeed = deviceSpeed;
@@ -248,7 +251,7 @@ int GPUReconstructionCUDABackend::InitDevice_Runtime()
     bool noDevice = false;
     if (bestDevice == -1) {
       GPUWarning("No %sCUDA Device available, aborting CUDA Initialisation", count ? "appropriate " : "");
-      GPUImportant("Requiring Revision %d.%d, Mem: %lld", reqVerMaj, reqVerMin, (long long int)std::max(mDeviceMemorySize, (size_t)1024 * 1024 * 1024));
+      GPUImportant("Requiring Revision %d.%d, Mem: %lld", reqVerMaj, reqVerMin, (long long int)std::max(mDeviceMemorySize, REQUIRE_MIN_MEMORY));
       noDevice = true;
     } else if (mDeviceProcessingSettings.deviceNum > -1) {
       if (mDeviceProcessingSettings.deviceNum >= (signed)count) {
