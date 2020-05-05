@@ -126,7 +126,7 @@ class DigitsSinkTask
     mOutputFile.write(reinterpret_cast<char*>(&xtrk), sizeof(float));
     mOutputFile.write(reinterpret_cast<char*>(&ytrk), sizeof(float));
 
-    int nDigits = sdigits2.length();
+    int nDigits = sdigits2.size();
     mOutputFile.write(reinterpret_cast<char*>(&nDigits), sizeof(int));
     mOutputFile.write(reinterpret_cast<const char*>(sdigits2.data()), sdigits2.size_bytes());
 

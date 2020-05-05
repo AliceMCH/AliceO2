@@ -39,8 +39,8 @@ TH2F* plotPrecuster(PreCluster& preCluster, gsl::span<Digit> digits, std::vector
   if(maxPadID < 0) return nullptr;
   const mapping::Segmentation& segment = mapping::segmentation(digits[0].getDetID());
 
-  float padMaxPosition[2] = {segment.padPositionX(maxPadID), segment.padPositionY(maxPadID)};
-  float padMaxSize[2] = {segment.padSizeX(maxPadID), segment.padSizeY(maxPadID)};
+  double padMaxPosition[2] = {segment.padPositionX(maxPadID), segment.padPositionY(maxPadID)};
+  double padMaxSize[2] = {segment.padSizeX(maxPadID), segment.padSizeY(maxPadID)};
 
   TH2F* h2 = new TH2F(TString::Format("h2_%d",iClus),
       "Pad amplitude", 11, padMaxPosition[0]-padMaxSize[0]*5-padMaxSize[0]/2, padMaxPosition[0]+padMaxSize[0]*5+padMaxSize[0]/2,
@@ -154,7 +154,7 @@ int main(int argc, char** argv)
       std::vector<Clustering::Cluster> clusters(0);
 
       //cout<<"DetID: "<<preClusterDigits[0].getDetID()<<endl;
-      if(preClusterDigits[0].getDetID() == DEID && preClusterDigits.length()>1) {
+      if(preClusterDigits[0].getDetID() == DEID && preClusterDigits.size()>1) {
         preCluster.print(cout, usedDigits);
         // Fit Mathieson
         //clustering.runFinderSimpleFit(sPreCluster, usedDigits, clusters);
@@ -169,13 +169,13 @@ int main(int argc, char** argv)
         //getchar();
       }
       float clusPosition[2] = {
-          clusters.empty() ? 0 : clusters[0].getx(),
-              clusters.empty() ? 0 : clusters[0].gety()
+          clusters.empty() ? 0 : static_cast<float>(clusters[0].getx()),
+              clusters.empty() ? 0 : static_cast<float>(clusters[0].gety())
       };
       outFile.write(reinterpret_cast<char*>(clusPosition), sizeof(clusPosition));
 
       // write the total number of digits in this precluster
-      int nDigits = preClusterDigits.length();
+      int nDigits = preClusterDigits.size();
       outFile.write(reinterpret_cast<char*>(&nDigits), sizeof(int));
 
 
@@ -191,8 +191,8 @@ int main(int argc, char** argv)
 
         int digitInfo[4] = {detid, padid, static_cast<int>(digit.getTimeStamp()), static_cast<int>(digit.getADC())};
         //On définit le vecteur position et taille du pad en question
-        float padPosition[2] = {pad.padPositionX(padid), pad.padPositionY(padid)};
-        float padSize[2] = {pad.padSizeX(padid), pad.padSizeY(padid)};
+        float padPosition[2] = {static_cast<float>(pad.padPositionX(padid)), static_cast<float>(pad.padPositionY(padid))};
+        float padSize[2] = {static_cast<float>(pad.padSizeX(padid)), static_cast<float>(pad.padSizeY(padid))};
 
         outFile.write(reinterpret_cast<char*>(digitInfo), sizeof(digitInfo));
         outFile.write(reinterpret_cast<char*>(padPosition), sizeof(padPosition));

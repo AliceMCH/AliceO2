@@ -67,7 +67,7 @@ Cluster ClusteringCoG::run(gsl::span<const Digit> precluster)
   int detid = precluster[0].getDetID();
   const mapping::Segmentation& segment = mapping::segmentation(detid);
 
-  for ( size_t i = 0; i < precluster.length(); ++i ) {
+  for ( size_t i = 0; i < precluster.size(); ++i ) {
     const Digit& digit = precluster[i];
     int padid = digit.getPadID();
 

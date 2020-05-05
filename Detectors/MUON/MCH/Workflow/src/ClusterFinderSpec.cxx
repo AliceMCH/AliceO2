@@ -58,7 +58,7 @@ class ClusterFinderTask
     auto digits = pc.inputs().get<gsl::span<Digit>>("preclusterdigits");
 
     if (mPrint) {
-      std::cout << "Number of pre-clusters: " << preClusters.length() << std::endl;
+      std::cout << "Number of pre-clusters: " << preClusters.size() << std::endl;
     }
 
     std::vector<Cluster> clusters(0);
