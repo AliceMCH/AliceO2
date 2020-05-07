@@ -22,6 +22,8 @@
 
 #include <stdexcept>
 
+#include <fmt/core.h>
+
 #include "Framework/CallbackService.h"
 #include "Framework/ConfigParamRegistry.h"
 #include "Framework/ControlService.h"
@@ -102,7 +104,13 @@ class PreClusterFinderTask
     mUsedDigits.reserve(digits.size()); // the capacity is exceeded
     mPreClusterFinder.getPreClusters(mPreClusters, mUsedDigits);
     if (mUsedDigits.size() != digits.size()) {
-      throw runtime_error("some digits have been lost during the preclustering");
+      //std::cout<<"some digits have been lost during the preclustering"<<std::endl;
+      //for (auto& d : digits) {
+      //  std::cout << fmt::format("  DE {:4d}  PAD {:5d}  ADC {:6d}  TIME {}-{:4d}",
+      //      d.getDetID(), d.getPadID(), d.getADC(), d.getTime().bunchCrossing, d.getTimeStamp());
+      //  std::cout << std::endl;
+      //}
+      //throw runtime_error("some digits have been lost during the preclustering");
     }
     tEnd = std::chrono::high_resolution_clock::now();
     mTimeStorePreClusters += tEnd - tStart;
