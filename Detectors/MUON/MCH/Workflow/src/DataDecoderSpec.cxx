@@ -101,7 +101,7 @@ class MergerDigit
 
 struct MergerBuffer {
   std::vector<MergerDigit> digits;
-  uint32_t orbit;
+  uint32_t orbit = {0};
 };
 
 class FeeIdMerger
@@ -109,18 +109,25 @@ class FeeIdMerger
   MergerBuffer buffers[2];
   int currentBufId = {1};
   int previousBufId = {0};
+  int feeId = {0};
+
+  std::function<void(const Digit&)> sendDigit;
 
  public:
   FeeIdMerger() = default;
   ~FeeIdMerger() = default;
 
-  void setOrbit(uint32_t orbit)
+  void setId(int id)
   {
-    currentBufId = 1 - currentBufId;
-    previousBufId = 1 - previousBufId;
-    buffers[currentBufId].digits.clear();
-    buffers[currentBufId].orbit = orbit;
+    feeId = id;
   }
+
+  void setDigitHandler(std::function<void(const Digit&)> h)
+  {
+    sendDigit = h;
+  }
+
+  void setOrbit(uint32_t orbit);
 
   MergerBuffer& getCurrentBuffer()
   {
@@ -143,7 +150,33 @@ class FeeIdMerger
   }
 
   void mergeDigits();
+
+  void storeDigits();
 };
+
+void FeeIdMerger::setOrbit(uint32_t orbit)
+{
+  if (orbit == buffers[currentBufId].orbit) {
+    return;
+  }
+
+  int nSent = 0;
+  for (auto& d : buffers[previousBufId].digits) {
+    if (!d.merged) {
+    sendDigit(d.digit);
+    nSent += 1;
+    }
+  }
+  if (mPrint) {
+    std::cout<<"[FeeIdMerger] sent "<<nSent<<" digits for orbit "<<buffers[previousBufId].orbit<<"  current orbit is "<<orbit<<std::endl;
+  }
+
+  currentBufId = 1 - currentBufId;
+  previousBufId = 1 - previousBufId;
+  buffers[currentBufId].digits.clear();
+  buffers[currentBufId].orbit = orbit;
+}
+
 
 void FeeIdMerger::mergeDigits()
 {
@@ -260,6 +293,24 @@ void FeeIdMerger::mergeDigits()
   }
 }
 
+
+
+void FeeIdMerger::storeDigits()
+{
+  auto& digits = getPreviousBuffer().digits;
+  if (mPrint) {
+    std::cout << "[FeeIdMerger] storing " << digits.size() << " digits from " << feeId << "-" << getPreviousBufId()
+        << " (orbit=" << getPreviousBuffer().orbit << ")" << std::endl;
+  }
+
+  for (auto& d : digits) {
+    if (!d.merged && (d.digit.getPadID() >= 0)) {
+      sendDigit(d.digit);
+    }
+  }
+}
+
+
 #define MCH_MERGER_FEEID_MAX 63
 
 class MergerBase
@@ -274,13 +325,12 @@ class MergerBase
                         int deId, int padId, int adc, HitTime time, HitTime stopTime) = 0;
 
   virtual void mergeDigits(int feeId) = 0;
-
-  virtual void storeDigits(int feeId, std::vector<Digit>& digits) = 0;
 };
 
 class MergerSimple : public MergerBase
 {
-  std::vector<Digit> digits;
+  //std::vector<Digit> digits;
+  std::function<void(const Digit&)> sendDigit;
 
  public:
   MergerSimple() = default;
@@ -288,25 +338,24 @@ class MergerSimple : public MergerBase
 
   void setOrbit(int feeId, uint32_t orbit)
   {
-    digits.clear();
+    //digits.clear();
+  }
+
+  void setDigitHandler(std::function<void(const Digit&)> h)
+  {
+    sendDigit = h;
   }
 
   void addDigit(int feeId, int solarId, int dsAddr, int chAddr,
                 int deId, int padId, int adc, HitTime time, HitTime stopTime)
   {
-    digits.emplace_back(o2::mch::Digit(time, deId, padId, adc));
+    //digits.emplace_back(o2::mch::Digit(time, deId, padId, adc));
+    sendDigit(o2::mch::Digit(time, deId, padId, adc));
   }
 
   void mergeDigits(int feeId) {}
-
-  void storeDigits(int feeId, std::vector<Digit>& outputDigits)
-  {
-    if (mPrint) {
-      std::cout << "[MergerSimple] storing " << digits.size() << " digits" << std::endl;
-    }
-    outputDigits.insert(outputDigits.end(), digits.begin(), digits.end());
-  }
 };
+
 
 class Merger : public MergerBase
 {
@@ -319,13 +368,14 @@ class Merger : public MergerBase
 
   void setOrbit(int feeId, uint32_t orbit);
 
+  void setDigitHandler(std::function<void(const Digit&)> h);
+
   void addDigit(int feeId, int solarId, int dsAddr, int chAddr,
                 int deId, int padId, int adc, HitTime time, HitTime stopTime);
 
   void mergeDigits(int feeId);
-
-  void storeDigits(int feeId, std::vector<Digit>& digits);
 };
+
 
 void Merger::setOrbit(int feeId, uint32_t orbit)
 {
@@ -334,6 +384,13 @@ void Merger::setOrbit(int feeId, uint32_t orbit)
   }
 
   mergers[feeId].setOrbit(orbit);
+}
+
+void Merger::setDigitHandler(std::function<void(const Digit&)> h)
+{
+  for (int feeId = 0; feeId <= MCH_MERGER_FEEID_MAX; feeId++) {
+    mergers[feeId].setDigitHandler(h);
+  }
 }
 
 void Merger::addDigit(int feeId, int solarId, int dsAddr, int chAddr,
@@ -356,7 +413,7 @@ void Merger::mergeDigits(int feeId)
   mergers[feeId].mergeDigits();
 }
 
-void Merger::storeDigits(int feeId, std::vector<Digit>& outputDigits)
+/*void Merger::storeDigits(int feeId, std::vector<Digit>& outputDigits)
 {
   if (feeId < 0 || feeId > MCH_MERGER_FEEID_MAX) {
     return;
@@ -364,7 +421,8 @@ void Merger::storeDigits(int feeId, std::vector<Digit>& outputDigits)
 
   auto& digits = mergers[feeId].getPreviousBuffer().digits;
   if (mPrint) {
-    std::cout << "[Merger] storing " << digits.size() << " digits from " << feeId << "-" << mergers[feeId].getPreviousBufId() << std::endl;
+    std::cout << "[Merger] storing " << digits.size() << " digits from " << feeId << "-" << mergers[feeId].getPreviousBufId()
+        << " (orbit=" << mergers[feeId].getPreviousBuffer().orbit << ")" << std::endl;
   }
   int nDigits = {0};
   for (auto& d : digits) {
@@ -372,7 +430,7 @@ void Merger::storeDigits(int feeId, std::vector<Digit>& outputDigits)
       outputDigits.emplace_back(d.digit);
     }
   }
-}
+}*/
 
 //=======================
 // Data decoder
@@ -419,6 +477,9 @@ class DataDecoderTask
       int padId = -1;
       try {
         const Segmentation& segment = segmentation(deId);
+        if ((&segment) == nullptr) {
+          return;
+        }
         padId = segment.findPadByFEE(dsIddet, int(channel));
         if (mPrint) {
           auto s = asString(dsElecId);
@@ -509,34 +570,37 @@ class DataDecoderTask
     }*/
 
     mMerger->mergeDigits(feeId);
-    mMerger->storeDigits(feeId, outputDigits);
+    //mMerger->storeDigits(feeId, mOutputDigits);
 
     if (mPrint) {
-      for (auto d : outputDigits) {
+      for (auto d : mOutputDigits) {
         if(d.getPadID() < 0) continue;
         const Segmentation& segment = segmentation(d.getDetID());
         float X = segment.padPositionX(d.getPadID());
         float Y = segment.padPositionY(d.getPadID());
         bool bend = !segment.isBendingPad(d.getPadID());
         if(bend) continue;
-        std::cout << fmt::format("  DE {:4d}  PAD {:5d}  ADC {:6d}  TIME {:4d}", d.getDetID(), d.getPadID(), d.getADC(), d.getTimeStamp());
-        std::cout << fmt::format("    CATHODE {}  PAD_XY {:+2.2f} , {:+2.2f}", (int)bend, X, Y);
+        std::cout << fmt::format("  DE {:4d}  PAD {:5d}  ADC {:6d}  TIME ({} {} {:4d})",
+            d.getDetID(), d.getPadID(), d.getADC(), d.getTime().orbit, d.getTime().bunchCrossing, d.getTimeStamp());
+        std::cout << fmt::format("\tC {}  PAD_XY {:+2.2f} , {:+2.2f}", (int)bend, X, Y);
         std::cout << std::endl;
       }
-      for (auto d : outputDigits) {
+      for (auto d : mOutputDigits) {
         if(d.getPadID() < 0) continue;
         const Segmentation& segment = segmentation(d.getDetID());
         float X = segment.padPositionX(d.getPadID());
         float Y = segment.padPositionY(d.getPadID());
         bool bend = !segment.isBendingPad(d.getPadID());
         if(!bend) continue;
-        std::cout << fmt::format("  DE {:4d}  PAD {:5d}  ADC {:6d}  TIME {:4d}", d.getDetID(), d.getPadID(), d.getADC(), d.getTimeStamp());
-        std::cout << fmt::format("    CATHODE {}  PAD_XY {:+2.2f} , {:+2.2f}", (int)bend, X, Y);
+        std::cout << fmt::format("  DE {:4d}  PAD {:5d}  ADC {:6d}  TIME ({} {} {:4d})",
+            d.getDetID(), d.getPadID(), d.getADC(), d.getTime().orbit, d.getTime().bunchCrossing, d.getTimeStamp());
+        std::cout << fmt::format("\tC {}  PAD_XY {:+2.2f} , {:+2.2f}", (int)bend, X, Y);
         std::cout << std::endl;
       }
-      for (auto d : outputDigits) {
+      for (auto d : mOutputDigits) {
         if(d.getPadID() >= 0) continue;
-        std::cout << fmt::format("  DE {:4d}  PAD {:5d}  ADC {:6d}  TIME {:4d}", d.getDetID(), d.getPadID(), d.getADC(), d.getTimeStamp());
+        std::cout << fmt::format("  DE {:4d}  PAD {:5d}  ADC {:6d}  TIME ({} {} {:4d})",
+            d.getDetID(), d.getPadID(), d.getADC(), d.getTime().orbit, d.getTime().bunchCrossing, d.getTimeStamp());
         std::cout << std::endl;
       }
     }
@@ -622,6 +686,13 @@ class DataDecoderTask
         std::cout << "Failed to get padId: " << e.what() << std::endl;
       }
     }
+
+    const auto storeDigit = [&](const Digit& d) {
+      mOutputDigits.emplace_back(d);
+    };
+
+    mMergerSimple.setDigitHandler(storeDigit);
+    mMergerFull.setDigitHandler(storeDigit);
   }
 
   //_________________________________________________________________________________________________
@@ -682,7 +753,7 @@ class DataDecoderTask
   //_________________________________________________________________________________________________
   void run(framework::ProcessingContext& pc)
   {
-    outputDigits.clear();
+    mOutputDigits.clear();
     //std::cout << "DatDecoderTask::run()" << std::endl;
     decodeTF(pc);
     for (auto&& input : pc.inputs()) {
@@ -690,12 +761,12 @@ class DataDecoderTask
         decodeReadout(input);
     }
 
-    const size_t OUT_SIZE = sizeof(o2::mch::Digit) * outputDigits.size();
+    const size_t OUT_SIZE = sizeof(o2::mch::Digit) * mOutputDigits.size();
 
     // send the output buffer via DPL
     char* outbuffer = nullptr;
     outbuffer = (char*)realloc(outbuffer, OUT_SIZE);
-    memcpy(outbuffer, outputDigits.data(), OUT_SIZE);
+    memcpy(outbuffer, mOutputDigits.data(), OUT_SIZE);
 
     // create the output message
     auto freefct = [](void* data, void*) { free(data); };
@@ -706,7 +777,7 @@ class DataDecoderTask
   Elec2DetMapper mElec2Det{nullptr};
   FeeLink2SolarMapper mFee2Solar{nullptr};
   size_t mNrdhs{0};
-  std::vector<o2::mch::Digit> outputDigits;
+  std::vector<o2::mch::Digit> mOutputDigits;
 
   std::ifstream mInputFile{}; ///< input file
   //bool mDs2manu = false;      ///< print convert channel numbering from Run3 to Run1-2 order
