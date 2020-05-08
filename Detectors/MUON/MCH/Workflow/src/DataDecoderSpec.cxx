@@ -544,9 +544,10 @@ class DataDecoderTask
       }
     };
 
-    o2::mch::raw::PageDecoder decode =
-      mFee2Solar ? o2::mch::raw::createPageDecoder(page, channelHandler, mFee2Solar)
-                 : o2::mch::raw::createPageDecoder(page, channelHandler);
+    if (!mDecoder) {
+      mDecoder = mFee2Solar ? o2::mch::raw::createPageDecoder(page, channelHandler, mFee2Solar)
+      : o2::mch::raw::createPageDecoder(page, channelHandler);
+    }
 
     patchPage(page);
 
@@ -561,7 +562,7 @@ class DataDecoderTask
       std::cout << "               currentBufId=" << currentBufId << "  current orbit: "
                 << currentBuffer.orbit << "  digits.size(): " << currentBuffer.digits.size() << std::endl;
     }*/
-    decode(page);
+    mDecoder(page);
     /*if (mPrint) {
       std::cout << "page decoded: previousBufId=" << previousBufId << "  previous orbit: "
                 << previousBuffer.orbit << "  digits.size(): " << previousBuffer.digits.size() << std::endl;
@@ -776,6 +777,7 @@ class DataDecoderTask
  private:
   Elec2DetMapper mElec2Det{nullptr};
   FeeLink2SolarMapper mFee2Solar{nullptr};
+  o2::mch::raw::PageDecoder mDecoder;
   size_t mNrdhs{0};
   std::vector<o2::mch::Digit> mOutputDigits;
 
