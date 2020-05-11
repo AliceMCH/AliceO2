@@ -24,9 +24,7 @@ MapFEC::MapFEC(std::string_view content)
   int link_id, group_id, de, ds_id[5];
   std::istringstream in(std::string{content});
   while (in >> link_id >> group_id >> de >> ds_id[0] >> ds_id[1] >> ds_id[2] >> ds_id[3] >> ds_id[4]) {
-    std::cout<<"[MapFEC::MapFEC] link_id="<<link_id<<"  group_id="<<group_id<<"  de="<<de<<std::endl;
     for (int i = 0; i < 5; i++) {
-      std::cout<<"  ds_id["<<i<<"]="<<ds_id[i]<<std::endl;
       if (ds_id[i] <= 0) {
         continue;
       }

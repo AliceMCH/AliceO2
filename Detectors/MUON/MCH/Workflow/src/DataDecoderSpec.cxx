@@ -436,7 +436,7 @@ void Merger::mergeDigits(int feeId)
 // Data decoder
 class DataDecoderTask
 {
-
+private:
   void decodeBuffer(gsl::span<const std::byte> page)
   {
     size_t ndigits{0};
@@ -447,9 +447,13 @@ class DataDecoderTask
     uint32_t linkId;
 
     auto channelHandler = [&](DsElecId dsElecId, uint8_t channel, o2::mch::raw::SampaCluster sc) {
-      //auto& digits = mergers[feeId].getCurrentBuffer().digits;
       if (mDs2manu) {
         channel = ds2manu(int(channel));
+      }
+      if (mPrint) {
+        auto s = asString(dsElecId);
+        auto ch = fmt::format("{}-CH{:02d}", s, channel);
+        std::cout << ch << std::endl;
       }
       double digitadc(0);
       //for (auto d = 0; d < sc.nofSamples(); d++) {
@@ -465,38 +469,24 @@ class DataDecoderTask
         deId = dsDetId.deId();
       }
 
-      if (false && mPrint) {
+      int padId = -1;
+      const Segmentation& segment = segmentation(deId);
+      if ((&segment) == nullptr) {
+        return;
+      }
+      padId = segment.findPadByFEE(dsIddet, int(channel));
+      if (mPrint) {
         auto s = asString(dsElecId);
         auto ch = fmt::format("{}-CH{:02d}", s, channel);
         std::cout << ch << "  "
-                  << fmt::format("PAD {:04d}-{:04d}\tADC {:5.0f}\tTIME {}-{}-{}\tSIZE {}\tEND {}", deId, dsIddet, digitadc, orbit, sc.bunchCrossing, sc.timestamp, sc.nofSamples(), (sc.timestamp + sc.nofSamples() - 1))
-                  << (((sc.timestamp + sc.nofSamples() - 1) >= 98) ? " *" : "") << std::endl;
+            << fmt::format("PAD ({:04d} {:04d} {:04d})\tADC {:5.0f}\tTIME ({} {} {})\tSIZE {}\tEND {}", deId, dsIddet, padId, digitadc, orbit, sc.bunchCrossing, sc.timestamp, sc.nofSamples(), (sc.timestamp + sc.nofSamples() - 1))
+        << (((sc.timestamp + sc.nofSamples() - 1) >= 98) ? " *" : "") << std::endl;
         //std::cout << "DS " << (int)dsElecId.elinkId() << "  CHIP " << ((int)channel) / 32 << "  CH " << ((int)channel) % 32 << "  ADC " << digitadc << "  DE# " << deId << "  DSid " << dsIddet << "  PadId " << padId << std::endl;
-      }
-
-      int padId = -1;
-      try {
-        const Segmentation& segment = segmentation(deId);
-        if ((&segment) == nullptr) {
-          return;
-        }
-        padId = segment.findPadByFEE(dsIddet, int(channel));
-        if (mPrint) {
-          auto s = asString(dsElecId);
-          auto ch = fmt::format("{}-CH{:02d}", s, channel);
-          std::cout << ch << "  "
-                    << fmt::format("PAD ({:04d} {:04d} {:04d})\tADC {:5.0f}\tTIME ({} {} {})\tSIZE {}\tEND {}", deId, dsIddet, padId, digitadc, orbit, sc.bunchCrossing, sc.timestamp, sc.nofSamples(), (sc.timestamp + sc.nofSamples() - 1))
-                    << (((sc.timestamp + sc.nofSamples() - 1) >= 98) ? " *" : "") << std::endl;
-          //std::cout << "DS " << (int)dsElecId.elinkId() << "  CHIP " << ((int)channel) / 32 << "  CH " << ((int)channel) % 32 << "  ADC " << digitadc << "  DE# " << deId << "  DSid " << dsIddet << "  PadId " << padId << std::endl;
-          if (padId == 994) {
-            for (auto d = 0; d < sc.samples.size(); d++) {
-              std::cout<<"  sample "<<d<<"  "<<sc.samples[d]<<std::endl;
-            }
+        if (false && padId == 994) {
+          for (auto d = 0; d < sc.samples.size(); d++) {
+            std::cout<<"  sample "<<d<<"  "<<sc.samples[d]<<std::endl;
           }
         }
-      } catch (const std::exception& e) {
-        std::cout << "Failed to get padId: " << e.what() << std::endl;
-        return;
       }
 
       HitTime time;
@@ -552,26 +542,12 @@ class DataDecoderTask
     patchPage(page);
 
     // skip stop RDHs
-    //std::cout<<"isStopRDH: "<<(int)isStopRDH<<std::endl;
     if (isStopRDH != 0)
       return;
 
-    /*if (mPrint) {
-      std::cout << "decoding page: previousBufId=" << previousBufId << "  previous orbit: "
-                << previousBuffer.orbit << "  digits.size(): " << previousBuffer.digits.size() << std::endl;
-      std::cout << "               currentBufId=" << currentBufId << "  current orbit: "
-                << currentBuffer.orbit << "  digits.size(): " << currentBuffer.digits.size() << std::endl;
-    }*/
     mDecoder(page);
-    /*if (mPrint) {
-      std::cout << "page decoded: previousBufId=" << previousBufId << "  previous orbit: "
-                << previousBuffer.orbit << "  digits.size(): " << previousBuffer.digits.size() << std::endl;
-      std::cout << "               currentBufId=" << currentBufId << "  current orbit: "
-                << currentBuffer.orbit << "  digits.size(): " << currentBuffer.digits.size() << std::endl;
-    }*/
 
     mMerger->mergeDigits(feeId);
-    //mMerger->storeDigits(feeId, mOutputDigits);
 
     if (mPrint) {
       for (auto d : mOutputDigits) {
@@ -669,25 +645,6 @@ class DataDecoderTask
     initElec2DetMapper(mapFECfile);
     initFee2SolarMapper(mapCRUfile);
 
-    if (mPrint) {
-      try {
-        int deId = 819;
-        int dsIddet = 107;
-        const Segmentation& segment = segmentation(deId);
-        for (int channel = 0; channel < 64; channel++) {
-          int channel2 = channel;
-          if (mDs2manu) {
-            channel2 = ds2manu(int(channel));
-          }
-          int padId = segment.findPadByFEE(dsIddet, int(channel2));
-          std::cout << "DE# " << deId << "  DSid " << dsIddet << "  channel " << channel << "  channel2 " << channel2 << "  PadId " << padId
-                    << "  " << segment.padPositionX(padId) << "," << segment.padPositionY(padId) << std::endl;
-        }
-      } catch (const std::exception& e) {
-        std::cout << "Failed to get padId: " << e.what() << std::endl;
-      }
-    }
-
     const auto storeDigit = [&](const Digit& d) {
       mOutputDigits.emplace_back(d);
     };
@@ -697,8 +654,7 @@ class DataDecoderTask
   }
 
   //_________________________________________________________________________________________________
-  void
-    decodeTF(framework::ProcessingContext& pc)
+  void decodeTF(framework::ProcessingContext& pc)
   {
     // get the input buffer
     auto& inputs = pc.inputs();
@@ -782,9 +738,7 @@ class DataDecoderTask
   std::vector<o2::mch::Digit> mOutputDigits;
 
   std::ifstream mInputFile{}; ///< input file
-  //bool mDs2manu = false;      ///< print convert channel numbering from Run3 to Run1-2 order
 
-  //uint32_t mFeeId = 0;
   MergerBase* mMerger = {nullptr};
   MergerSimple mMergerSimple;
   Merger mMergerFull;
