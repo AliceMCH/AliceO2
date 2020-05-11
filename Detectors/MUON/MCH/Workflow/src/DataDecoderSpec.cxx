@@ -127,7 +127,7 @@ class FeeIdMerger
     sendDigit = h;
   }
 
-  void setOrbit(uint32_t orbit);
+  void setOrbit(uint32_t orbit, bool stop);
 
   MergerBuffer& getCurrentBuffer()
   {
@@ -154,9 +154,11 @@ class FeeIdMerger
   void storeDigits();
 };
 
-void FeeIdMerger::setOrbit(uint32_t orbit)
+void FeeIdMerger::setOrbit(uint32_t orbit, bool stop)
 {
-  if (orbit == buffers[currentBufId].orbit) {
+  // send digits of previous orbit if either the stop RDH is received
+  // or a new orbit is started
+  if ((orbit == buffers[currentBufId].orbit) && (!stop)) {
     return;
   }
 
@@ -319,7 +321,7 @@ class MergerBase
   MergerBase() = default;
   ~MergerBase() = default;
 
-  virtual void setOrbit(int feeId, uint32_t orbit) = 0;
+  virtual void setOrbit(int feeId, uint32_t orbit, bool stop) = 0;
 
   virtual void addDigit(int feeId, int solarId, int dsAddr, int chAddr,
                         int deId, int padId, int adc, HitTime time, HitTime stopTime) = 0;
@@ -336,7 +338,7 @@ class MergerSimple : public MergerBase
   MergerSimple() = default;
   ~MergerSimple() = default;
 
-  void setOrbit(int feeId, uint32_t orbit)
+  void setOrbit(int feeId, uint32_t orbit, bool stop)
   {
     //digits.clear();
   }
@@ -366,7 +368,7 @@ class Merger : public MergerBase
   Merger() = default;
   ~Merger() = default;
 
-  void setOrbit(int feeId, uint32_t orbit);
+  void setOrbit(int feeId, uint32_t orbit, bool stop);
 
   void setDigitHandler(std::function<void(const Digit&)> h);
 
@@ -377,13 +379,13 @@ class Merger : public MergerBase
 };
 
 
-void Merger::setOrbit(int feeId, uint32_t orbit)
+void Merger::setOrbit(int feeId, uint32_t orbit, bool stop)
 {
   if (feeId < 0 || feeId > MCH_MERGER_FEEID_MAX) {
     return;
   }
 
-  mergers[feeId].setOrbit(orbit);
+  mergers[feeId].setOrbit(orbit, stop);
 }
 
 void Merger::setDigitHandler(std::function<void(const Digit&)> h)
@@ -529,8 +531,8 @@ private:
         mMerger = &mMergerSimple;
       }
 
-      if (isStopRDH == 0 && (feeId < 64)) {
-        mMerger->setOrbit(feeId, orbit);
+      if (feeId < 64) {
+        mMerger->setOrbit(feeId, orbit, isStopRDH);
       }
     };
 
@@ -642,8 +644,8 @@ private:
     auto mapCRUfile = ic.options().get<std::string>("cru-map");
     auto mapFECfile = ic.options().get<std::string>("fec-map");
 
-    initElec2DetMapper(mapFECfile);
     initFee2SolarMapper(mapCRUfile);
+    initElec2DetMapper(mapFECfile);
 
     const auto storeDigit = [&](const Digit& d) {
       mOutputDigits.emplace_back(d);
