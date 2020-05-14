@@ -452,7 +452,7 @@ private:
       if (mDs2manu) {
         channel = ds2manu(int(channel));
       }
-      if (mPrint) {
+      if (false && mPrint) {
         auto s = asString(dsElecId);
         auto ch = fmt::format("{}-CH{:02d}", s, channel);
         std::cout << ch << std::endl;
@@ -481,14 +481,19 @@ private:
         auto s = asString(dsElecId);
         auto ch = fmt::format("{}-CH{:02d}", s, channel);
         std::cout << ch << "  "
-            << fmt::format("PAD ({:04d} {:04d} {:04d})\tADC {:5.0f}\tTIME ({} {} {})\tSIZE {}\tEND {}", deId, dsIddet, padId, digitadc, orbit, sc.bunchCrossing, sc.timestamp, sc.nofSamples(), (sc.timestamp + sc.nofSamples() - 1))
+            << fmt::format("PAD ({:04d} {:04d} {:04d})\tADC {:5.0f}  TIME ({} {} {:02d})  SIZE {}  END {}",
+                deId, dsIddet, padId, digitadc, orbit, sc.bunchCrossing, sc.timestamp, sc.nofSamples(), (sc.timestamp + sc.nofSamples() - 1))
         << (((sc.timestamp + sc.nofSamples() - 1) >= 98) ? " *" : "") << std::endl;
         //std::cout << "DS " << (int)dsElecId.elinkId() << "  CHIP " << ((int)channel) / 32 << "  CH " << ((int)channel) % 32 << "  ADC " << digitadc << "  DE# " << deId << "  DSid " << dsIddet << "  PadId " << padId << std::endl;
-        if (false && padId == 994) {
+        if (false && ((padId == 545) || (padId == 550) || (padId == 574) || (padId == 1012) || (padId == 1014) || (padId == 1016))) {
           for (auto d = 0; d < sc.samples.size(); d++) {
-            std::cout<<"  sample "<<d<<"  "<<sc.samples[d]<<std::endl;
+            std::cout<<"  sample "<<d<<"  "<<sc.bunchCrossing+((sc.timestamp+d)*4)<<"  "<<sc.samples[d]<<std::endl;
           }
         }
+      }
+      // skip channels not associated to any pad
+      if (padId < 0) {
+        return;
       }
 
       HitTime time;
@@ -544,14 +549,15 @@ private:
     patchPage(page);
 
     // skip stop RDHs
-    if (isStopRDH != 0)
-      return;
+    //if (isStopRDH != 0)
+    //  return;
 
     mDecoder(page);
 
     mMerger->mergeDigits(feeId);
 
     if (mPrint) {
+      std::cout<<"[decodeBuffer] mOutputDigits size: "<<mOutputDigits.size()<<std::endl;
       for (auto d : mOutputDigits) {
         if(d.getPadID() < 0) continue;
         const Segmentation& segment = segmentation(d.getDetID());
@@ -649,6 +655,9 @@ private:
 
     const auto storeDigit = [&](const Digit& d) {
       mOutputDigits.emplace_back(d);
+      if(mPrint) {
+        std::cout<<"[storeDigit]: digit stored, mOutputDigits size: "<<mOutputDigits.size()<<std::endl;
+      }
     };
 
     mMergerSimple.setDigitHandler(storeDigit);
