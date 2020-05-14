@@ -22,6 +22,8 @@
 #include <stdexcept>
 #include <vector>
 
+#include <fmt/format.h>
+
 #include "Framework/CallbackService.h"
 #include "Framework/ConfigParamRegistry.h"
 #include "Framework/ControlService.h"
@@ -78,6 +80,10 @@ class PreClusterSinkTask
     auto digits = pc.inputs().get<gsl::span<Digit>>("digits");
 
     if (mText) {
+      if (preClusters.empty()) {
+        return;
+      }
+
       mOutputFile << preClusters.size() << " preclusters:" << endl;
       if (mUseRun2DigitUID) {
         std::vector<Digit> digitsCopy(digits.begin(), digits.end());
@@ -87,7 +93,21 @@ class PreClusterSinkTask
         }
       } else {
         for (const auto& precluster : preClusters) {
-          precluster.print(mOutputFile, digits);
+          //precluster.print(mOutputFile, digits);
+          int i(0);
+          mOutputFile << "  nDigits = " << precluster.nDigits << endl;
+          for (const auto& digit : digits.subspan(precluster.firstDigit, precluster.nDigits)) {
+            mOutputFile << fmt::format("  digit[{:02d}] = ", i)
+                 << fmt::format("PAD ({:04d} {:04d})  ADC {:05d}  TIME ({} {} {:02d})", digit.getDetID(), digit.getPadID(), digit.getADC(),
+                     digit.getTime().orbit, digit.getTime().bunchCrossing, digit.getTime().sampaTime);
+            const mapping::Segmentation& segment = mapping::segmentation(digit.getDetID());
+            if ((&segment) != nullptr) {
+              float px = static_cast<float>(segment.padPositionX(digit.getPadID()));
+              float py = static_cast<float>(segment.padPositionY(digit.getPadID()));
+              mOutputFile << fmt::format("  X-Y {:03.2f},{:03.2f}", px, py);
+            }
+            mOutputFile << std::endl;
+          }
         }
       }
     } else {
