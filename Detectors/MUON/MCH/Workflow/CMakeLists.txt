@@ -9,11 +9,11 @@
 # submit itself to any jurisdiction.
 
 o2_add_library(MCHWorkflow
-               SOURCES src/DataDecoderSpec.cxx src/PreClusterFinderSpec.cxx src/ClusterFinderSpec.cxx
+               SOURCES src/DataDecoderSpec.cxx src/PreClusterFinderSpec.cxx src/TimePreClusterFinderSpec.cxx src/TimeClusterFinderSpec.cxx src/ClusterFinderSpec.cxx
                TARGETVARNAME targetName
                PUBLIC_LINK_LIBRARIES O2::Framework O2::DPLUtils O2::MCHRawDecoder Boost::program_options
                                      O2::MCHRawImplHelpers RapidJSON::RapidJSON O2::MCHMappingInterface O2::MCHPreClustering
-                                     O2::MCHMappingImpl4 O2::MCHRawElecMap O2::MCHBase O2::MCHPreClustering O2::MCHClustering)
+                                     O2::MCHMappingImpl4 O2::MCHRawElecMap O2::MCHBase O2::MCHPreClustering O2::MCHTimeClustering O2::MCHClustering)
 
 o2_add_executable(
         file-to-digits-workflow
@@ -38,6 +38,18 @@ o2_add_executable(
 o2_add_executable(
         raw-to-digits-workflow
         SOURCES src/raw-to-digits-workflow.cxx
+        COMPONENT_NAME mch
+        PUBLIC_LINK_LIBRARIES O2::MCHWorkflow)
+
+o2_add_executable(
+        digits-to-timeclusters-workflow
+        SOURCES src/digits-to-timeclusters-workflow.cxx
+        COMPONENT_NAME mch
+        PUBLIC_LINK_LIBRARIES O2::MCHWorkflow)
+
+o2_add_executable(
+        timeclusters-to-preclusters-workflow
+        SOURCES src/timeclusters-to-preclusters-workflow.cxx
         COMPONENT_NAME mch
         PUBLIC_LINK_LIBRARIES O2::MCHWorkflow)
 
