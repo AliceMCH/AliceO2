@@ -31,10 +31,11 @@
 #include "DPLUtils/DPLRawParser.h"
 #include "MCHBase/Digit.h"
 #include "Headers/RAWDataHeader.h"
+#include "DetectorsRaw/RDHUtils.h"
 #include "MCHRawCommon/DataFormats.h"
 #include "MCHRawDecoder/PageDecoder.h"
 #include "MCHRawElecMap/Mapper.h"
-#include "MCHRawCommon/RDHManip.h"
+//#include "MCHRawCommon/RDHManip.h"
 #include "MCHMappingInterface/Segmentation.h"
 #include "MCHWorkflow/DataDecoder.h"
 //#include <array>
@@ -501,9 +502,16 @@ void DataDecoder::decodeBuffer(gsl::span<const std::byte> page)
     auto rdhPtr = reinterpret_cast<o2::header::RAWDataHeaderV4*>(const_cast<std::byte*>(&rdhBuffer[0]));
     auto& rdh = *rdhPtr;
     mNrdhs++;
-    auto cruId = rdhCruId(rdh);
-    rdhFeeId(rdh, cruId * 2 + rdhEndpoint(rdh));
-    isStopRDH = rdhStop(rdh);
+
+    //auto cruId = rdhCruId(rdh);
+    //rdhFeeId(rdh, cruId * 2 + rdhEndpoint(rdh));
+    //isStopRDH = rdhStop(rdh);
+
+    auto cruId = o2::raw::RDHUtils::getCRUID(*rdhAnyPtr); //rdhCruId(rdh);
+    auto endPointID = o2::raw::RDHUtils::getEndPointID(*rdhAnyPtr);
+    o2::raw::RDHUtils::setFEEID(*rdhAnyPtr, cruId * 2 + endPointID);
+    isStopRDH = o2::raw::RDHUtils::getStop(*rdhAnyPtr);
+
     if (true && mPrint) {
       std::cout << std::endl
                 << mNrdhs << "--" << rdh << "\n";
