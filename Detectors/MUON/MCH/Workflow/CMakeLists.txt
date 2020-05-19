@@ -9,9 +9,9 @@
 # submit itself to any jurisdiction.
 
 o2_add_library(MCHWorkflow
-               SOURCES src/DataDecoderSpec.cxx src/PreClusterFinderSpec.cxx
+               SOURCES src/DataDecoder.cxx src/DataDecoderSpec.cxx src/PreClusterFinderSpec.cxx
                TARGETVARNAME targetName
-               PUBLIC_LINK_LIBRARIES O2::Framework O2::DPLUtils O2::MCHRawDecoder Boost::program_options
+               PUBLIC_LINK_LIBRARIES O2::Framework O2::DPLUtils O2::DetectorsRaw O2::MCHRawDecoder Boost::program_options
                                      O2::MCHRawImplHelpers RapidJSON::RapidJSON O2::MCHMappingInterface O2::MCHPreClustering
                                      O2::MCHMappingImpl3 O2::MCHRawElecMap O2::MCHBase O2::MCHPreClustering)
 

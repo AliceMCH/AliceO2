@@ -34,6 +34,11 @@ struct HitTime {
       uint32_t orbit;              /// bit 32 to 63: orbit
     };                             ///
   };
+  uint64_t getBXTime()
+  {
+    uint64_t result = bunchCrossing;
+    return (bunchCrossing + (sampaTime * 4));
+  }
 };
 
 } //namespace mch
