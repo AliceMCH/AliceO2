@@ -42,11 +42,6 @@
 
 static bool mPrint = true;
 
-namespace o2::header
-{
-extern std::ostream& operator<<(std::ostream&, const o2::header::RAWDataHeaderV4&);
-}
-
 namespace o2
 {
 namespace mch
@@ -508,14 +503,14 @@ void DataDecoder::decodeBuffer(gsl::span<const std::byte> page)
     o2::raw::RDHUtils::setFEEID(*rdhAnyPtr, cruId * 2 + endPointID);
     isStopRDH = o2::raw::RDHUtils::getStop(*rdhAnyPtr);
 
-    if (true && mPrint) {
-      std::cout << std::endl
-                << mNrdhs << "--" << rdh << "\n";
-    }
+    //if (true && mPrint) {
+    //  std::cout << std::endl
+    //            << mNrdhs << "--" << rdh << "\n";
+    //}
 
-    feeId = rdhFeeId(rdh);
-    orbit = rdhOrbit(rdh);
-    linkId = rdhLinkId(rdh);
+    feeId = o2::raw::RDHUtils::getFEEID(*rdhAnyPtr);
+    orbit = o2::raw::RDHUtils::getHeartBeatOrbit(*rdhAnyPtr);
+    linkId = o2::raw::RDHUtils::getLinkID(*rdhAnyPtr);
 
     if (!mMerger) {
       if (linkId == 15) {

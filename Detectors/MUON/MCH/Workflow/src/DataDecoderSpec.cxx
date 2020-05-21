@@ -34,11 +34,11 @@
 #include "MCHRawCommon/DataFormats.h"
 #include "MCHRawDecoder/PageDecoder.h"
 #include "MCHRawElecMap/Mapper.h"
-#include "MCHRawCommon/RDHManip.h"
 #include "MCHMappingInterface/Segmentation.h"
 #include "MCHWorkflow/DataDecoder.h"
 #include "MCHWorkflow/DataDecoderSpec.h"
 #include <array>
+#include "DetectorsRaw/RDHUtils.h"
 
 namespace o2::header
 {
