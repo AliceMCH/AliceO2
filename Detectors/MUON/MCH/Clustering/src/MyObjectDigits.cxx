@@ -8,20 +8,18 @@
 
 ClassImp(o2::mch::MyObjectDigits)
 
-namespace o2
+  namespace o2
 {
-namespace mch
-{
+  namespace mch
+  {
 
-MyObjectDigits::MyObjectDigits() : TObject()
-{
-    
-}
+  MyObjectDigits::MyObjectDigits() : TObject()
+  {
+  }
 
-MyObjectDigits::~MyObjectDigits()
-{
-    
-}
+  MyObjectDigits::~MyObjectDigits()
+  {
+  }
 
-}
+  } // namespace mch
 }

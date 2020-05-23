@@ -42,25 +42,21 @@ namespace mch
 using namespace std;
 using namespace o2::framework;
 
-
 // \class Digit2
 /// \brief MCH digit implementation, with pad coordinates
-struct Digit2
-{
+struct Digit2 {
  public:
   uint64_t mTime;
   uint32_t mDetID;
-  uint32_t mPadID;         /// PadIndex to which the digit corresponds to
-  uint64_t mADC; /// Amplitude of signal
+  uint32_t mPadID; /// PadIndex to which the digit corresponds to
+  uint64_t mADC;   /// Amplitude of signal
   uint8_t mCathode;
   float mX, mY, mSizeX, mSizeY;
 }; //class Digit2
 
-
-
 class PreClusterSinkTask
 {
-public:
+ public:
   //_________________________________________________________________________________________________
   void init(framework::InitContext& ic)
   {
@@ -138,7 +134,7 @@ public:
         //cout<<"sizeof(Digit2): "<<sizeof(Digit2)<<endl;
 
         for (auto& digit : dv) {
-          if(false){
+          if (false) {
             cout << "\nDetID:" << digit.getDetID() << " PadID:" << digit.getPadID() << endl;
           }
 
@@ -165,7 +161,7 @@ public:
     }
   }
 
-private:
+ private:
   //_________________________________________________________________________________________________
   void convertPadID2DigitUID(std::vector<Digit>& digits)
   {
@@ -174,15 +170,15 @@ private:
     // cathode number of the bending plane for each DE
     static const std::array<std::vector<int>, 10> bendingCathodes{
       {{0, 1, 0, 1},
-        {0, 1, 0, 1},
-        {0, 1, 0, 1},
-        {0, 1, 0, 1},
-        {0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1},
-        {0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1},
-        {0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1},
-        {0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1},
-        {0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1},
-        {0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1}}};
+       {0, 1, 0, 1},
+       {0, 1, 0, 1},
+       {0, 1, 0, 1},
+       {0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1},
+       {0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1},
+       {0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1},
+       {0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1},
+       {0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1},
+       {0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1}}};
 
     for (auto& digit : digits) {
 
@@ -212,12 +208,12 @@ o2::framework::DataProcessorSpec getPreClusterSinkSpec()
   return DataProcessorSpec{
     "PreClusterSink",
     Inputs{InputSpec{"preclusters", "MCH", "PRECLUSTERS", 0, Lifetime::Timeframe},
-      InputSpec{"digits", "MCH", "PRECLUSTERDIGITS", 0, Lifetime::Timeframe}},
-      Outputs{},
-      AlgorithmSpec{adaptFromTask<PreClusterSinkTask>()},
-      Options{{"outfile", VariantType::String, "preclusters.out", {"output filename"}},
-        {"txt", VariantType::Bool, false, {"output preclusters in text format"}},
-        {"useRun2DigitUID", VariantType::Bool, false, {"mPadID = digit UID in run2 format"}}}};
+           InputSpec{"digits", "MCH", "PRECLUSTERDIGITS", 0, Lifetime::Timeframe}},
+    Outputs{},
+    AlgorithmSpec{adaptFromTask<PreClusterSinkTask>()},
+    Options{{"outfile", VariantType::String, "preclusters.out", {"output filename"}},
+            {"txt", VariantType::Bool, false, {"output preclusters in text format"}},
+            {"useRun2DigitUID", VariantType::Bool, false, {"mPadID = digit UID in run2 format"}}}};
 }
 
 } // end namespace mch

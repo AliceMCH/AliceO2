@@ -7,20 +7,18 @@
 
 ClassImp(o2::mch::MyObjectParametersMathieson)
 
-namespace o2
+  namespace o2
 {
-namespace mch
-{
+  namespace mch
+  {
 
-MyObjectParametersMathieson::MyObjectParametersMathieson() : TObject()
-{
-    
-}
+  MyObjectParametersMathieson::MyObjectParametersMathieson() : TObject()
+  {
+  }
 
-MyObjectParametersMathieson::~MyObjectParametersMathieson()
-{
-    
-}
+  MyObjectParametersMathieson::~MyObjectParametersMathieson()
+  {
+  }
 
-}
+  } // namespace mch
 }

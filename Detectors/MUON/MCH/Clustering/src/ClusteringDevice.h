@@ -9,8 +9,6 @@
 using namespace o2;
 using namespace o2::framework;
 
-
 WorkflowSpec defineDataProcessing(const ConfigContext&);
 
 #endif // O2_MCH_CLUSTERINGDEVICE_H_
-

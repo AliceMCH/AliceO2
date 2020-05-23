@@ -40,7 +40,6 @@ DigitsFileReader::DigitsFileReader(std::string inputFileName)
   }
 }
 
-
 bool DigitsFileReader::readDigitsFromFile()
 {
   const uint32_t SSizeOfDigitBlock = sizeof(DigitBlock);
@@ -66,7 +65,7 @@ bool DigitsFileReader::readDigitsFromFile()
   printf("fNrecords: %d  size: %d\n", (int)(digitBlock.header.fNrecords), (int)size);
 
   DigitStruct* bufferPtr = (DigitStruct*)malloc(size);
-  if( !bufferPtr) {
+  if (!bufferPtr) {
     throw length_error("cannot allocate digits buffer");
   }
 
@@ -78,7 +77,7 @@ bool DigitsFileReader::readDigitsFromFile()
   }
 
   digits.reserve(digitBlock.header.fNrecords);
-  for(unsigned int di = 0; di < digitBlock.header.fNrecords; di++) {
+  for (unsigned int di = 0; di < digitBlock.header.fNrecords; di++) {
     const DigitStruct& digit = bufferPtr[di];
     uint32_t uid = digit.uid;
     uint16_t adc = digit.adc;
@@ -91,16 +90,16 @@ bool DigitsFileReader::readDigitsFromFile()
     try {
       mapping::Segmentation segment(detId);
       int padId = segment.findPadByFEE(dualSampaId, dualSampaChannel);
-      if(padId < 0) continue;
+      if (padId < 0)
+        continue;
       //digits.push_back( std::make_unique<Digit>(time, detId, padId, adc) );
-      digits.push_back( std::make_unique<Digit>() );
+      digits.push_back(std::make_unique<Digit>());
       Digit* mchdigit = digits.back().get();
       mchdigit->setDetID(detId);
       mchdigit->setPadID(padId);
       mchdigit->setADC(adc);
       mchdigit->setTimeStamp(time);
-    }
-    catch(std::exception& e) {
+    } catch (std::exception& e) {
       continue;
     }
   }
@@ -108,17 +107,15 @@ bool DigitsFileReader::readDigitsFromFile()
   return true;
 }
 
-
 ssize_t DigitsFileReader::getNumberOfDigits()
 {
   return digits.size();
 }
 
-
 void DigitsFileReader::storeDigits(void* bufferPtr)
 {
   Digit* ptr = (Digit*)bufferPtr;
-  for(unsigned int di = 0; di < digits.size(); di++) {
+  for (unsigned int di = 0; di < digits.size(); di++) {
 
     memcpy(ptr, digits[di].get(), sizeof(Digit));
     ptr += 1;

@@ -1,19 +1,17 @@
 #ifndef ALICEO2_MCH_MYOBJECTDIGITS_H_
 #define ALICEO2_MCH_MYOBJECTDIGITS_H_
 
-
 #include <TROOT.h>
 #include "TObject.h"
 #include <iostream>
 #include <vector>
 #include "MCHBase/Digit.h"
 
-
 namespace o2
 {
 namespace mch
 {
-    
+
 using namespace std;
 
 //class MyObjectDigits : public TObject
@@ -35,19 +33,19 @@ using namespace std;
 class MyObjectDigits : public TObject
 {
  public:
-    MyObjectDigits();
-    virtual ~MyObjectDigits();
+  MyObjectDigits();
+  virtual ~MyObjectDigits();
 
   std::vector<Digit> getfDigits() const { return fDigits; }
   void setfDigits(std::vector<Digit> vectdigits) { fDigits = vectdigits; }
-    
-    ClassDef(MyObjectDigits, 1);
+
+  ClassDef(MyObjectDigits, 1);
 
  private:
-    std::vector<Digit> fDigits;
+  std::vector<Digit> fDigits;
 };
 
-}
-}
+} // namespace mch
+} // namespace o2
 
 #endif // ALICEO2_MCH_MYOBJECTDIGITS_H_

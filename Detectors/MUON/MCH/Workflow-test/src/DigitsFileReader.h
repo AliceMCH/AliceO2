@@ -16,13 +16,15 @@
 using namespace o2::mch;
 using namespace std;
 
-namespace o2 {
+namespace o2
+{
 
-namespace mch {
+namespace mch
+{
 
 class DigitsFileReader
 {
-public:
+ public:
   DigitsFileReader(std::string inputFileName);
 
   bool readDigitsFromFile();
@@ -30,10 +32,10 @@ public:
   ssize_t getNumberOfDigits();
   void storeDigits(void* bufferPtr);
 
-private:
+ private:
   std::ifstream mInputFile;
-  std::vector< std::unique_ptr<Digit> > digits;
+  std::vector<std::unique_ptr<Digit>> digits;
 };
 
-}
-}
+} // namespace mch
+} // namespace o2

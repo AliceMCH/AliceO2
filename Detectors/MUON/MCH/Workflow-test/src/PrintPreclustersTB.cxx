@@ -20,26 +20,26 @@ using namespace std;
 
 int main(int argc, char** argv)
 {
-    
+
   TBDigitsFileReader digitsReader;
   digitsReader.init(argv[1]);
-  ofstream outFile(argv[2],ios::out);
+  ofstream outFile(argv[2], ios::out);
 
   PreClusterFinder preClusterFinder;
   preClusterFinder.init();
 
   Digit* digitsBuffer = NULL;
-    
+
   // load digits from binary input file, block-by-block
-  while(digitsReader.readDigitsFromFile()) {
+  while (digitsReader.readDigitsFromFile()) {
 
     // get number of loaded digits and store them into a memory buffer
     auto nDigits = digitsReader.getNumberOfDigits();
-      float xtrk;
-      float ytrk;
+    float xtrk;
+    float ytrk;
     digitsReader.get_trk_pos(819, xtrk, ytrk);
-      cout << "xtrk: " << xtrk << endl;
-      cout << "ytrk: " << ytrk << endl;
+    cout << "xtrk: " << xtrk << endl;
+    cout << "ytrk: " << ytrk << endl;
     printf("nDigits: %d\n", (int)nDigits);
     //continue;
     digitsBuffer = (Digit*)realloc(digitsBuffer, sizeof(Digit) * nDigits);
@@ -50,7 +50,7 @@ int main(int argc, char** argv)
     preClusterFinder.loadDigits({digitsBuffer, nDigits});
     preClusterFinder.run();
 
-    outFile<<preClusterFinder<<std::endl;
+    outFile << preClusterFinder << std::endl;
   }
 
   return 0;

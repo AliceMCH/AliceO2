@@ -98,8 +98,8 @@ class PreClusterSinkTask
           mOutputFile << "  nDigits = " << precluster.nDigits << endl;
           for (const auto& digit : digits.subspan(precluster.firstDigit, precluster.nDigits)) {
             mOutputFile << fmt::format("  digit[{:02d}] = ", i)
-                 << fmt::format("PAD ({:04d} {:04d})  ADC {:05d}  TIME ({} {} {:02d})", digit.getDetID(), digit.getPadID(), digit.getADC(),
-                     digit.getTime().orbit, digit.getTime().bunchCrossing, digit.getTime().sampaTime);
+                        << fmt::format("PAD ({:04d} {:04d})  ADC {:05d}  TIME ({} {} {:02d})  SIZE {}", digit.getDetID(), digit.getPadID(), digit.getADC(),
+                                       digit.getTime().orbit, digit.getTime().bunchCrossing, digit.getTime().sampaTime, digit.getSize());
             const mapping::Segmentation& segment = mapping::segmentation(digit.getDetID());
             if ((&segment) != nullptr) {
               float px = static_cast<float>(segment.padPositionX(digit.getPadID()));

@@ -32,7 +32,8 @@ namespace mch
 /**
  * Gives the fired channel/pad information which was considered during
  * hit reconstruction and correlated into a common cluster.
- *//*
+ */
+/*
 struct PreClusterStruct {
   uint16_t nDigits;          // number of digits attached to this precluster
   const Digit* digits; // pointer to the 1st element of the array of digits
@@ -130,7 +131,6 @@ class PreClusterSerializer
   void readPreClusters(std::vector<PreClusterStruct>& preClusters, char* buffer, uint32_t size);
 
  private:
-
   static constexpr uint32_t SSizeOfUShort = sizeof(uint16_t);
   static constexpr uint32_t SSizeOfDigit = sizeof(Digit);
 

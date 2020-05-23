@@ -225,7 +225,7 @@ int PreClusterSerializer::readBuffer(std::vector<PreClusterStruct>& preClusters)
 
   // sanity check on read size
   if (mCurrentSize != mSize && status >= 0) {
-    LOG(ERROR) << "The number of bytes read differs from the buffer size: "<<mCurrentSize<<", "<<mSize;
+    LOG(ERROR) << "The number of bytes read differs from the buffer size: " << mCurrentSize << ", " << mSize;
     status = -EILSEQ;
   }
 
@@ -278,7 +278,7 @@ uint32_t PreClusterSerializer::getPreClustersBufferSize(PreClusterFinder& finder
   uint32_t nPreClusters = finder.getNumberOfPreClusters();
 
   uint32_t bufSize = SSizeOfInt + nDEWithPreClusters * 2 * SSizeOfInt +
-      (nDEWithPreClusters + nPreClusters) * SSizeOfUShort + nUsedDigits * SSizeOfDigit;
+                     (nDEWithPreClusters + nPreClusters) * SSizeOfUShort + nUsedDigits * SSizeOfDigit;
 
   return bufSize;
 }
@@ -347,7 +347,7 @@ void PreClusterSerializer::storePreClusters(PreClusterFinder& preClusterFinder, 
         }
 
         // add the precluster with its first digit
-        printf("[PreClusterSerializer::storePreClusters] adding pre-cluster of size %d\n", (int)(cluster->lastPad+1-cluster->firstPad));
+        printf("[PreClusterSerializer::storePreClusters] adding pre-cluster of size %d\n", (int)(cluster->lastPad + 1 - cluster->firstPad));
         // Fix code to use O2 digits
         digit = preClusterFinder.getDigit(iDE, cluster->firstPad);
         if (startPreCluster(*digit) < 0) {
@@ -403,7 +403,6 @@ void PreClusterSerializer::readPreClusters(std::vector<PreClusterStruct>& preClu
   int deId;
   uint32_t bytesUsed;
 
-
   for (int iDE = 0; iDE < nDEWithPreClusters; ++iDE) {
 
     // retrieve the DE ID
@@ -420,14 +419,14 @@ void PreClusterSerializer::readPreClusters(std::vector<PreClusterStruct>& preClu
       auto iptr = reinterpret_cast<uint32_t*>(buffer + totalBytesUsed);
       bytesUsed = *iptr;
       printf("[PreClusterSerializer::readPreClusters] bytesUsed: %d -> %p, totalBytesUsed: %d\n", (int)(bytesUsed), iptr, (int)(totalBytesUsed));
-     totalBytesUsed += SSizeOfInt;
+      totalBytesUsed += SSizeOfInt;
     } else {
       throw length_error("cannot store size of the PreClusterSerializer");
     }
 
     // prepare to read the preclusters of this DE
     printf("[PreClusterSerializer::readPreClusters] totalBytesUsed: %d\n", (int)(totalBytesUsed));
-    if (reset(buffer + totalBytesUsed, bytesUsed/*sizeIn - totalBytesUsed*/, false) < 0) {
+    if (reset(buffer + totalBytesUsed, bytesUsed /*sizeIn - totalBytesUsed*/, false) < 0) {
       throw length_error("cannot reset the cluster block");
     }
 

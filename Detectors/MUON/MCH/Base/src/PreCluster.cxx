@@ -35,8 +35,8 @@ void PreCluster::print(std::ostream& stream, gsl::span<const Digit> digits) cons
   stream << "  nDigits = " << nDigits << endl;
   for (const auto& digit : digits.subspan(firstDigit, nDigits)) {
     stream << "  digit[" << i++ << "] = " << digit.getDetID() << "-" << digit.getPadID()
-        << "(" << digit.getTime().orbit <<" " << digit.getTime().bunchCrossing << " " << digit.getTime().sampaTime
-        << ")  " << digit.getADC() << endl;
+           << "(" << digit.getTime().orbit << " " << digit.getTime().bunchCrossing << " " << digit.getTime().sampaTime
+           << ")  " << digit.getADC() << endl;
   }
 }
 

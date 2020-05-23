@@ -12,7 +12,6 @@
 /// @author P. Pillot
 /// @brief Class to fit a preclusters with the center-of-gravity method
 
-
 #ifndef ALICEO2_MCH_CLUSTERINGCOG_H_
 #define ALICEO2_MCH_CLUSTERINGCOG_H_
 
@@ -33,7 +32,7 @@ namespace mch
 
 class ClusteringCoG
 {
-public:
+ public:
   ClusteringCoG() = default;
   ~ClusteringCoG() = default;
 
@@ -41,7 +40,6 @@ public:
   ClusteringCoG& operator=(const ClusteringCoG&) = delete;
   ClusteringCoG(ClusteringCoG&&) = delete;
   ClusteringCoG& operator=(ClusteringCoG&&) = delete;
-
 
   void run(gsl::span<const PreCluster> preClusters, gsl::span<const Digit> digits, std::vector<Cluster>& clusters);
   Cluster run(gsl::span<const Digit> precluster);

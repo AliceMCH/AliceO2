@@ -61,7 +61,7 @@ class TimeClusterFinder
   static constexpr int SNDEs = 156; ///< number of DEs
 
   std::vector<std::unique_ptr<DetectionElement>> mDEs; ///< internal mapping
-  std::unordered_map<int, int> mDEIndices{};             ///< maps DE indices from DE IDs
+  std::unordered_map<int, int> mDEIndices{};           ///< maps DE indices from DE IDs
 
   gsl::span<Digit> mOutputDigits{};           ///< array of output digits
   gsl::span<PreCluster> mOutputPreclusters{}; ///< array of output preclusters

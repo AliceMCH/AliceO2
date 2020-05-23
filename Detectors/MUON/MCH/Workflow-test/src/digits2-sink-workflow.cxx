@@ -60,14 +60,13 @@ class Digit2
  public:
   uint64_t mTime;
   uint32_t mDetID;
-  uint32_t mPadID;         /// PadIndex to which the digit corresponds to
-  uint64_t mADC; /// Amplitude of signal
+  uint32_t mPadID; /// PadIndex to which the digit corresponds to
+  uint64_t mADC;   /// Amplitude of signal
   uint8_t mCathode;
   float mX, mY, mSizeX, mSizeY;
 
   ClassDefNV(Digit2, 1);
 }; //class Digit2
-
 
 namespace raw
 {

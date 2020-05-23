@@ -7,20 +7,18 @@
 
 ClassImp(o2::mch::MyObjectParametersDoubleGauss)
 
-namespace o2
+  namespace o2
 {
-namespace mch
-{
+  namespace mch
+  {
 
-MyObjectParametersDoubleGauss::MyObjectParametersDoubleGauss() : TObject()
-{
-    
-}
+  MyObjectParametersDoubleGauss::MyObjectParametersDoubleGauss() : TObject()
+  {
+  }
 
-MyObjectParametersDoubleGauss::~MyObjectParametersDoubleGauss()
-{
-    
-}
+  MyObjectParametersDoubleGauss::~MyObjectParametersDoubleGauss()
+  {
+  }
 
-}
+  } // namespace mch
 }

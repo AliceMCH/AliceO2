@@ -27,12 +27,12 @@ Cluster::Cluster(float time, int detid, float x, float y, float ex, float ey, fl
 bool Cluster::operator==(const Cluster& other) const
 {
   return mDetID == other.mDetID &&
-      closeEnough(mX, other.mX) &&
-      closeEnough(mY, other.mY) &&
-      closeEnough(mSigmaX, other.mSigmaX) &&
-      closeEnough(mSigmaY, other.mSigmaY) &&
-      closeEnough(mCharge, other.mCharge) &&
-      closeEnough(mTime, other.mTime);
+         closeEnough(mX, other.mX) &&
+         closeEnough(mY, other.mY) &&
+         closeEnough(mSigmaX, other.mSigmaX) &&
+         closeEnough(mSigmaY, other.mSigmaY) &&
+         closeEnough(mCharge, other.mCharge) &&
+         closeEnough(mTime, other.mTime);
 }
 
 } // namespace o2::mch

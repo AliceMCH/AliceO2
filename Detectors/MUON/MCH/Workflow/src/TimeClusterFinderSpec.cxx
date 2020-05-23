@@ -95,7 +95,7 @@ class TimeClusterFinderTask
     mTimeLoadDigits += tEnd - tStart;
 
     gsl::span<Digit> outputDigits;
-    gsl::span<PreCluster>outputPreclusters;
+    gsl::span<PreCluster> outputPreclusters;
     mTimeClusterFinder.getTimeClusters(outputPreclusters, outputDigits);
 
     //std::cout<<"output preclusters size: "<<outputPreclusters.size()<<std::endl;
@@ -103,20 +103,20 @@ class TimeClusterFinderTask
     // send the output messages
     auto freefct = [](void* data, void* /*hint*/) { free(data); };
     pc.outputs().adoptChunk(Output{"MCH", "TCLUSTERS", 0, Lifetime::Timeframe},
-        reinterpret_cast<char*>(outputPreclusters.data()), outputPreclusters.size_bytes(), freefct, nullptr);
+                            reinterpret_cast<char*>(outputPreclusters.data()), outputPreclusters.size_bytes(), freefct, nullptr);
     pc.outputs().adoptChunk(Output{"MCH", "TCLUSTERDIGITS", 0, Lifetime::Timeframe},
-        reinterpret_cast<char*>(outputDigits.data()), outputDigits.size_bytes(), freefct, nullptr);
+                            reinterpret_cast<char*>(outputDigits.data()), outputDigits.size_bytes(), freefct, nullptr);
   }
 
  private:
-  TimeClusterFinder mTimeClusterFinder{};   ///< preclusterizer
+  TimeClusterFinder mTimeClusterFinder{}; ///< preclusterizer
   std::vector<PreCluster> mPreClusters{}; ///< vector of preclusters
   std::vector<Digit> mUsedDigits{};       ///< vector of digits in the preclusters
 
   std::chrono::duration<double, std::milli> mTimeResetTimeClusterFinder{}; ///< timer
-  std::chrono::duration<double, std::milli> mTimeLoadDigits{};            ///< timer
+  std::chrono::duration<double, std::milli> mTimeLoadDigits{};             ///< timer
   std::chrono::duration<double, std::milli> mTimeTimeClusterFinder{};      ///< timer
-  std::chrono::duration<double, std::milli> mTimeStorePreClusters{};      ///< timer
+  std::chrono::duration<double, std::milli> mTimeStorePreClusters{};       ///< timer
 };
 
 //_________________________________________________________________________________________________

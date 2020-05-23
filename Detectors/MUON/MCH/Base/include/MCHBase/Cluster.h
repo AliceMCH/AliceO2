@@ -48,13 +48,13 @@ class Cluster
   float getCharge() const { return mCharge; }
 
  private:
-  int mDetID;   /// Detection element the cluster belongs to
-  float mTime; /// Time stamp of the charge cluster
-  double mX;    /// cluster X coordinate
-  double mY;    /// cluster Y coordinate
-  double mSigmaX;    /// error on X coordinate
-  double mSigmaY;    /// error on Y coordinate
-  float mCharge; /// Total charge in the cluster
+  int mDetID;     /// Detection element the cluster belongs to
+  float mTime;    /// Time stamp of the charge cluster
+  double mX;      /// cluster X coordinate
+  double mY;      /// cluster Y coordinate
+  double mSigmaX; /// error on X coordinate
+  double mSigmaY; /// error on Y coordinate
+  float mCharge;  /// Total charge in the cluster
 
   ClassDefNV(Cluster, 1);
 }; //class Cluster

@@ -8,7 +8,6 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-
 #include <chrono>
 #include <memory>
 #include <stdexcept>
@@ -28,14 +27,13 @@ namespace mch
 
 using namespace std;
 
-
 //_________________________________________________________________________________________________
 void ClusteringCoG::run(gsl::span<const PreCluster> preClusters, gsl::span<const Digit> digits, std::vector<Cluster>& clusters)
 {
   // loop on pre-clusters
   for (const auto& preCluster : preClusters) {
     // we remove the preclusters with only one hit
-    if(preCluster.nDigits < 2) {
+    if (preCluster.nDigits < 2) {
       continue;
     }
 
@@ -55,19 +53,19 @@ Cluster ClusteringCoG::run(gsl::span<const Digit> precluster)
   double ymin = 1E9;
   double xmax = -1E9;
   double ymax = -1E9;
-  double charge[] = { 0.0, 0.0 };
-  int multiplicity[] = { 0, 0 };
+  double charge[] = {0.0, 0.0};
+  int multiplicity[] = {0, 0};
 
-  double x[] = { 0.0, 0.0 };
-  double y[] = { 0.0, 0.0 };
+  double x[] = {0.0, 0.0};
+  double y[] = {0.0, 0.0};
 
-  double xsize[] = { 0.0, 0.0 };
-  double ysize[] = { 0.0, 0.0 };
+  double xsize[] = {0.0, 0.0};
+  double ysize[] = {0.0, 0.0};
 
   int detid = precluster[0].getDetID();
   const mapping::Segmentation& segment = mapping::segmentation(detid);
 
-  for ( size_t i = 0; i < precluster.size(); ++i ) {
+  for (size_t i = 0; i < precluster.size(); ++i) {
     const Digit& digit = precluster[i];
     int padid = digit.getPadID();
 
@@ -76,10 +74,10 @@ Cluster ClusteringCoG::run(gsl::span<const Digit> precluster)
     double padSize[2] = {segment.padSizeX(padid), segment.padSizeY(padid)};
 
     // update of xmin/max et ymin/max
-    xmin = std::min(padPosition[0]-0.5*padSize[0],xmin);
-    xmax = std::max(padPosition[0]+0.5*padSize[0],xmax);
-    ymin = std::min(padPosition[1]-0.5*padSize[1],ymin);
-    ymax = std::max(padPosition[1]+0.5*padSize[1],ymax);
+    xmin = std::min(padPosition[0] - 0.5 * padSize[0], xmin);
+    xmax = std::max(padPosition[0] + 0.5 * padSize[0], xmax);
+    ymin = std::min(padPosition[1] - 0.5 * padSize[1], ymin);
+    ymax = std::max(padPosition[1] + 0.5 * padSize[1], ymax);
 
     // cathode index
     int cathode = segment.isBendingPad(padid) ? 0 : 1;
@@ -94,12 +92,12 @@ Cluster ClusteringCoG::run(gsl::span<const Digit> precluster)
   }
 
   // Computation of the CoG coordinates for the two cathodes
-  for ( int cathode = 0; cathode < 2; ++cathode ) {
-    if ( charge[cathode] != 0 ) {
+  for (int cathode = 0; cathode < 2; ++cathode) {
+    if (charge[cathode] != 0) {
       x[cathode] /= charge[cathode];
       y[cathode] /= charge[cathode];
     }
-    if ( multiplicity[cathode] != 0 ) {
+    if (multiplicity[cathode] != 0) {
       double sqrtCharge = sqrt(charge[cathode]);
       xsize[cathode] /= (multiplicity[cathode] * sqrtCharge);
       ysize[cathode] /= (multiplicity[cathode] * sqrtCharge);
@@ -110,10 +108,10 @@ Cluster ClusteringCoG::run(gsl::span<const Digit> precluster)
   }
 
   // each CoG coordinate is taken from the cathode with the best precision
-  double xCOG = ( xsize[0] < xsize[1] ) ? x[0] : x[1];
-  double yCOG = ( ysize[0] < ysize[1] ) ? y[0] : y[1];
-  double ex = ( xsize[0] < xsize[1] ) ? xsize[0] : xsize[1];
-  double ey = ( ysize[0] < ysize[1] ) ? ysize[0] : ysize[1];
+  double xCOG = (xsize[0] < xsize[1]) ? x[0] : x[1];
+  double yCOG = (ysize[0] < ysize[1]) ? y[0] : y[1];
+  double ex = (xsize[0] < xsize[1]) ? xsize[0] : xsize[1];
+  double ey = (ysize[0] < ysize[1]) ? ysize[0] : ysize[1];
   // For the moment we use the time of the pad with the highest charge
   double timestamp = precluster[0].getTimeStamp();
 
