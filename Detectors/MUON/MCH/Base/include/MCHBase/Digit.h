@@ -59,6 +59,9 @@ class Digit
   uint16_t getSize() const { return mSize; }
   void setSize(uint16_t s) { mSize = s; }
 
+  uint16_t getSize() const { return mSize; }
+  void setSize(uint16_t s) { mSize = s; }
+
   int getDetID() const { return mDetID; }
 
   int getPadID() const { return mPadID; }
