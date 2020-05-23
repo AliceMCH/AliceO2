@@ -35,7 +35,7 @@
 #include "MCHRawCommon/DataFormats.h"
 #include "MCHRawDecoder/PageDecoder.h"
 #include "MCHRawElecMap/Mapper.h"
-#include "MCHRawCommon/RDHManip.h"
+//#include "MCHRawCommon/RDHManip.h"
 #include "MCHMappingInterface/Segmentation.h"
 #include "MCHWorkflow/DataDecoderSpec.h"
 //#include <array>

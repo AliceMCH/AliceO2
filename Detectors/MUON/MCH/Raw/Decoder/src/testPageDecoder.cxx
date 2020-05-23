@@ -13,26 +13,27 @@
 #define BOOST_TEST_DYN_LINK
 
 #include <boost/test/unit_test.hpp>
-#include <iostream>
-#include <fstream>
-#include <fmt/printf.h>
-#include "MCHRawCommon/RDHManip.h"
-#include "MCHRawCommon/DataFormats.h"
-#include "MCHRawDecoder/PageDecoder.h"
-#include "Headers/RAWDataHeader.h"
-#include "RefBuffers.h"
 #include "BareGBTDecoder.h"
+#include "Headers/RAWDataHeader.h"
+#include "MCHRawCommon/DataFormats.h"
+#include "RDHManip.h"
+#include "MCHRawDecoder/PageDecoder.h"
+#include "RefBuffers.h"
+#include <fmt/printf.h>
+#include <fstream>
+#include <iostream>
 #include <random>
+#include "DetectorsRaw/RDHUtils.h"
+#include "DumpBuffer.h"
 
 using namespace o2::mch::raw;
-using o2::header::RAWDataHeaderV4;
 
-std::ostream& operator<<(std::ostream&, const RAWDataHeaderV4&);
+std::ostream& operator<<(std::ostream&, const o2::header::RAWDataHeaderV4&);
 
 SampaChannelHandler handlePacketStoreAsVec(std::vector<std::string>& result)
 {
   return [&result](DsElecId dsId, uint8_t channel, SampaCluster sc) {
-    result.emplace_back(fmt::format("{}-ch-{}-ts-{}-q-{}", asString(dsId), channel, sc.timestamp, sc.chargeSum));
+    result.emplace_back(fmt::format("{}-ch-{}-ts-{}-bc-{}-q-{}", asString(dsId), channel, sc.sampaTime, sc.bunchCrossing, sc.chargeSum));
   };
 }
 
@@ -55,8 +56,15 @@ BOOST_AUTO_TEST_CASE(Test1)
   uint32_t orbit{12};
   uint16_t bunchCrossing{34};
 
-  auto rdh = createRDH<RAWDataHeaderV4>(dummyCruId, dummyEndpoint, dummyLinkId, dummyFeeId,
-                                        orbit, bunchCrossing, buffer.size());
+  o2::header::RDHAny rdh;
+  o2::raw::RDHUtils::setCRUID(rdh, dummyCruId);
+  o2::raw::RDHUtils::setEndPointID(rdh, dummyEndpoint);
+  o2::raw::RDHUtils::setFEEID(rdh, dummyFeeId);
+  o2::raw::RDHUtils::setLinkID(rdh, dummyLinkId);
+  o2::raw::RDHUtils::setHeartBeatOrbit(rdh, orbit);
+  o2::raw::RDHUtils::setHeartBeatBC(rdh, bunchCrossing);
+  o2::raw::RDHUtils::setMemorySize(rdh, buffer.size() + sizeof(rdh));
+  o2::raw::RDHUtils::setOffsetToNext(rdh, buffer.size() + sizeof(rdh));
 
   std::vector<std::byte> testBuffer;
 
@@ -67,53 +75,72 @@ BOOST_AUTO_TEST_CASE(Test1)
     std::copy(begin(buffer), end(buffer), std::back_inserter(testBuffer));
   }
 
-  int n = countRDHs<RAWDataHeaderV4>(testBuffer);
+  int n = countRDHs(testBuffer);
 
   BOOST_CHECK_EQUAL(n, nrdhs);
 
-  //   showRDHs<RAWDataHeaderV4>(testBuffer);
+  showRDHs(testBuffer);
 }
 
-BOOST_AUTO_TEST_CASE(TestDecoding)
+bool testDecode(gsl::span<const std::byte> testBuffer)
 {
-  auto testBuffer = REF_BUFFER_CRU<BareFormat, ChargeSumMode>();
-  int n = countRDHs<RAWDataHeaderV4>(testBuffer);
-  BOOST_CHECK_EQUAL(n, 28);
   std::vector<std::string> result;
   std::vector<std::string> expected{
 
-    "S728-J1-DS0-ch-3-ts-0-q-13",
-    "S728-J1-DS0-ch-13-ts-0-q-133",
-    "S728-J1-DS0-ch-23-ts-0-q-163",
+    "S728-J1-DS0-ch-3-ts-24-bc-567-q-13",
+    "S728-J1-DS0-ch-13-ts-24-bc-567-q-133",
+    "S728-J1-DS0-ch-23-ts-24-bc-567-q-163",
 
-    "S361-J0-DS4-ch-0-ts-0-q-10",
-    "S361-J0-DS4-ch-1-ts-0-q-20",
-    "S361-J0-DS4-ch-2-ts-0-q-30",
-    "S361-J0-DS4-ch-3-ts-0-q-40",
+    "S361-J0-DS4-ch-0-ts-24-bc-567-q-10",
+    "S361-J0-DS4-ch-1-ts-24-bc-567-q-20",
+    "S361-J0-DS4-ch-2-ts-24-bc-567-q-30",
+    "S361-J0-DS4-ch-3-ts-24-bc-567-q-40",
 
-    "S448-J6-DS2-ch-22-ts-0-q-420",
-    "S448-J6-DS2-ch-23-ts-0-q-430",
-    "S448-J6-DS2-ch-24-ts-0-q-440",
-    "S448-J6-DS2-ch-25-ts-0-q-450",
-    "S448-J6-DS2-ch-26-ts-0-q-460",
-    "S448-J6-DS2-ch-12-ts-0-q-420"};
+    "S448-J6-DS2-ch-22-ts-24-bc-567-q-420",
+    "S448-J6-DS2-ch-23-ts-24-bc-567-q-430",
+    "S448-J6-DS2-ch-24-ts-24-bc-567-q-440",
+    "S448-J6-DS2-ch-25-ts-24-bc-567-q-450",
+    "S448-J6-DS2-ch-26-ts-24-bc-567-q-460",
+    "S448-J6-DS2-ch-42-ts-24-bc-567-q-420"};
 
   auto pageDecoder = createPageDecoder(testBuffer, handlePacketStoreAsVec(result));
 
-  auto parser = createPageParser(testBuffer);
+  auto parser = createPageParser();
 
   parser(testBuffer, pageDecoder);
 
-  BOOST_CHECK_EQUAL(result.size(), expected.size());
-  BOOST_CHECK(std::is_permutation(begin(result), end(result), begin(expected)));
-  // std::cout << "Got:\n";
-  // for (auto s : result) {
-  //   std::cout << s << "\n";
-  // }
-  // std::cout << "Expected:\n";
-  // for (auto s : expected) {
-  //   std::cout << s << "\n";
-  // }
+  bool sameSize = result.size() == expected.size();
+  bool permutation = std::is_permutation(begin(result), end(result), begin(expected));
+  BOOST_CHECK_EQUAL(sameSize, true);
+  BOOST_CHECK_EQUAL(permutation, true);
+  if (!permutation || !sameSize) {
+    std::cout << "Got:\n";
+    for (auto s : result) {
+      std::cout << s << "\n";
+    }
+    std::cout << "Expected:\n";
+    for (auto s : expected) {
+      std::cout << s << "\n";
+    }
+    return false;
+  }
+  return true;
+}
+
+BOOST_AUTO_TEST_CASE(TestBareDecoding)
+{
+  auto testBuffer = REF_BUFFER_CRU<BareFormat, ChargeSumMode>();
+  int n = countRDHs(testBuffer);
+  BOOST_CHECK_EQUAL(n, 28);
+  testDecode(testBuffer);
+}
+
+BOOST_AUTO_TEST_CASE(TestUserLogicDecoding)
+{
+  auto testBuffer = REF_BUFFER_CRU<UserLogicFormat, ChargeSumMode>();
+  int n = countRDHs(testBuffer);
+  BOOST_CHECK_EQUAL(n, 4);
+  testDecode(testBuffer);
 }
 
 BOOST_AUTO_TEST_CASE(BareGBTDecoderFromBuffer)
@@ -123,13 +150,25 @@ BOOST_AUTO_TEST_CASE(BareGBTDecoderFromBuffer)
   auto testBuffer = REF_BUFFER_GBT<BareFormat, ChargeSumMode>();
   dec.append(testBuffer);
   std::vector<std::string> expected{
-    "S0-J0-DS3-ch-63-ts-12-q-163",
-    "S0-J0-DS3-ch-33-ts-12-q-133",
-    "S0-J0-DS3-ch-13-ts-12-q-13",
-    "S0-J0-DS0-ch-31-ts-12-q-160",
-    "S0-J0-DS0-ch-0-ts-12-q-10"};
-  BOOST_CHECK_EQUAL(result.size(), expected.size());
-  BOOST_CHECK(std::is_permutation(begin(result), end(result), begin(expected)));
+    "S0-J0-DS3-ch-63-ts-12-bc-6789-q-163",
+    "S0-J0-DS3-ch-33-ts-12-bc-6789-q-133",
+    "S0-J0-DS3-ch-13-ts-12-bc-6789-q-13",
+    "S0-J0-DS0-ch-31-ts-12-bc-6789-q-160",
+    "S0-J0-DS0-ch-0-ts-12-bc-6789-q-10"};
+  bool sameSize = result.size() == expected.size();
+  bool permutation = std::is_permutation(begin(result), end(result), begin(expected));
+  BOOST_CHECK_EQUAL(sameSize, true);
+  BOOST_CHECK_EQUAL(permutation, true);
+  if (!permutation || !sameSize) {
+    std::cout << "Got:\n";
+    for (auto s : result) {
+      std::cout << s << "\n";
+    }
+    std::cout << "Expected:\n";
+    for (auto s : expected) {
+      std::cout << s << "\n";
+    }
+  }
 }
 
 BOOST_AUTO_TEST_SUITE_END()

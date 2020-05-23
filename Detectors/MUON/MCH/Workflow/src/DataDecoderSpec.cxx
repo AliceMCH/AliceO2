@@ -34,11 +34,11 @@
 #include "MCHRawCommon/DataFormats.h"
 #include "MCHRawDecoder/PageDecoder.h"
 #include "MCHRawElecMap/Mapper.h"
-#include "MCHRawCommon/RDHManip.h"
 #include "MCHMappingInterface/Segmentation.h"
 #include "MCHWorkflow/DataDecoder.h"
 #include "MCHWorkflow/DataDecoderSpec.h"
 #include <array>
+#include "DetectorsRaw/RDHUtils.h"
 
 namespace o2::header
 {
@@ -57,8 +57,6 @@ using namespace o2::framework;
 using namespace o2::mch::mapping;
 using RDHv4 = o2::header::RAWDataHeaderV4;
 
-static bool mPrint = true;
-
 //=======================
 // Data decoder
 class DataDecoderTask
@@ -68,7 +66,7 @@ class DataDecoderTask
   void init(framework::InitContext& ic)
   {
     auto mDs2manu = ic.options().get<bool>("ds2manu");
-    auto mPrint = ic.options().get<bool>("print");
+    mPrint = ic.options().get<bool>("print");
 
     mDecoder.setDs2manu(mDs2manu);
     mDecoder.setPrint(mPrint);
@@ -159,6 +157,7 @@ class DataDecoderTask
   }
 
  private:
+  bool mPrint = {false};
   DataDecoder mDecoder;
 };
 
@@ -168,8 +167,8 @@ o2::framework::DataProcessorSpec getDecodingSpec()
   return DataProcessorSpec{
     "DataDecoder",
     //o2::framework::select("TF:MCH/RAWDATA, re:ROUT/RAWDATA"),
-    o2::framework::select("readout:ROUT/RAWDATA"),
-    //o2::framework::select("TF:MCH/RAWDATA"),
+    //o2::framework::select("readout:ROUT/RAWDATA"),
+    o2::framework::select("TF:MCH/RAWDATA"),
     Outputs{OutputSpec{"MCH", "DIGITS", 0, Lifetime::Timeframe}},
     AlgorithmSpec{adaptFromTask<DataDecoderTask>()},
     Options{{"print", VariantType::Bool, false, {"print digits"}},

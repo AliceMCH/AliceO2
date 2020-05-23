@@ -92,7 +92,8 @@ struct DataRefUtils {
           if (r) {
             result.reset(r);
           }
-        } else if (storedClass == requestedClass) {
+          // This check includes the case: storedClass == requestedClass
+        } else if (storedClass->InheritsFrom(requestedClass)) {
           result.reset(static_cast<T*>(object));
         }
         if (result == nullptr) {
@@ -112,6 +113,14 @@ struct DataRefUtils {
              << (storedClass != nullptr ? storedClass->GetName() : "<unknown>")
              << " is actually stored which cannot be casted to the requested one.";
           throw std::runtime_error(ss.str());
+        }
+        // collections in ROOT can be non-owning or owning and the proper cleanup depends on
+        // this flag. Be it a bug or a feature in ROOT, but the owning flag of the extracted
+        // object only depends on the state at serialization of the original object. However,
+        // all objects created during deserialization are new and must be owned by the collection
+        // to avoid memory leak. So we call SetOwner if it is available for the type.
+        if constexpr (has_root_setowner<T>::value) {
+          result->SetOwner(true);
         }
       });
 
@@ -148,6 +157,10 @@ struct DataRefUtils {
             ss << cl->GetName();
           }
           throw std::runtime_error(ss.str());
+        }
+        // workaround for ROOT feature, see above
+        if constexpr (has_root_setowner<T>::value) {
+          result->SetOwner(true);
         }
       });
       return std::move(result);

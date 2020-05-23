@@ -199,6 +199,7 @@ void BareElinkDecoder<CHARGESUM>::append(bool bit0, bool bit1)
 template <typename CHARGESUM>
 void BareElinkDecoder<CHARGESUM>::changeState(State newState, int newCheckpoint)
 {
+  //fmt::printf("BareElinkDecoder %d: changing state %d -> %d\n", mDsId, (int)mState, (int)newState);
   mState = newState;
   clear(newCheckpoint);
 }
@@ -220,7 +221,7 @@ template <typename CHARGESUM>
 void BareElinkDecoder<CHARGESUM>::findSync()
 {
   assert(mState == State::LookingForSync);
-  if (mBitBuffer != mSync) {
+  if (mBitBuffer != sampaSyncWord) {
     mBitBuffer >>= 1;
     mMask /= 2;
     return;
@@ -246,6 +247,7 @@ void BareElinkDecoder<CHARGESUM>::handleHeader()
   ++mNofHeaderSeen;
 
   if (mSampaHeader.hasError()) {
+    fmt::printf("[ERROR] BareElinkDecoder %d: Hamming error found\n", mDsId);
     ++mNofHammingErrors;
   }
 
@@ -258,6 +260,7 @@ void BareElinkDecoder<CHARGESUM>::handleHeader()
       // data with a problem is still data, i.e. there will
       // probably be some data words to read in...
       // so we fallthrough the simple Data case
+      fmt::printf("[ERROR] BareElinkDecoder %d: unexpected packet found: %d\n", mDsId, (int)mSampaHeader.packetType());
     case SampaPacketType::Data:
       mNof10BitsWordsToRead = mSampaHeader.nof10BitWords();
       changeState(State::ReadingNofSamples, 10);
@@ -279,6 +282,12 @@ void BareElinkDecoder<CHARGESUM>::handleHeader()
 template <typename CHARGESUM>
 void BareElinkDecoder<CHARGESUM>::handleReadClusterSum()
 {
+  if (mNof10BitsWordsToRead < 2) {
+    fmt::printf("[ERROR] BareElinkDecoder %d: mNof10BitsWordsToRead (%d) too small when reading ClusterSum paylod\n",
+        mDsId, (int)mNof10BitsWordsToRead);
+    reset();
+    return;
+  }
   mClusterSum = mBitBuffer;
   oneLess10BitWord();
   oneLess10BitWord();
@@ -304,15 +313,27 @@ void BareElinkDecoder<CHARGESUM>::handleReadData()
 template <typename CHARGESUM>
 void BareElinkDecoder<CHARGESUM>::handleReadSample()
 {
+  //fmt::printf("BareElinkDecoder::handleReadSample %d: mNofSamples: %d, mNof10BitsWordsToRead: %d\n",
+  //        mDsId, (int)mNofSamples, (int)mNof10BitsWordsToRead);
   mSamples.push_back(mBitBuffer);
   if (mNofSamples > 0) {
     --mNofSamples;
   }
   oneLess10BitWord();
+
+  if (mNofSamples && !mNof10BitsWordsToRead) {
+    fmt::printf("[ERROR] BareElinkDecoder %d: end-of-packet reached while reading samples, remaining: %d\n", mDsId, (int)mNofSamples);
+    reset();
+    return;
+  }
+
   if (mNofSamples) {
-    handleReadData();
+    //handleReadData();
+    changeToReadingData();
   } else {
     sendCluster();
+    //fmt::printf("BareElinkDecoder::handleReadSample %d: end-of-cluster found, mNof10BitsWordsToRead: %d\n",
+    //        mDsId, (int)mNof10BitsWordsToRead);
     if (mNof10BitsWordsToRead) {
       changeState(State::ReadingNofSamples, 10);
     } else {
@@ -325,8 +346,16 @@ template <typename CHARGESUM>
 void BareElinkDecoder<CHARGESUM>::handleReadTimestamp()
 {
   assert(mState == State::ReadingNofSamples);
-  oneLess10BitWord();
   mNofSamples = mBitBuffer;
+  if ((mNofSamples + 2) > mNof10BitsWordsToRead) {
+    fmt::printf("[ERROR] BareElinkDecoder %d: number of samples too large (%d), mNof10BitsWordsToRead: %d\n",
+        mDsId, (int)mNofSamples, (int)mNof10BitsWordsToRead);
+    reset();
+    return;
+  }
+  //fmt::printf("BareElinkDecoder %d: mNofSamples: %d, mNof10BitsWordsToRead: %d\n",
+  //        mDsId, (int)mNofSamples, (int)mNof10BitsWordsToRead);
+  oneLess10BitWord();
   changeState(State::ReadingTimestamp, 10);
 }
 
@@ -405,6 +434,7 @@ template <typename CHARGESUM>
 void BareElinkDecoder<CHARGESUM>::reset()
 {
   softReset();
+  //fmt::printf("BareElinkDecoder::reset %d: changing state %d -> %d\n", mDsId, (int)mState, (int)State::LookingForSync);
   mState = State::LookingForSync;
 }
 

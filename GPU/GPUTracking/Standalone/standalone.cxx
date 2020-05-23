@@ -390,6 +390,7 @@ int SetupReconstruction()
     devProc.trackletSelectorInPipeline = configStandalone.configProc.selectorPipeline;
   }
   devProc.mergerSortTracks = configStandalone.configProc.mergerSortTracks;
+  devProc.tpcCompressionGatherMode = configStandalone.configProc.tpcCompressionGatherMode;
 
   steps.steps = GPUReconstruction::RecoStep::AllRecoSteps;
   if (configStandalone.configRec.runTRD != -1) {
@@ -433,6 +434,7 @@ int SetupReconstruction()
   steps.outputs.setBits(GPUDataTypes::InOutType::TPCMergedTracks, steps.steps.isSet(GPUReconstruction::RecoStep::TPCMerging));
   steps.outputs.setBits(GPUDataTypes::InOutType::TPCCompressedClusters, steps.steps.isSet(GPUReconstruction::RecoStep::TPCCompression));
   steps.outputs.setBits(GPUDataTypes::InOutType::TRDTracks, steps.steps.isSet(GPUReconstruction::RecoStep::TRDTracking));
+  steps.outputs.setBits(GPUDataTypes::InOutType::TPCClusters, steps.steps.isSet(GPUReconstruction::RecoStep::TPCClusterFinding));
 
   if (configStandalone.testSyncAsync) {
     // Set settings for synchronous
@@ -678,9 +680,13 @@ int main(int argc, char** argv)
 
         if (configStandalone.overrideMaxTimebin && (chainTracking->mIOPtrs.clustersNative || chainTracking->mIOPtrs.tpcPackedDigits || chainTracking->mIOPtrs.tpcZS)) {
           GPUSettingsEvent ev = rec->GetEventSettings();
-          ev.continuousMaxTimeBin = chainTracking->mIOPtrs.tpcZS ? GPUReconstructionConvert::GetMaxTimeBin(*chainTracking->mIOPtrs.tpcZS) : chainTracking->mIOPtrs.tpcPackedDigits ? GPUReconstructionConvert::GetMaxTimeBin(*chainTracking->mIOPtrs.tpcPackedDigits) : GPUReconstructionConvert::GetMaxTimeBin(*chainTracking->mIOPtrs.clustersNative);
-          printf("Max time bin set to %d\n", (int)ev.continuousMaxTimeBin);
-          rec->UpdateEventSettings(&ev);
+          if (ev.continuousMaxTimeBin == 0) {
+            printf("Cannot override max time bin for non-continuous data!\n");
+          } else {
+            ev.continuousMaxTimeBin = chainTracking->mIOPtrs.tpcZS ? GPUReconstructionConvert::GetMaxTimeBin(*chainTracking->mIOPtrs.tpcZS) : chainTracking->mIOPtrs.tpcPackedDigits ? GPUReconstructionConvert::GetMaxTimeBin(*chainTracking->mIOPtrs.tpcPackedDigits) : GPUReconstructionConvert::GetMaxTimeBin(*chainTracking->mIOPtrs.clustersNative);
+            printf("Max time bin set to %d\n", (int)ev.continuousMaxTimeBin);
+            rec->UpdateEventSettings(&ev);
+          }
         }
         if (!rec->GetParam().earlyTpcTransform && chainTracking->mIOPtrs.clustersNative == nullptr && chainTracking->mIOPtrs.tpcPackedDigits == nullptr && chainTracking->mIOPtrs.tpcZS == nullptr) {
           printf("Need cluster native data for on-the-fly TPC transform\n");
@@ -705,7 +711,13 @@ int main(int argc, char** argv)
             printf("Running synchronous phase\n");
           }
           chainTracking->mIOPtrs = ioPtrSave;
+          if (configStandalone.controlProfiler && j1 == configStandalone.runs - 1) {
+            rec->startGPUProfiling();
+          }
           int tmpRetVal = rec->RunChains();
+          if (configStandalone.controlProfiler && j1 == configStandalone.runs - 1) {
+            rec->endGPUProfiling();
+          }
           nEventsProcessed += (j1 == 0);
 
           if (tmpRetVal == 0 || tmpRetVal == 2) {
@@ -747,7 +759,13 @@ int main(int argc, char** argv)
               chainTrackingAsync->mIOPtrs.nRawClusters[i] = 0;
             }
             chainTrackingAsync->mIOPtrs.clustersNative = &clNativeAccess;
+            if (configStandalone.controlProfiler && j1 == configStandalone.runs - 1) {
+              rec->startGPUProfiling();
+            }
             tmpRetVal = recAsync->RunChains();
+            if (configStandalone.controlProfiler && j1 == configStandalone.runs - 1) {
+              rec->endGPUProfiling();
+            }
             if (tmpRetVal == 0 || tmpRetVal == 2) {
               OutputStat(chainTrackingAsync, nullptr, nullptr);
               if (configStandalone.memoryStat) {

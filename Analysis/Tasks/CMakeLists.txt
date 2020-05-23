@@ -23,6 +23,11 @@ o2_add_dpl_workflow(correlations-collection
                   PUBLIC_LINK_LIBRARIES O2::Framework O2::AnalysisCore
                   COMPONENT_NAME Analysis)
 
+o2_add_dpl_workflow(correlations-mixed
+                  SOURCES correlationsMixed.cxx
+                  PUBLIC_LINK_LIBRARIES O2::Framework O2::AnalysisCore
+                  COMPONENT_NAME Analysis)
+
 o2_add_dpl_workflow(vertexing-hf
 	  	  SOURCES vertexerhf.cxx
 		  PUBLIC_LINK_LIBRARIES O2::Framework O2::AnalysisDataModel O2::DetectorsVertexing
@@ -48,6 +53,11 @@ o2_add_dpl_workflow(upc-an
 
 o2_add_dpl_workflow(event-selection
                   SOURCES eventSelection.cxx
+                  PUBLIC_LINK_LIBRARIES O2::Framework O2::AnalysisDataModel O2::DetectorsBase
+                  COMPONENT_NAME Analysis)
+
+o2_add_dpl_workflow(event-selection-qa
+                  SOURCES eventSelectionQa.cxx
                   PUBLIC_LINK_LIBRARIES O2::Framework O2::AnalysisDataModel O2::DetectorsBase
                   COMPONENT_NAME Analysis)
 

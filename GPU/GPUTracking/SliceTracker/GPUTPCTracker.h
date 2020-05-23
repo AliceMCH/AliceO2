@@ -128,7 +128,10 @@ class GPUTPCTracker : public GPUProcessor
   }
 
   void SetupCommonMemory();
+  bool SliceDataOnGPU();
   void* SetPointersDataInput(void* mem);
+  void* SetPointersDataLinks(void* mem);
+  void* SetPointersDataWeights(void* mem);
   void* SetPointersDataScratch(void* mem);
   void* SetPointersDataRows(void* mem);
   void* SetPointersScratch(void* mem);
@@ -138,7 +141,7 @@ class GPUTPCTracker : public GPUProcessor
   void* SetPointersOutput(void* mem);
   void RegisterMemoryAllocation();
 
-  short MemoryResLinksScratch() { return mMemoryResLinksScratch; }
+  short MemoryResLinks() { return mMemoryResLinks; }
   short MemoryResScratchHost() { return mMemoryResScratchHost; }
   short MemoryResCommon() { return mMemoryResCommon; }
   short MemoryResTracklets() { return mMemoryResTracklets; }
@@ -278,7 +281,7 @@ class GPUTPCTracker : public GPUProcessor
   unsigned int mNMaxRowHits;
   unsigned int mNMaxTracks;
   unsigned int mNMaxTrackHits;
-  short mMemoryResLinksScratch;
+  short mMemoryResLinks;
   short mMemoryResScratch;
   short mMemoryResScratchHost;
   short mMemoryResCommon;

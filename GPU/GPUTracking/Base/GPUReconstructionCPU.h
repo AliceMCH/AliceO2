@@ -136,7 +136,6 @@ class GPUReconstructionCPU : public GPUReconstructionKernels<GPUReconstructionCP
   int registerMemoryForGPU(const void* ptr, size_t size) override { return 0; }
   int unregisterMemoryForGPU(const void* ptr) override { return 0; }
   int GPUStuck() { return mGPUStuck; }
-  int NStreams() { return mNStreams; }
   void ResetDeviceProcessorTypes();
   template <class T>
   void AddGPUEvents(T*& events);
@@ -172,8 +171,8 @@ class GPUReconstructionCPU : public GPUReconstructionKernels<GPUReconstructionCP
   size_t TransferMemoryResourcesToHost(GPUProcessor* proc, int stream = -1, bool all = false) { return TransferMemoryResourcesHelper(proc, stream, all, false); }
   size_t TransferMemoryResourceLinkToGPU(short res, int stream = -1, deviceEvent* ev = nullptr, deviceEvent* evList = nullptr, int nEvents = 1) { return TransferMemoryResourceToGPU(&mMemoryResources[res], stream, ev, evList, nEvents); }
   size_t TransferMemoryResourceLinkToHost(short res, int stream = -1, deviceEvent* ev = nullptr, deviceEvent* evList = nullptr, int nEvents = 1) { return TransferMemoryResourceToHost(&mMemoryResources[res], stream, ev, evList, nEvents); }
-  virtual size_t GPUMemCpy(void* dst, const void* src, size_t size, int stream, bool toGPU, deviceEvent* ev = nullptr, deviceEvent* evList = nullptr, int nEvents = 1);
-  virtual size_t GPUMemCpyAlways(bool onGpu, void* dst, const void* src, size_t size, int stream, bool toGPU, deviceEvent* ev = nullptr, deviceEvent* evList = nullptr, int nEvents = 1);
+  virtual size_t GPUMemCpy(void* dst, const void* src, size_t size, int stream, int toGPU, deviceEvent* ev = nullptr, deviceEvent* evList = nullptr, int nEvents = 1);
+  virtual size_t GPUMemCpyAlways(bool onGpu, void* dst, const void* src, size_t size, int stream, int toGPU, deviceEvent* ev = nullptr, deviceEvent* evList = nullptr, int nEvents = 1);
   size_t WriteToConstantMemory(size_t offset, const void* src, size_t size, int stream, deviceEvent* ev) override;
   virtual size_t TransferMemoryInternal(GPUMemoryResource* res, int stream, deviceEvent* ev, deviceEvent* evList, int nEvents, bool toGPU, const void* src, void* dst);
 
@@ -280,7 +279,7 @@ inline int GPUReconstructionCPU::runKernel(const krnlExec& x, const krnlRunRange
     }
   }
   if (mDeviceProcessingSettings.debugLevel >= 0) {
-    if (GPUDebug(typeid(S).name(), x.stream)) {
+    if (GPUDebug(GetKernelName<S, I>(), x.stream)) {
       throw std::runtime_error("kernel failure");
     }
     if (t) {

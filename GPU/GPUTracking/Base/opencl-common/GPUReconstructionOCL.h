@@ -35,6 +35,7 @@ class GPUReconstructionOCL : public GPUReconstructionDeviceBase
  protected:
   int InitDevice_Runtime() override;
   int ExitDevice_Runtime() override;
+  void UpdateSettings() override;
 
   void SynchronizeGPU() override;
   int DoStuckProtection(int stream, void* event) override;
@@ -45,7 +46,7 @@ class GPUReconstructionOCL : public GPUReconstructionDeviceBase
 
   size_t WriteToConstantMemory(size_t offset, const void* src, size_t size, int stream = -1, deviceEvent* ev = nullptr) override;
   size_t TransferMemoryInternal(GPUMemoryResource* res, int stream, deviceEvent* ev, deviceEvent* evList, int nEvents, bool toGPU, const void* src, void* dst) override;
-  size_t GPUMemCpy(void* dst, const void* src, size_t size, int stream, bool toGPU, deviceEvent* ev = nullptr, deviceEvent* evList = nullptr, int nEvents = 1) override;
+  size_t GPUMemCpy(void* dst, const void* src, size_t size, int stream, int toGPU, deviceEvent* ev = nullptr, deviceEvent* evList = nullptr, int nEvents = 1) override;
   void ReleaseEvent(deviceEvent* ev) override;
   void RecordMarker(deviceEvent* ev, int stream) override;
 

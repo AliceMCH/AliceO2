@@ -42,11 +42,6 @@
 
 static bool mPrint = true;
 
-namespace o2::header
-{
-extern std::ostream& operator<<(std::ostream&, const o2::header::RAWDataHeaderV4&);
-}
-
 namespace o2
 {
 namespace mch
@@ -92,7 +87,7 @@ class MergerDigit
   ~MergerDigit() = default;
 
   o2::mch::Digit digit;
-  o2::mch::HitTime stopTime;
+  o2::mch::Digit::Time stopTime;
   bool merged = {false};
   int solarId = {-1};
   int dsAddr = {-1};
@@ -164,7 +159,7 @@ class MergerBase
   virtual void setDigitHandler(std::function<void(const Digit&)> h) = 0;
   virtual void setOrbit(int feeId, uint32_t orbit, bool stop) = 0;
   virtual void addDigit(int feeId, int solarId, int dsAddr, int chAddr,
-                        int deId, int padId, int adc, HitTime time, HitTime stopTime) = 0;
+                        int deId, int padId, int adc, Digit::Time time, Digit::Time stopTime) = 0;
   virtual void mergeDigits(int feeId) = 0;
 };
 
@@ -187,10 +182,10 @@ class MergerSimple : public MergerBase
   }
 
   void addDigit(int feeId, int solarId, int dsAddr, int chAddr,
-                int deId, int padId, int adc, HitTime time, HitTime stopTime)
+                int deId, int padId, int adc, Digit::Time time, Digit::Time stopTime)
   {
     //digits.emplace_back(o2::mch::Digit(time, deId, padId, adc));
-    sendDigit(o2::mch::Digit(time, deId, padId, adc));
+    sendDigit(o2::mch::Digit(deId, padId, adc, time));
   }
 
   void mergeDigits(int feeId) {}
@@ -211,7 +206,7 @@ class Merger : public MergerBase
   void setDigitHandler(std::function<void(const Digit&)> h);
 
   void addDigit(int feeId, int solarId, int dsAddr, int chAddr,
-                int deId, int padId, int adc, HitTime time, HitTime stopTime);
+                int deId, int padId, int adc, Digit::Time time, Digit::Time stopTime);
 
   void mergeDigits(int feeId);
 };
@@ -228,10 +223,6 @@ void FeeIdMerger::setOrbit(uint32_t orbit, bool stop)
   for (auto& d : buffers[previousBufId].digits) {
     if (!d.merged && (d.digit.getPadID() >= 0)) {
       uint16_t size = (d.stopTime.getBXTime() - d.digit.getTime().getBXTime()) / 4 + 1;
-      if (size < 14) {
-        std::cout << "[setOrbit] start " << d.digit.getTime().sampaTime << "  stop " << d.stopTime.sampaTime << "  size " << size << std::endl;
-      }
-      d.digit.setSize(size);
       sendDigit(d.digit);
       nSent += 1;
     }
@@ -269,9 +260,9 @@ void FeeIdMerger::mergeDigits()
       return false;
 
     // compute time difference
-    HitTime startTime = d1.digit.getTime();
+    Digit::Time startTime = d1.digit.getTime();
     uint32_t bxStart = startTime.bunchCrossing;
-    HitTime stopTime = d2.stopTime;
+    Digit::Time stopTime = d2.stopTime;
     uint32_t bxStop = stopTime.bunchCrossing;
     // correct for value rollover
     if (bxStart < bxStop)
@@ -309,7 +300,7 @@ void FeeIdMerger::mergeDigits()
     MergerDigit& d1 = previousBuffer.digits[i];
 
     // skip digits that do not start at the beginning of the time window
-    HitTime startTime = d1.digit.getTime();
+    Digit::Time startTime = d1.digit.getTime();
     if (startTime.sampaTime != 0) {
       continue;
     }
@@ -347,7 +338,7 @@ void FeeIdMerger::mergeDigits()
     MergerDigit& d1 = currentBuffer.digits[i];
 
     // skip digits that do not start at the beginning of the time window
-    HitTime startTime = d1.digit.getTime();
+    Digit::Time startTime = d1.digit.getTime();
     if (startTime.sampaTime != 0) {
       continue;
     }
@@ -378,13 +369,13 @@ void Merger::setDigitHandler(std::function<void(const Digit&)> h)
 }
 
 void Merger::addDigit(int feeId, int solarId, int dsAddr, int chAddr,
-                      int deId, int padId, int adc, HitTime time, HitTime stopTime)
+                      int deId, int padId, int adc, Digit::Time time, Digit::Time stopTime)
 {
   if (feeId < 0 || feeId > MCH_MERGER_FEEID_MAX) {
     return;
   }
 
-  mergers[feeId].getCurrentBuffer().digits.emplace_back(MergerDigit{o2::mch::Digit(time, deId, padId, adc),
+  mergers[feeId].getCurrentBuffer().digits.emplace_back(MergerDigit{o2::mch::Digit(deId, padId, adc, time),
                                                                     stopTime, false, solarId, dsAddr, chAddr});
 }
 
@@ -457,8 +448,8 @@ void DataDecoder::decodeBuffer(gsl::span<const std::byte> page)
       auto ch = fmt::format("{}-CH{:02d}", s, channel);
       std::cout << ch << "  "
                 << fmt::format("PAD ({:04d} {:04d} {:04d})\tADC {:5.0f}  TIME ({} {} {:02d})  SIZE {}  END {}",
-                               deId, dsIddet, padId, digitadc, orbit, sc.bunchCrossing, sc.timestamp, sc.nofSamples(), (sc.timestamp + sc.nofSamples() - 1))
-                << (((sc.timestamp + sc.nofSamples() - 1) >= 98) ? " *" : "") << std::endl;
+                               deId, dsIddet, padId, digitadc, orbit, sc.bunchCrossing, sc.sampaTime, sc.nofSamples(), (sc.sampaTime + sc.nofSamples() - 1))
+                << (((sc.sampaTime + sc.nofSamples() - 1) >= 98) ? " *" : "") << std::endl;
       //std::cout << "DS " << (int)dsElecId.elinkId() << "  CHIP " << ((int)channel) / 32 << "  CH " << ((int)channel) % 32 << "  ADC " << digitadc << "  DE# " << deId << "  DSid " << dsIddet << "  PadId " << padId << std::endl;
       //if (true && ((padId == 545) || (padId >= 547 && padId <= 551) || (padId == 574) || (padId == 1012) || (padId == 1014) || (padId == 1016))) {
       //if (true && ((padId == 548) || (padId == 1047) || (padId == 1049))) {
@@ -466,7 +457,7 @@ void DataDecoder::decodeBuffer(gsl::span<const std::byte> page)
       //if (true && (sc.nofSamples() < 14) || (smax > 900)) {
       if (true && (smax > 900)) {
         for (auto d = 0; d < sc.samples.size(); d++) {
-          std::cout << "  sample " << d << "  " << sc.bunchCrossing + ((sc.timestamp + d) * 4) << "  " << sc.samples[d] << "  " << 1023 - sc.samples[d] << std::endl;
+          std::cout << "  sample " << d << "  " << sc.bunchCrossing + ((sc.sampaTime + d) * 4) << "  " << sc.samples[d] << "  " << 1023 - sc.samples[d] << std::endl;
         }
       }
     }
@@ -475,13 +466,13 @@ void DataDecoder::decodeBuffer(gsl::span<const std::byte> page)
     //  return;
     //}
 
-    HitTime time;
-    time.sampaTime = sc.timestamp;
+    Digit::Time time;
+    time.sampaTime = sc.sampaTime;
     time.bunchCrossing = sc.bunchCrossing;
     time.orbit = orbit;
 
-    HitTime stopTime;
-    stopTime.sampaTime = sc.timestamp + sc.nofSamples() - 1;
+    Digit::Time stopTime;
+    stopTime.sampaTime = sc.sampaTime + sc.nofSamples() - 1;
     stopTime.bunchCrossing = sc.bunchCrossing;
     stopTime.orbit = orbit;
 
@@ -490,7 +481,7 @@ void DataDecoder::decodeBuffer(gsl::span<const std::byte> page)
 
     if (false && mPrint)
       std::cout << "DIGIT STORED:\nADC " << digitadc << " DE# " << (int)deId << " PadId " << (int)padId
-                << " time " << sc.timestamp << " size " << sc.nofSamples() << std::endl;
+                << " time " << sc.sampaTime << " size " << sc.nofSamples() << std::endl;
     ++ndigits;
   };
 
@@ -512,14 +503,14 @@ void DataDecoder::decodeBuffer(gsl::span<const std::byte> page)
     o2::raw::RDHUtils::setFEEID(*rdhAnyPtr, cruId * 2 + endPointID);
     isStopRDH = o2::raw::RDHUtils::getStop(*rdhAnyPtr);
 
-    if (true && mPrint) {
-      std::cout << std::endl
-                << mNrdhs << "--" << rdh << "\n";
-    }
+    //if (true && mPrint) {
+    //  std::cout << std::endl
+    //            << mNrdhs << "--" << rdh << "\n";
+    //}
 
-    feeId = rdhFeeId(rdh);
-    orbit = rdhOrbit(rdh);
-    linkId = rdhLinkId(rdh);
+    feeId = o2::raw::RDHUtils::getFEEID(*rdhAnyPtr);
+    orbit = o2::raw::RDHUtils::getHeartBeatOrbit(*rdhAnyPtr);
+    linkId = o2::raw::RDHUtils::getLinkID(*rdhAnyPtr);
 
     if (!mMerger) {
       if (linkId == 15) {
@@ -563,7 +554,7 @@ void DataDecoder::decodeBuffer(gsl::span<const std::byte> page)
       if (bend)
         continue;
       std::cout << fmt::format("  DE {:4d}  PAD {:5d}  ADC {:6d}  TIME ({} {} {:4d})",
-                               d.getDetID(), d.getPadID(), d.getADC(), d.getTime().orbit, d.getTime().bunchCrossing, d.getTimeStamp());
+                               d.getDetID(), d.getPadID(), d.getADC(), d.getTime().orbit, d.getTime().bunchCrossing, d.getTime().sampaTime);
       std::cout << fmt::format("\tC {}  PAD_XY {:+2.2f} , {:+2.2f}", (int)bend, X, Y);
       std::cout << std::endl;
     }
@@ -577,7 +568,7 @@ void DataDecoder::decodeBuffer(gsl::span<const std::byte> page)
       if (!bend)
         continue;
       std::cout << fmt::format("  DE {:4d}  PAD {:5d}  ADC {:6d}  TIME ({} {} {:4d})",
-                               d.getDetID(), d.getPadID(), d.getADC(), d.getTime().orbit, d.getTime().bunchCrossing, d.getTimeStamp());
+                               d.getDetID(), d.getPadID(), d.getADC(), d.getTime().orbit, d.getTime().bunchCrossing, d.getTime().sampaTime);
       std::cout << fmt::format("\tC {}  PAD_XY {:+2.2f} , {:+2.2f}", (int)bend, X, Y);
       std::cout << std::endl;
     }
@@ -585,7 +576,7 @@ void DataDecoder::decodeBuffer(gsl::span<const std::byte> page)
       if (d.getPadID() >= 0)
         continue;
       std::cout << fmt::format("  DE {:4d}  PAD {:5d}  ADC {:6d}  TIME ({} {} {:4d})",
-                               d.getDetID(), d.getPadID(), d.getADC(), d.getTime().orbit, d.getTime().bunchCrossing, d.getTimeStamp());
+                               d.getDetID(), d.getPadID(), d.getADC(), d.getTime().orbit, d.getTime().bunchCrossing, d.getTime().sampaTime);
       std::cout << std::endl;
     }
   }
