@@ -113,7 +113,7 @@ Cluster ClusteringCoG::run(gsl::span<const Digit> precluster)
   double ex = (xsize[0] < xsize[1]) ? xsize[0] : xsize[1];
   double ey = (ysize[0] < ysize[1]) ? ysize[0] : ysize[1];
   // For the moment we use the time of the pad with the highest charge
-  double timestamp = precluster[0].getTimeStamp();
+  double timestamp = precluster[0].getTime().sampaTime;
 
   return Cluster{timestamp, precluster[0].getDetID(), xCOG, yCOG, ex, ey, charge[0] + charge[1]};
 }
