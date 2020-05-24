@@ -15,6 +15,7 @@
 #include <gsl/span>
 #include <map>
 #include "MCHRawDecoder/SampaChannelHandler.h"
+#include "MCHRawDecoder/SampaErrorHandler.h"
 #include "MCHRawElecMap/Mapper.h"
 
 namespace o2::mch::raw
