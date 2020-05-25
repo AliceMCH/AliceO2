@@ -8,9 +8,10 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-/// \file PreClusterFinderSpec.h
-/// \brief Definition of a data processor to run the preclusterizer
+/// \file TimePreClusterFinderSpec.h
+/// \brief Definition of a data processor to run the preclusterizer after the time clusterizer
 ///
+/// \author Andrea Ferrero, CEA
 /// \author Philippe Pillot, Subatech
 
 #ifndef O2_MCH_TIMEPRECLUSTERFINDERSPEC_H_

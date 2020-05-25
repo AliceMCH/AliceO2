@@ -9,9 +9,9 @@
 // or submit itself to any jurisdiction.
 
 /// \file TimeClusterFinderSpec.cxx
-/// \brief Implementation of a data processor to run the preclusterizer
+/// \brief Implementation of a data processor to run the time clusterizer
 ///
-/// \author Philippe Pillot, Subatech
+/// \author Andrea Ferrero, CEA
 
 #include "MCHWorkflow/TimeClusterFinderSpec.h"
 
