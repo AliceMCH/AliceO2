@@ -17,7 +17,6 @@
 #define ALICEO2_MCH_BASE_DIGIT_H_
 
 #include "Rtypes.h"
-#include "MCHBase/HitTime.h"
 
 namespace o2
 {

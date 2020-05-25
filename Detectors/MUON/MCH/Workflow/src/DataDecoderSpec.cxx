@@ -162,13 +162,11 @@ class DataDecoderTask
 };
 
 //_________________________________________________________________________________________________
-o2::framework::DataProcessorSpec getDecodingSpec()
+o2::framework::DataProcessorSpec getDecodingSpec(std::string inputSpec)
 {
   return DataProcessorSpec{
     "DataDecoder",
-    //o2::framework::select("TF:MCH/RAWDATA, re:ROUT/RAWDATA"),
-    //o2::framework::select("readout:ROUT/RAWDATA"),
-    o2::framework::select("TF:MCH/RAWDATA"),
+    o2::framework::select(inputSpec.c_str()),
     Outputs{OutputSpec{"MCH", "DIGITS", 0, Lifetime::Timeframe}},
     AlgorithmSpec{adaptFromTask<DataDecoderTask>()},
     Options{{"print", VariantType::Bool, false, {"print digits"}},
