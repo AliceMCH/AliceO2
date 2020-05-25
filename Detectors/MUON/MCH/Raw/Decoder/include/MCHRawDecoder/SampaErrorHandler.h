@@ -26,12 +26,14 @@ enum class DecodeError: int
 {
   BadPacketType,
   EndOfPacketTooEarly,
-  ClusterSizeTooBig
+  ClusterSizeTooBig,
+  UnknownError = 1000
 };
 
 /// A SampaChannelHandler is a function that takes a pair to identify
 /// a readout sampa channel and a SampaCluster containing the channel data.
 using SampaErrorHandler = std::function<void(DsElecId dsId, DecodeError error)>;
+
 } // namespace raw
 } // namespace mch
 } // namespace o2
