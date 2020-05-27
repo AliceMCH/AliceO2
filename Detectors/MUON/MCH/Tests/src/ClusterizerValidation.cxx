@@ -44,13 +44,16 @@ int main(int argc, char** argv){
     // Declaration of arrays. The size of the arrays is hardcoded (it wouldn't accept an initialisation using a variable)
     // The size of the arrays should be the number of events you wish to simulate
     
- //   TFile *f = new TFile("ComparisonSimuTB/NumberOfPadsWrtCharge/1700V_Thr3_CustomBinning/rootfiles/out_1700V_Thr3_65000evts_KyMathieson.root", "NEW");
+//   TFile *f = new TFile("ComparisonSimuTB/NumberOfPadsWrtCharge/1700V_Thr3_CustomBinning/rootfiles/out_1700V_Thr3_6640evts_KyMathieson.root", "NEW");
     
-    double xarray[6500]{0};
-    double yarray[6500]{0};
-    double chg[6500]{0};
-    double resyfound[6500]{0};
-    double eyfound[6500]{0};
+    //Number of events to simulate
+    const int NbEvts = 2000;
+    
+    double xarray[NbEvts]{0};
+    double yarray[NbEvts]{0};
+    double chg[NbEvts]{0};
+    double resyfound[NbEvts]{0};
+    double eyfound[NbEvts]{0};
     int count = 0;
     Validation validation;
     std::vector<Clustering::Cluster> clusters;
@@ -91,8 +94,8 @@ int main(int argc, char** argv){
     TCanvas *cchgrebin = new TCanvas("cchgrebin","Charge rebin",0,0,600,600);
     
     TCanvas *cNbinsY = new TCanvas("cNbinsY","NBinsY",0,0,600,600);
-      TH1F *hNbinsY = new TH1F("hNbinsY", "Validation data cluster NBinsY distribution without cuts or noise", 20, 0.5, 20.5);
-      TH1F *hNbinsYafter = new TH1F("hNbinsYafter", "Validation data NBinsY distribution with cuts and noise on bending plane, all events", 20, 0.5, 20.5);
+      TH1F *hNbinsY = new TH1F("hNbinsY", "Validation data cluster NBinsY distribution without cuts or noise", 10, 0.5, 10.5);
+      TH1F *hNbinsYafter = new TH1F("hNbinsYafter", "Validation data NBinsY distribution with cuts and noise on bending plane, all events", 10, 0.5, 10.5);
     hNbinsYafter->SetLineColor(3);
     
     TCanvas *cMeanYbins = new TCanvas("cMeanYbins","cMeanYbins",0,0,600,600);
@@ -143,27 +146,36 @@ int main(int argc, char** argv){
     cNbinsY->Divide(2,1);
     cNbinsX->Divide(2,1);
     cchg->cd(1);
+    
+    
+    
 
     // Dependency of residuals with respect to y
-//        for(int i=0; i<50; i++){
+//        for(int i=0; i<2000; i++){
 //            xarray[i] = 0;
 //            yarray[i] = ygen->Uniform(0,0.5);
-//            chg[i] = chggen->Uniform(20,2000);
+//           // chg[i] = chggen->Uniform(20,2000);
+//            chg[i] = chggen->Landau(565,195);  //Distribution deduced from the fit on TB data 550 180 after
 //
 //        }
     
     
     // Residuals distribution on the detector 819
-//        for(int i=0; i<6500; i++){
-//            yarray[i] = ygen->Uniform(-20,20);
-//            xarray[i] = xgen->Uniform(-40,40);
-//         //   chg[i] = chggen->Uniform(20,2000);
-//            chg[i] = chggen->Landau(550,180);  //Distribution deduced from the fit on TB data 550 180 after
-//            hchg->Fill(chg[i]);
-//        }
+        for(int i=0; i<NbEvts; i++){
+            yarray[i] = ygen->Uniform(-20,20);
+         //   yarray[i] = 0.25;
+           // yarray[i] = ygen->Uniform(-0.5,0.5);
+          //  xarray[i] = 5;
+            xarray[i] = xgen->Uniform(-40,40);
+         //   chg[i] = chggen->Uniform(20,2000);
+           chg[i] = 1000;
+        //    chg[i] = chggen->Landau(565,195);  //Distribution deduced from the fit on TB data 550 180 after
+         //   chg[i] = chggen->Landau(1045,355);  //Distribution deduced from the fit on TB data
+            hchg->Fill(chg[i]);
+        }
     
       // Residuals distribution on the detector 819 like TB - 1650V - Thr3
-//            for(int i=0; i<6500; i++){
+//            for(int i=0; i<2000; i++){
 //                yarray[i] = ygen->Uniform(11.7,12.9);
 //                xarray[i] = xgen->Uniform(8.75,11.25);
 //             //   chg[i] = chggen->Uniform(20,2000);
@@ -171,14 +183,14 @@ int main(int argc, char** argv){
 //                hchg->Fill(chg[i]);
 //            }
     
-    // Residuals distribution on the detector 819 like TB - 1650V - Thr3
-    for(int i=0; i<6500; i++){
-        yarray[i] = ygen->Uniform(11.7,12.9);
-        xarray[i] = xgen->Uniform(13.75,16.25);
-     //   chg[i] = chggen->Uniform(20,2000);
-        chg[i] = chggen->Landau(1045,355);  //Distribution deduced from the fit on TB data 550 180 after
-        hchg->Fill(chg[i]);
-    }
+    // Residuals distribution on the detector 819 like TB - 1700V - Thr3
+//    for(int i=0; i<6000; i++){
+//        yarray[i] = ygen->Uniform(11.7,12.9);
+//        xarray[i] = xgen->Uniform(13.75,16.25);
+//     //   chg[i] = chggen->Uniform(20,2000);
+//        chg[i] = chggen->Landau(1045,355);  //Distribution deduced from the fit on TB data
+//        hchg->Fill(chg[i]);
+//    }
 
     
    //  Residuals distribution width with respect to fixed cluster charge, not really useful, since it is the same process as Residuals distribution but at fixed cluster charge
@@ -189,19 +201,28 @@ int main(int argc, char** argv){
 //        }
     
     
+    
+    
+    
     hchg->GetXaxis()->SetTitle("Charge (ADC)");
     hchg->GetYaxis()->SetTitle("Count");
     hchg->Draw();
+    
+    
+    
 
     cout << "\n\n==========\nGetting info for Bending plane\n\n" << endl;
    validation.InfoDE819b();
     cout << "\n\n==========\nGetting info for Non-Bending plane\n\n" << endl;
    validation.InfoDE819nb();
-    for(int i=0; i<6500 ; i++){
+    for(int i=0; i<NbEvts ; i++){
     cout << "\n\n==========\nHit generation, histograms plotting and digitization\n\n" << endl;
    validation.PlotMathieson2D(hchgpads, hchgafter, hchmaxafter, hNbinsafter, hNbinsX, hNbinsXafter, hNbinsY, hNbinsYafter, hMeanYbins, hMeanbins, hNhits0_600, hNhits600_1200, hNhits1200_2000, hNhits2000_6000, hYNhits0_600, hYNhits600_1200, hYNhits1200_2000, hYNhits2000_6000, xarray[i], yarray[i], chg[i]);
     cout << "\n\n==========\nTesting the (pre)clustering\n\n" << endl;
         cout << "EVENT # " << i << endl;
+        cout << "x " << xarray[i] << endl;
+        cout << "y " << yarray[i] << endl;
+        cout << "Charge " << chg[i] << endl;
    clusters = validation.TestClustering();
         if(clusters.size() == 1){
         resyfound[i] = yarray[i]-clusters[0].gety();
@@ -209,6 +230,9 @@ int main(int argc, char** argv){
             count++;
         }
     }
+    
+    
+    
     
     hchgafter->Draw("SAME");
     cchg->cd(2);
@@ -371,6 +395,8 @@ int main(int argc, char** argv){
 
     // If want to plot the residual dependency wrt y and/or the residuals distribution for this run of events
    ResidualsPlot(yarray, resyfound, eyfound, count);
+    
+   ResidualsPlotChargeBinned(yarray, resyfound, eyfound, count, chg);
 
     
     //Useless
