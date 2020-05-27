@@ -143,8 +143,8 @@ Clustering::Cluster Clustering::FinderCOG(std::vector<Digit> &precluster)
        
        
        //On définit le vecteur position et taille du pad en question
-     std::vector<Double_t> padPosition = {pad.padPositionX(padid), pad.padPositionY(padid)};
-     std::vector<Double_t> padSize = {pad.padSizeX(padid), pad.padSizeY(padid)};
+     std::vector<Double_t> padPosition = {pad.padPositionX(padid), 1*pad.padPositionY(padid)};          // 1/ReductionFactor
+     std::vector<Double_t> padSize = {pad.padSizeX(padid), 1*pad.padSizeY(padid)};                      // 1/ReductionFactor
        
         if(gPrintLevel > 1){
            cout << "PadPosition: "<< padPosition[0] << " " << padPosition[1] << endl;
@@ -160,7 +160,7 @@ Clustering::Cluster Clustering::FinderCOG(std::vector<Digit> &precluster)
         for ( Int_t cathode = 0; cathode < 2; ++cathode ) //On boucle sur les deux plans de cathodes
          {
            
-             if ( cathode == pad.isBendingPad(padid) ) //On regarde à quelle cathode appartient le pad
+             if ( cathode != pad.isBendingPad(padid) ) //On regarde à quelle cathode appartient le pad
              {
                  if(gPrintLevel > 1){
                      cout << "Cathode:" << cathode << endl;
@@ -322,7 +322,7 @@ void Clustering::runFinderSimpleFit(std::vector<PreClusterStruct>& preClusters, 
        // cout << "preclustertmp[0].getADC():" << preclustertmp[0].getADC() << endl;
         clustertmpCOG = FinderCOG(preclustertmp);
       //  cout << "COORD X DU CLUSTER AJOUTÉ A CLUSTERS: " << clustertmp.getx() << endl;
-        if(preclustertmp.size() < 3){
+        if(preclustertmp.size() < 2){
             clustertmp = clustertmpCOG;
         }
         else{
@@ -376,10 +376,10 @@ Clustering::Cluster Clustering::ComputePositionClean(std::vector<Digit> &preclus
        for ( int cathode = 0; cathode < 2; ++cathode ) //On boucle sur les deux plans de cathodes
        {
 
-           if ( cathode == pad.isBendingPad(padid) ) //On regarde à quelle cathode appartient le pad
+           if ( cathode != pad.isBendingPad(padid) ) //On regarde à quelle cathode appartient le pad
                    {
-                       std::vector<Double_t> padPosition = {pad.padPositionX(padid), pad.padPositionY(padid)};
-                       std::vector<Double_t> padSize = {pad.padSizeX(padid), pad.padSizeY(padid)};
+                       std::vector<Double_t> padPosition = {pad.padPositionX(padid), 1*pad.padPositionY(padid)}; // 1/RedFactor
+                       std::vector<Double_t> padSize = {pad.padSizeX(padid), 1*pad.padSizeY(padid)};            // 1/RedFactor
                        
                        vecxmin[cathode] = TMath::Min(padPosition[0]-0.5*padSize[0],vecxmin[cathode]);
                        vecxmax[cathode] = TMath::Max(padPosition[0]+0.5*padSize[0],vecxmax[cathode]);
@@ -393,12 +393,12 @@ Clustering::Cluster Clustering::ComputePositionClean(std::vector<Digit> &preclus
    }
     
 
-  Float_t stepX = 0.00001; // cm
-  Float_t stepY = 0.00001; // cm
-    Double_t Ky3 = 0.5085;
+  Float_t stepX = 0.0005; // cm
+  Float_t stepY = 0.0005; // cm
+  //  Double_t Ky3 = 0.5085;
     Double_t Kx3 = 0.5840;
-//    Double_t Ky3 = 0.2; //Compare with Alberto
-  //  Double_t Ky3 = 0.4; //For tests
+ //   Double_t Ky3 = 0.2; //Compare with Alberto
+    Double_t Ky3 = 0.2; //For tests
     
     MyObjectDigits digits;
 
@@ -422,8 +422,8 @@ Clustering::Cluster Clustering::ComputePositionClean(std::vector<Digit> &preclus
             vecxmax[cathode] = +40.;
         }
         if(vecymin[cathode]>vecymax[cathode]){
-            vecymin[cathode] = -20.;
-            vecymax[cathode] = +20.;
+            vecymin[cathode] = -20;
+            vecymax[cathode] = +20;
         }
         cout << "On va set les params" << endl;
         
@@ -444,19 +444,24 @@ Clustering::Cluster Clustering::ComputePositionClean(std::vector<Digit> &preclus
         userObjects.Add(&parameters);
         fitter->SetObjectFit(&userObjects);
         
+        std::cout<<"[fitter->SetParameter] "<<xhit[cathode]<<","<<stepX<<","<<vecxmin[cathode]<<","<<vecxmax[cathode]<<std::endl;
+        std::cout<<"[fitter->SetParameter] "<<yhit[cathode]<<","<<stepY<<","<<vecymin[cathode]<<","<<vecymax[cathode]<<std::endl;
         fitter->SetParameter(0,"cluster X position",xhit[cathode],stepX,vecxmin[cathode],vecxmax[cathode]);
         fitter->SetParameter(1,"cluster Y position",yhit[cathode],stepY,vecymin[cathode],vecymax[cathode]);
         
 
         Double_t stratArg(2);
         fitter->ExecuteCommand("SET STR",&stratArg,1);
-        Int_t val = fitter->ExecuteCommand("MIGRAD",0,0);
+        Double_t arglist[20];
+        arglist[0]= -1;
+        arglist[1]= 0;
+        Int_t val = fitter->ExecuteCommand("MIGRAD",arglist,0);
         if ( val && chargetot[cathode] != 0 )
         {
             //Fit failed with robust strategy 2 try balanced strategy 1
             Double_t stratArg(1);
             fitter->ExecuteCommand("SET STR",&stratArg,1);
-            Int_t val2 = fitter->ExecuteCommand("MIGRAD",0,0);
+            Int_t val2 = fitter->ExecuteCommand("MIGRAD",arglist,0);
             if ( val2 ){
                 // fit failed. Using COG results, with big errors
                 cout << "Fit failed on viable cathode. Using COG results for cluster." << endl;
@@ -483,9 +488,9 @@ Clustering::Cluster Clustering::ComputePositionClean(std::vector<Digit> &preclus
 
     //Détermination de la position finale du hit à l'aide de la résolution sur chaque cathode
     Double_t xhitfinal = xhit[0];
-    Double_t yhitfinal = yhit[1];
+    Double_t yhitfinal = yhit[0];
     Double_t ex = xsize[0];
-    Double_t ey = ysize[1];
+    Double_t ey = ysize[0];
 
     double timestamp = precluster[0].getTimeStamp();  // On récupère le timestamp du premier digit du precluster
 
@@ -551,11 +556,11 @@ void FitFunctionClean(Int_t& /*notused*/, Double_t* /*notused*/,
         
         mapping::Segmentation pad(detid); // = mapping::Segmentation(detid);
 
-        if ( cathode == pad.isBendingPad(padid) ) //On regarde à quelle cathode appartient le pad
+        if ( cathode != pad.isBendingPad(padid) ) //On regarde à quelle cathode appartient le pad
         {
               //On définit le vecteur position et taille du pad en question
-            std::vector<Double_t> padPosition = {pad.padPositionX(padid), pad.padPositionY(padid)};
-            std::vector<Double_t> padSize = {pad.padSizeX(padid), pad.padSizeY(padid)};
+            std::vector<Double_t> padPosition = {pad.padPositionX(padid), 1*pad.padPositionY(padid)};   // 1/ReductionFactor
+            std::vector<Double_t> padSize = {pad.padSizeX(padid), 1*pad.padSizeY(padid)};               // 1/ReductionFactor
 
             std::vector<Double_t> lowerLeft = {par[0] - padPosition[0] - 0.5*padSize[0], par[1] - padPosition[1] - 0.5*padSize[1]};
             std::vector<Double_t> upperRight= {lowerLeft[0] + padSize[0], lowerLeft[1] + padSize[1]};
@@ -567,6 +572,8 @@ void FitFunctionClean(Int_t& /*notused*/, Double_t* /*notused*/,
             Double_t delta = qtrue-qfit;
 
             sum += pow(delta,2)/qtrue;
+            
+        //    std::cout<<"[Chi2]: xc="<<par[0]<<"  yc="<<par[1]<<"  xp="<<padPosition[0]<<"  yp="<<padPosition[1]<<"  wp="<<padSize[0]<<"  hp="<<padSize[1]<<"  q="<<qfit <<"  chargetot="<<chargetot <<std::endl;
         }
     }
 }
