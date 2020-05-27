@@ -19,6 +19,8 @@
 #include "../../PreClustering/src/PreClusterFinder.h"
 #include "MCHClustering/ClusteringForTest.h"
 #include "TH1.h"
+#include "TH2.h"
+#include "TRandom.h"
 
 using namespace o2::mch;
 using namespace std;
@@ -31,9 +33,12 @@ namespace mch {
 Double_t myMathieson2D2hits(Double_t *x, Double_t *par);
  void myMath1hit(Double_t x, Double_t y);
 void myMath2hits(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Double_t chg1, Double_t chg2);
+void fillPadCharge(float xc, float yc, int bx, int by, TH2F* h2, int nsamples);
+Double_t IntMathiesonXYcrea(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Double_t Kx3, Double_t Ky3);
 void ResidualsCOG();
 void ResidualsCompare();
 void ResidualsPlot(double yarray[], double resyfound[], double eyfound[], const int size);
+void ResidualsPlotChargeBinned(double yarray[], double resyfound[], double eyfound[], const int size, double chg[]);
 void PlotWidthWrtCharge();
 bool GradualAcceptance(int charge, double dice);
 void PowFitHitsWrtChg_1650V();
@@ -56,6 +61,7 @@ private:
     vector<double> lowysb;
     vector<double> lowxsnb;
     vector<double> lowysnb;
+    TRandom *noisegen = new TRandom(321);
 
     PreClusterFinder preClusterFinder;
     Clustering clustering;

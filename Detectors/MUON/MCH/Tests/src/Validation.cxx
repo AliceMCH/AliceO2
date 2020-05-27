@@ -21,6 +21,7 @@
 #include "TGraphErrors.h"
 #include "TGraph2DErrors.h"
 #include "TLegend.h"
+#include "TProfile.h"
 #include <cmath>
 
 using namespace o2::mch;
@@ -82,7 +83,7 @@ void myMath1hit(Double_t x, Double_t y){
     // Function generating a ONE HIT Mathieson histogram
     
     TF2 *f1 = new TF2("myMath",myMathieson2D,-10,10,-10,10,4);
-    f1->SetParameters(0.5840, 0.5085, x, y);
+    f1->SetParameters(0.5840, 0.2, x, y);
     f1->SetParNames("K3x", "K3y", "Mean x", "Mean y");
 }
 //0.5840 0.5085  x y
@@ -98,8 +99,66 @@ void myMath2hits(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Double_t ch
     //f1->Draw("colz");
 }
 
+//________________________________________________________________________________________
+void fillPadCharge(float xc, float yc, int bx, int by, TH2F* h2, int nsamples)
+{
+    
+    // Function filling a histogram according to the perfect Mathieson distribution
+    
+  Double_t Kx3 = 0.5840;
+  Double_t Ky3 = 0.2;
 
+  Double_t xp = h2->GetXaxis()->GetBinCenter(bx);
+  Double_t yp = h2->GetYaxis()->GetBinCenter(by);
 
+  Double_t wp = h2->GetXaxis()->GetBinWidth(bx);
+  Double_t hp = h2->GetYaxis()->GetBinWidth(by);
+
+  Double_t padPosition[2] = {xp, yp};
+  Double_t padSize[2]     = {wp, hp};
+
+  Double_t lowerLeft[2]  = {xc - padPosition[0] - 0.5*padSize[0], yc - padPosition[1] - 0.5*padSize[1]};
+  Double_t upperRight[2] = {lowerLeft[0] + padSize[0], lowerLeft[1] + padSize[1]};
+
+ // std::cout<<"[fillPadCharge] lowerLeft ="<<lowerLeft[0]<<","<<lowerLeft[1]<<std::endl;
+ // std::cout<<"[fillPadCharge] upperRight="<<upperRight[0]<<","<<upperRight[1]<<std::endl;
+
+  Double_t q = IntMathiesonXYcrea(lowerLeft[0], lowerLeft[1], upperRight[0], upperRight[1], Kx3, Ky3);
+
+  //std::cout<<"[fillPadCharge]: xc="<<xc<<"  yc="<<yc<<"  xp="<<padPosition[0]<<"  yp="<<padPosition[1]<<"  wp="<<padSize[0]<<"  hp="<<padSize[1]<<"  q="<<q<<std::endl;
+
+  h2->SetBinContent(bx, by, round(nsamples*q));
+}
+
+//________________________________________________________________________________________
+Double_t IntMathiesonXYcrea(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Double_t Kx3, Double_t Ky3)
+{
+    
+    //Calculation of the charge deposited by a perfect Mathieson on a rectangular pad
+    
+    Double_t pitch = 0.25;                                          //Adapted fron AliMuonMathieson
+    Double_t Kx2 = M_PI / 2. * (1. - 0.5 * sqrt(Kx3));
+    Double_t cx1 = Kx2 * sqrt(Kx3) / 4. / atan(sqrt(Kx3));
+    Double_t Kx4 = cx1 / Kx2 / sqrt(Kx3);
+    
+    Double_t Ky2 = M_PI / 2. * (1. - 0.5 * sqrt(Ky3));
+    Double_t cy1 = Ky2 * sqrt(Ky3) / 4. / atan(sqrt(Ky3));
+    Double_t Ky4 = cy1 / Ky2 / sqrt(Ky3);
+    
+    x1 /= pitch;
+    x2 /= pitch;
+    y1 /= pitch;
+    y2 /= pitch;
+
+    Double_t ux1 = sqrt(Kx3)*tanh(Kx2*x1);
+    Double_t ux2 = sqrt(Kx3)*tanh(Kx2*x2);
+    
+    Double_t uy1 = sqrt(Ky3)*tanh(Ky2*y1);
+    Double_t uy2 = sqrt(Ky3)*tanh(Ky2*y2);
+    
+    return Double_t(4.*Kx4*(atan(ux2)-atan(ux1))*
+                   Ky4*(atan(uy2)-atan(uy1)));
+}
 
 
 //PART WITH: - PLOTTING OF THE MATHIESON FOLLOWING THE DEFINITION WE USE (ONE OR TWO HITS) AND MAPPING OF A GIVEN DETECTOR (DE819)
@@ -108,9 +167,34 @@ void myMath2hits(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Double_t ch
 //________________________________________________________________________________________
 void Validation::PlotMathieson2D(TH1F* hchgpads, TH1F* hchgafter, TH1F* hchmaxafter, TH1F* hNbinsafter, TH1F* hNbinsX, TH1F* hNbinsXafter, TH1F* hNbinsY, TH1F* hNbinsYafter, TH1F* hMeanYbins, TH1F* hMeanbins, TH1F* hNhits0_600, TH1F* hNhits600_1200, TH1F* hNhits1200_2000, TH1F* hNhits2000_6000, TH1F* hYNhits0_600, TH1F* hYNhits600_1200, TH1F* hYNhits1200_2000, TH1F* hYNhits2000_6000, Double_t x, Double_t y, int nsamples, int SeedMath){
     
+    
+    //To handle the noise, look for "noisegen"in the code. It has 2 occurences (bending and non bending)
+    //To handle the cut, change CutLimit and go to function "GraduateAcceptance" set it to return kTRUE in you want a sharp cut, uncomment kTRUE if you want the progressibe TB-like cut from 10 ADC to 20 ADC.
+    
+    //To change Kx3 or Ky3: For generating events, either change them in myMath1hit (random draw) or fillPadCharge (ideal Mathieson)
+    //                      For fitting (clustering procedure), change it in ComputePositionClean
+    
+    
+    //To change the size of pads in Y: Take your reduction factor (if you want 1cm pads, the reduction factor is 0.5; if you want 0.25cm pads, the reduction factor is 2; if you want 0.125 cm pads, the reduction factor is 4).
+    //You must change 3 codes: Validation (this one), ClusteriserValidation (the executable calling this one), ClusteringForTest (the one with clustering procedures coded in).
+    
+    //In this one:  - When filling digits for bending and non-bending, binycent takes a ReductionFactor
+    //              - When using InfoDE to get mapping, padposy and padsizey both take 1/ReductionFactor, on bending and non-bending
+    
+    //In ClusterizerValidation (the executable): - Change the span of y accordingly. Initially, it is (-20,+20). A reduction factor of 2 gives a span of (-10,+10), just to make sure we don't generate events outside the "smaller DE"
+    
+    //In ClusteringForTest (the one with clustering procedures coded in):
+    //              - In FinderCOG, padPosition and padSize both take 1/ReductionFactor
+    //              - In ComputePositionClean, padPosition and padSize both take 1/ReductionFactor
+    //                                          vecymin and vecymax must match the span of y
+    //              - In FitFunctionClean, padPosition and padSize both take 1/ReductionFactor
+    
+    
+    
     digits.clear();
     
     TH2F* hb(NULL);
+   // TH2F* hbideal(NULL);
     TH2F* hdice(NULL);
     TH2F* hnb(NULL);
     myMath1hit(x, y);
@@ -122,7 +206,11 @@ void Validation::PlotMathieson2D(TH1F* hchgpads, TH1F* hchgafter, TH1F* hchmaxaf
     int nopadsb = catsegb.nofPads();
     int nopadsnb = catsegnb.nofPads();
     int padid;
+    
+    
+    // Cuts
     bool keepdigit = kTRUE;
+    int CutLimit = 10;          //How many ADC for the cut
     
     
     //Conversion des vecteurs en arrays bending
@@ -157,8 +245,18 @@ void Validation::PlotMathieson2D(TH1F* hchgpads, TH1F* hchgafter, TH1F* hchmaxaf
     cout << "Generating histograms bending and non-bending..."<< endl;
 
     hb = new TH2F("hb","hb",lowxsb.size()-1,xlowsb,lowysb.size()-1,ylowsb);
+ //   hbideal = new TH2F("hbideal","hbideal",lowxsb.size()-1,xlowsb,lowysb.size()-1,ylowsb);
     gRandom->SetSeed(SeedMath);
-    hb->FillRandom("myMath", /*nsamples=*/nsamples);
+    
+    // Fill using a random draw of charges on the pads
+  //  hb->FillRandom("myMath", /*nsamples=*/nsamples);
+    
+    // Fill using a perfect normalised Mathieson on the pads
+    for(int bx = 1; bx <= lowxsb.size(); bx++) {
+        for(int by = 1; by <= lowysb.size(); by++) {
+            fillPadCharge(x, y, bx, by, hb, nsamples);
+        }
+    }
     
     //Plot to find the NBinsY
     std::vector<int> fullbins;
@@ -229,12 +327,28 @@ void Validation::PlotMathieson2D(TH1F* hchgpads, TH1F* hchgafter, TH1F* hchmaxaf
        
        cout << "On a rempli hNbinsX" <<endl;
     
-    
-    TRandom *noisegen = new TRandom(321);
+    // Addition of the noise Bending plane
     for(int bin=0; bin<(lowxsb.size()+1)*(lowysb.size()+1); bin++){
-        noise = noisegen->Gaus(0,1);
-        hb->AddBinContent(bin, abs(noise));
+//        noise = 0; //noisegen->Gaus(0,1);
+//        hb->AddBinContent(bin, abs(noise));
+        
+        noise = noisegen->Gaus(0,sqrt(hb->GetBinContent(bin)));
+        hb->AddBinContent(bin, noise);
     }
+    
+    //Plot of the charge wrt y
+    
+    TCanvas *cbChargeY = new TCanvas("cbChargeY","Charge projected on Y",0,0,600,600);
+    TH1F* hbChargeY = (TH1F*)hb->ProjectionY("_py");
+  //  TH1F* hbChargeYideal = (TH1F*)hbideal->ProjectionY("_py");
+    cbChargeY->cd();
+    hbChargeY->SetTitle("Charge projected on Y - Ideal Simulation");
+    hbChargeY->GetXaxis()->SetTitle("Y coordinate");
+    hbChargeY->GetYaxis()->SetTitle("Charge");
+    hbChargeY->Draw("E");
+//    hbChargeYideal->SetLineColor(2);
+//    hbChargeYideal->Draw("SAME E");
+    cbChargeY->Update();
     
     //Plot to find the NBinsY after noise and cut
        std::vector<int> fullbinsafter;
@@ -251,7 +365,7 @@ void Validation::PlotMathieson2D(TH1F* hchgpads, TH1F* hchgafter, TH1F* hchmaxaf
                chgbin = hb->GetBinContent(i,j);
                dice1 = hdice->GetBinContent(i,j);
                keepdigit = GradualAcceptance(chgbin, dice1);
-               if(chgbin > 10 && keepdigit){
+               if(chgbin > CutLimit && keepdigit){ //chgbin > 10 &&
                    cout << "Chgbin = " << chgbin << " in bin (" << i << "," << j <<")"<<endl;
                    chgsum += chgbin;
                    fullbinsafter.push_back(i);
@@ -304,7 +418,7 @@ void Validation::PlotMathieson2D(TH1F* hchgpads, TH1F* hchgafter, TH1F* hchmaxaf
                   chgbinX = hb->GetBinContent(j,i);
                   dice1 = hdice->GetBinContent(j,i);
                   keepdigit = GradualAcceptance(chgbinX, dice1);
-                  if(chgbinX > 10 && keepdigit){
+                  if(chgbinX > CutLimit && keepdigit){ //chgbinX > 10 &&
                       cout << "ChgbinX = " << chgbinX << " in bin (" << j << "," << i <<")"<<endl;
                       fullbinsafterX.push_back(i);
                       fullbinsafterX.push_back(j);
@@ -353,11 +467,23 @@ void Validation::PlotMathieson2D(TH1F* hchgpads, TH1F* hchgafter, TH1F* hchmaxaf
     //Création et remplissage histogrammes non-bending
     
     hnb = new TH2F("hnb","hnb",lowxsnb.size()-1,xlowsnb,lowysnb.size()-1,ylowsnb);
+    
+    // Random draw
     hnb->FillRandom("myMath", /*nsamples=*/nsamples);
     
+    // Ideal Mathieson
+//    for(int bx = 1; bx <= lowxsnb.size()-1; bx++) {
+//           for(int by = 1; by <= lowysnb.size()-1; by++) {
+//               fillPadCharge(x, y, bx, by, hnb, nsamples);
+//           }
+//    }
+    
+    // Added noise
     for(int bin=0; bin<(lowxsnb.size()+1)*(lowysnb.size()+1); bin++){
-        noise = noisegen->Gaus(0,1);
+        noise = 0; //noisegen->Gaus(0,1);
         hnb->AddBinContent(bin, abs(noise));
+//        noise = noisegen->Gaus(0,sqrt(hnb->GetBinContent(bin)));
+//        hnb->AddBinContent(bin, noise);
     }
     
 //    c2->cd(2);
@@ -405,7 +531,7 @@ void Validation::PlotMathieson2D(TH1F* hchgpads, TH1F* hchgafter, TH1F* hchmaxaf
             bincontent = hb->GetBinContent(binx,biny);
             dicecontent = hdice->GetBinContent(binx,biny);
             binxcent = (hb->GetXaxis())->GetBinCenter(binx);
-            binycent = (hb->GetYaxis())->GetBinCenter(biny);
+            binycent = 1.0*(hb->GetYaxis())->GetBinCenter(biny);                     //Reduction factor
             
 //            if((binx*biny)%4 == 0){
 //                cout << "Content of bending bin (binx= " << binx << ", biny= " << biny << "): " << bincontent << endl;
@@ -432,7 +558,7 @@ void Validation::PlotMathieson2D(TH1F* hchgpads, TH1F* hchgafter, TH1F* hchmaxaf
             for(int biny = 1; biny<lowysnb.size(); biny++){
                 bincontent = hnb->GetBinContent(binx,biny);
                 binxcent = (hnb->GetXaxis())->GetBinCenter(binx);
-                binycent = (hnb->GetYaxis())->GetBinCenter(biny);
+                binycent = 1.0*(hnb->GetYaxis())->GetBinCenter(biny);                       //Reduction factor
                 
                 padid = catsegnb.findPadByPosition(binxcent,binycent) + nopadsb;
                 charge[padid] += bincontent;
@@ -457,7 +583,7 @@ void Validation::PlotMathieson2D(TH1F* hchgpads, TH1F* hchgafter, TH1F* hchmaxaf
     
     for(int i=0; i<nopadsb + nopadsnb; i++){
         keepdigit = GradualAcceptance(charge[i], dice2[i]);
-        if(charge[i] > 10 && keepdigit){  //Couper le bruit type (6ADC = 2*seuil de 3ADC, seuil de 3adc vient de 3*bruit/0.8)
+        if(charge[i] > CutLimit && keepdigit){  //charge[i] > 10 &&  Couper le bruit type (6ADC = 2*seuil de 3ADC, seuil de 3adc vient de 3*bruit/0.8)
             if(i<nopadsb){
                 chargeevent += charge[i];
                 hchgpads->Fill(charge[i]);
@@ -517,6 +643,8 @@ bool GradualAcceptance(int charge, double dice){
     
     double probabilitiestokeep[9] = {0.002, 0.0047, 0.0125, 0.0718, 0.1875, 0.25, 0.4333, 0.72, 0.84};
     
+    //Accept all (no cut)
+    return kTRUE;
     
     if(charge <= 10){
            return kFALSE;
@@ -570,9 +698,9 @@ void Validation::InfoDE819b(){
     
     for(int catPadindex = 0; catPadindex<nopads; catPadindex++){
         padposx = catseg.padPositionX(catPadindex);
-        padposy = catseg.padPositionY(catPadindex);
+        padposy = 1*catseg.padPositionY(catPadindex);                           // 1/Reduction factor
         padsizex = catseg.padSizeX(catPadindex);
-        padsizey = catseg.padSizeY(catPadindex);
+        padsizey = 1*catseg.padSizeY(catPadindex);                              // 1/Reduction factor
         lowerx = padposx - (padsizex/2);
         lowery = padposy - (padsizey/2);
         
@@ -676,9 +804,9 @@ void Validation::InfoDE819nb(){
     
     for(int catPadindex = 0; catPadindex<nopads; catPadindex++){
         padposx = catseg.padPositionX(catPadindex);
-        padposy = catseg.padPositionY(catPadindex);
+        padposy = 1*catseg.padPositionY(catPadindex);                       // 1/Reduction factor
         padsizex = catseg.padSizeX(catPadindex);
-        padsizey = catseg.padSizeY(catPadindex);
+        padsizey = 1*catseg.padSizeY(catPadindex);                           // 1/Reduction factor
         lowerx = padposx - (padsizex/2);
         lowery = padposy - (padsizey/2);
         
@@ -781,7 +909,7 @@ std::vector<Clustering::Cluster> Validation::TestClustering(){
         std::vector<PreClusterStruct> preClusters(0);
         preClusterFinder.getPreClusters(preClusters, digits);
 
-          printf("\n\n==========\nRunning Clustering\n\n");
+          printf("\n\n==========\nRunning clustering\n\n");
     
     
     
@@ -789,12 +917,12 @@ std::vector<Clustering::Cluster> Validation::TestClustering(){
           
     
     //To run COG Clustering
-       clustering.runFinderCOG(preClusters, clusters);
+ //      clustering.runFinderCOG(preClusters, clusters);
 //        printf("Number of clusters obtained and saved: %lu\n", clusters.size());
     
     
     //To run Mathieson fit Clustering
- //      clustering.runFinderSimpleFit(preClusters, clusters);
+       clustering.runFinderSimpleFit(preClusters, clusters);
           
     
     //To run Gaussian fit Clustering
@@ -958,9 +1086,75 @@ void ResidualsPlot(double yarray[], double resyfound[], double eyfound[], int si
     cerr->Update();
     cerr->Draw();
     
+    TCanvas *cbias2D = new TCanvas("cbias2D","Study of bias of residuals",0,0,600,600);
     
+    TH2F *hbias2D = new TH2F("hbias2D", "Bias of residuals wrt input y", 11, -0.5, 0.5, 50, -0.05, 0.05);
+    hbias2D->SetTitle("Bias of residuals wrt input y - 2D");
+    hbias2D->GetXaxis()->SetTitle("y input (cm)");
+    hbias2D->GetYaxis()->SetTitle("Residual (cm)");
+    for(int i=0;i<n;i++){
+        hbias2D->Fill(yarray[i], resyfound[i]);
+    }
+    hbias2D->Draw("colz");
+    cbias2D->Update();
+    cbias2D->Draw();
+    
+    TCanvas *cbias1D = new TCanvas("cbias1D","Study of bias of residuals",0,0,600,600);
+       
+//       TProfile *hbias1D = hbias2D->ProfileX("hbias1D");
+//       hbias1D->SetTitle("Bias of residuals wrt input y - 1D");
+//       hbias1D->GetXaxis()->SetTitle("y input (cm)");
+//       hbias1D->GetYaxis()->SetTitle("Residual (cm)");
+//       hbias1D->Draw("AP");
+//       cbias1D->Update();
+//       cbias1D->Draw();
+    
+    TH1F hMean2("hMean2", "Mean vs. Y", 11, -0.5, 0.5);
+    for(int bx = 1; bx <= hbias2D->GetXaxis()->GetNbins(); bx++) {
+      TH1D* hp = hbias2D->ProjectionY("_py2",bx,bx);
+      TF1 fgaus("fgaus","gausn");
+      fgaus.SetParameter(1,0);
+      fgaus.SetParameter(2,0.01);
+      //hp->Fit("fgaus");
+      hp->Fit("fgaus","NL");
+      hp->Fit("fgaus","ML");
+      hMean2.SetBinContent(bx, fgaus.GetParameter(1));
+      hMean2.SetBinError(bx, fgaus.GetParError(1));
+    }
+    hMean2.SetMinimum(-0.02);
+    hMean2.SetMaximum( 0.02);
+    hMean2.GetXaxis()->SetTitle("y input (cm)");
+    hMean2.GetYaxis()->SetTitle("Residual (cm)");
+    hMean2.Draw();
+    cbias1D->Update();
+    cbias1D->Draw();
+
+     TCanvas *csig1D = new TCanvas("csig1D","Study of resolution wrt y",0,0,600,600);
+           
+        
+        TH1F hSig2("hSig2", "Resolution vs. Y", 11, -0.5, 0.5);
+        for(int bx = 1; bx <= hbias2D->GetXaxis()->GetNbins(); bx++) {
+          TH1D* hpsig = hbias2D->ProjectionY("_py2",bx,bx);
+          TF1 fgaus("fgaus","gausn");
+          fgaus.SetParameter(1,0);
+          fgaus.SetParameter(2,0.01);
+          //hp->Fit("fgaus");
+          hpsig->Fit("fgaus","NL");
+          hpsig->Fit("fgaus","ML");
+          hSig2.SetBinContent(bx, 10000*fgaus.GetParameter(2));
+          hSig2.SetBinError(bx, 10000*fgaus.GetParError(2));
+        }
+        hSig2.SetMinimum(40);
+        hSig2.SetMaximum(200);
+        hSig2.GetXaxis()->SetTitle("y input (cm)");
+        hSig2.GetYaxis()->SetTitle("Resolution (um)");
+        hSig2.Draw();
+        csig1D->Update();
+        csig1D->Draw();
+    
+   //csig1D->SaveAs("OutputsOfTests/ClusterizerValidation/DistributionOfResiduals/ResolutionWrtParametersK=0.2/ResolutionWrtY/IdealSim_1000ADC.pdf");
     TCanvas *cbell = new TCanvas("cbell","Bell",0,0,600,600);
-    TH1F *h1 = new TH1F("h1", "Residuals distribution", 50, -0.1, 0.1);
+    TH1F *h1 = new TH1F("h1", "Residuals distribution", 5000, -0.1, 0.1);
     for(int i=0; i<n; i++){
         h1->Fill(resyfound[i]);
     }
@@ -969,6 +1163,61 @@ void ResidualsPlot(double yarray[], double resyfound[], double eyfound[], int si
     h1->Draw();
     cbell->Update();
     cbell->Draw();
+    
+}
+
+// Function plotting the residuals distribution but by big bins of charge
+
+void ResidualsPlotChargeBinned(double yarray[], double resyfound[], double eyfound[], int size, double chg[]){
+    
+    const int n = size;
+    
+    Double_t eyinput[n];
+    for(int i=0; i<n; i++){
+        eyinput[i]=0;
+    }
+    
+    TH1F *h0_300 = new TH1F("h0_300", "Residuals distribution - 0 to 300 ADC", 50, -0.1, 0.1);
+    TH1F *h300_600 = new TH1F("h300_600", "Residuals distribution - 300 to 600 ADC", 50, -0.1, 0.1);
+    TH1F *h600_1000 = new TH1F("h600_1000", "Residuals distribution - 600 to 1000 ADC", 50, -0.1, 0.1);
+    TH1F *h1000_3000 = new TH1F("h1000_3000", "Residuals distribution - 1000 to 3000 ADC", 50, -0.1, 0.1);
+    
+    for(int i=0; i<n; i++){
+        if(chg[i] < 300){
+            h0_300->Fill(resyfound[i]);
+        }
+        else if(chg[i] >= 300 && chg[i] < 600){
+            h300_600->Fill(resyfound[i]);
+        }
+        else if(chg[i] >= 600 && chg[i] < 1000){
+            h600_1000->Fill(resyfound[i]);
+        }
+        else if(chg[i] >= 1000 && chg[i] < 3000){
+            h1000_3000->Fill(resyfound[i]);
+        }
+        
+    }
+    
+    TCanvas *cbellbin = new TCanvas("cbellbin","Bell",0,0,600,600);
+    cbellbin->Divide(2,2);
+    cbellbin->cd(1);
+    h0_300->GetXaxis()->SetTitle("Residual y (cm)");
+    h0_300->GetYaxis()->SetTitle("Count");
+    h0_300->Draw();
+    cbellbin->cd(2);
+    h300_600->GetXaxis()->SetTitle("Residual y (cm)");
+    h300_600->GetYaxis()->SetTitle("Count");
+    h300_600->Draw();
+    cbellbin->cd(3);
+    h600_1000->GetXaxis()->SetTitle("Residual y (cm)");
+    h600_1000->GetYaxis()->SetTitle("Count");
+    h600_1000->Draw();
+    cbellbin->cd(4);
+    h1000_3000->GetXaxis()->SetTitle("Residual y (cm)");
+    h1000_3000->GetYaxis()->SetTitle("Count");
+    h1000_3000->Draw();
+    cbellbin->Update();
+    cbellbin->Draw();
     
 }
 
