@@ -38,6 +38,10 @@ int main(int argc, char** argv)
     
   // TFile *f = new TFile("ComparisonSimuTB/AdaptedReferenceTB_1700V_Thr3.root", "NEW");
     
+     ofstream myfile;
+     myfile.open ("logTBCompareFit1700V.txt");
+    
+    
     TApplication app ("app",&argc,argv);
     
     TCanvas *cResDistrib = new TCanvas("cResDistrib","Residuals Distribution",0,0,600,600);
@@ -122,11 +126,11 @@ int main(int argc, char** argv)
        //Uncomment the method you wish to use to clusterize
             
           //Runs the clustering of preClusters following a CenterOfGravity algorithm. Fills clusters.
-          clustering.runFinderCOG(preClusters, clusters);
+  //        clustering.runFinderCOG(preClusters, clusters);
 //          printf("Number of clusters obtained and saved: %lu\n", clusters.size());
             
             // Fit Mathieson
-  //       clustering.runFinderSimpleFit(preClusters, clusters);
+         clustering.runFinderSimpleFit(preClusters, clusters);
             
             // Fit Simple Gaussienne
        //     clustering.runFinderGaussianFit(preClusters, clusters);
@@ -146,7 +150,7 @@ int main(int argc, char** argv)
           hXNhitsTB->Fill(tbclusters[0].fXNhits);
           hchmax->Fill(tbclusters[0].fChargemax);
           float yobtenuMoi = clusters[0].gety();
-          float yobtenuAlberto = tbclusters[0].fYclus;
+          float yobtenuAlberto = tbclusters[0].fYmat;
           float chargeAlberto = tbclusters[0].fCharge;
           float differenceMoi = ytrk-yobtenuMoi;
           float differenceAlberto = ytrk - yobtenuAlberto;
@@ -191,14 +195,30 @@ int main(int argc, char** argv)
           hTB_MeanNHits->Fill(chargeAlberto, tbclusters[0].fNhits);
           hTB_MeanNHits->GetXaxis()->SetTitle("Cluster charge (ADC)");
           hTB_MeanNHits->GetYaxis()->SetTitle("Mean number of pads fired");
-        
+          cout << "\n=============================================================================" << count <<endl;
+          cout << "It was event number " << count <<endl;\
+          cout << "Y track: " << ytrk <<endl;
+          cout << "Y found by fit, me: " << yobtenuMoi <<endl;
+          cout << "Y found by fit, Alberto: " << yobtenuAlberto <<endl;
+          cout << "Y COG: " << tbclusters[0].fYclus <<endl;
           cout << "RESIDUAL y found by me: " << differenceMoi <<endl;
           cout << "RESIDUAL y found by Alberto: " << differenceAlberto <<endl;
           if(residualsDifference[count] != 0){
               cout << "DISAGREE ON RESIDUALS" <<endl;
               cout << "Number of preclusters found by Alberto: " << tbclusters.size() <<endl;
           }
-          cout << "It was cluster number " << count <<endl;
+          cout << "=============================================================================\n" << count <<endl;
+          
+          myfile << "\n=============================================================================" << count <<endl;
+          myfile << "It was event number " << count <<endl;
+          myfile << "Y track: " << ytrk <<endl;
+          myfile << "Y found by fit, me: " << yobtenuMoi <<endl;
+          myfile << "Y found by fit, Alberto: " << yobtenuAlberto <<endl;
+          myfile << "Y COG: " << tbclusters[0].fYclus <<endl;
+          myfile << "RESIDUAL y found by me: " << differenceMoi <<endl;
+          myfile << "RESIDUAL y found by Alberto: " << differenceAlberto <<endl;
+          cout << "=============================================================================\n" << count <<endl;
+          
           count++;
       }
       
@@ -395,6 +415,7 @@ int main(int argc, char** argv)
     
 //    f->Write();
 //    f->Close();
+    myfile.close();
     
               app.Run(kTRUE);
 
