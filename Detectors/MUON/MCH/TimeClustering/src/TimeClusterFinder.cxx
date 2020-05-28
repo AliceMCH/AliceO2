@@ -51,8 +51,6 @@ struct CompareDigitTime final
 
 
 struct TimeClusterFinder::DetectionElement {
-  std::vector<Digit> digits[2]; // vector of digits from two consecutive orbits
-  std::vector<bool> merged[2];
   using DigitsMap = std::multimap<Digit, bool, CompareDigitTime>;
   DigitsMap mDigits[2];
   int orbit[2] = {-1, -1};
@@ -68,30 +66,22 @@ struct TimeClusterFinder::DetectionElement {
   int getCurrentOrbit() { return orbit[currentBufId]; }
 
   void mergeAndSendTimeClusters();
-  void mergeAndSendTimeClusters2();
 
   void storeDigit(const Digit& d);
 };
 
 void TimeClusterFinder::DetectionElement::storeDigit(const Digit& d)
 {
-  //std::cout<<"\n[storeDigit] current orbit: "<<getCurrentOrbit()<<"  new: "<<d.getTime().orbit<<std::endl;
   if (d.getTime().orbit != getCurrentOrbit()) {
-    //mergeAndSendTimeClusters();
-    mergeAndSendTimeClusters2();
+    mergeAndSendTimeClusters();
 
     currentBufId = 1 - currentBufId;
     previousBufId = 1 - previousBufId;
-    digits[currentBufId].clear();
-    merged[currentBufId].clear();
     mDigits[currentBufId].clear();
     orbit[currentBufId] = d.getTime().orbit;
   }
 
   mDigits[currentBufId].insert(std::make_pair(d, false));
-
-  //digits[currentBufId].emplace_back(d);
-  //merged[currentBufId].push_back(false);
 }
 
 static bool compareDigits(const Digit& lhs, const Digit& rhs)
@@ -104,154 +94,8 @@ static int64_t getTimeDiff(Digit& d1, Digit& d2)
   return (static_cast<int64_t>(d2.getTime().getBXTime()) - static_cast<int64_t>(d1.getTime().getBXTime()));
 }
 
-void TimeClusterFinder::DetectionElement::mergeAndSendTimeClusters()
-{
-  // sort current digits buffer
-  //std::cout<<"\n[mergeAndSendTimeClusters] sorting digit in buffer "<<currentBufId<<std::endl;
-  //std::cout<<"[mergeAndSendTimeClusters] digits before sorting:\n";
-  //for(auto& d : digits[currentBufId]) std::cout<<d<<std::endl;
-  std::sort(digits[currentBufId].begin(), digits[currentBufId].end(), compareDigits);
-  //std::cout<<"[mergeAndSendTimeClusters] digits after sorting:\n";
-  //for(auto& d : digits[currentBufId]) std::cout<<d<<std::endl;
-
-  if (sPrint) {
-    std::cout << "\n[mergeAndSendTimeClusters] list of digits:\n";
-    for (auto& d : digits[previousBufId])
-      std::cout << d << " [prev]" << std::endl;
-    for (auto& d : digits[currentBufId])
-      std::cout << d << " [cur]" << std::endl;
-  }
-
-  // collect the time clusters
-  // step 1: find index of first non-merged digit in previous orbit
-  int iStart = -1, iEnd = -1;
-  uint64_t tStart = 0, tEnd = 0;
-  for (size_t i = 0; i < digits[previousBufId].size(); i++) {
-    if (!merged[previousBufId][i]) {
-      iStart = i;
-      break;
-    }
-  }
-  if (iStart < 0)
-    return;
-
-  // the first non-merged digit is used as seed to search for the next time cluster
-  while (iStart < digits[previousBufId].size()) {
-
-    iEnd = iStart;
-
-
-    if (sPrint) {
-      std::cout << "[mergeAndSendTimeClusters] previousBufId: " << previousBufId << "  iStart: " << iStart << std::endl;
-    }
-    Digit* d1 = &(digits[previousBufId][iStart]);
-
-    // we add the seed digit to the next time cluster
-    if (sPrint) {
-      std::cout << "[mergeAndSendTimeClusters] adding digit to cluster [0]: " << *d1 << std::endl;
-    }
-    std::vector<const Digit*> timeClusterDigits;
-    timeClusterDigits.push_back(d1);
-
-    // the added digit is marked as merged
-    merged[previousBufId][iStart] = true;
-    //std::cout<<"[mergeAndSendTimeClusters] digits in current cluster:\n";
-    //for(auto& d : timeClusterDigits) std::cout<<*d<<std::endl;
-
-    // initialize the time bounds of the current cluster
-    tStart = d1->getTime().getBXTime();
-    tEnd = tStart;
-
-    // step 2: loop on digits from previous orbit, starting from the one after the seed
-    for (size_t i = static_cast<size_t>(iStart) + 1; i < digits[previousBufId].size(); i++) {
-
-      // skip digits that have already been merged to a time cluster
-      if (merged[previousBufId][i]) {
-        continue;
-      }
-
-      // we check the time difference between the current digit and the previous one, in
-      // units of bunch crossings
-      Digit* d2 = &(digits[previousBufId][i]);
-      uint64_t td2 = d2->getTime().getBXTime();
-
-      // the cluster is ended if the time difference with respect to the last digit
-      // is larger than 10 ADC samples, or equivalently 40 bunch crossings
-      if (td2 > (tEnd + 40)) {
-        break;
-      }
-
-      // the digit is added to the time cluster and marked as merged
-      if (sPrint) {
-        std::cout << "[mergeAndSendTimeClusters] adding digit to cluster [1]: " << *d2 << std::endl;
-      }
-      timeClusterDigits.push_back(d2);
-      merged[previousBufId][i] = true;
-      //std::cout<<"[mergeAndSendTimeClusters] digits in current cluster:\n";
-      //for(auto& d : timeClusterDigits) std::cout<<*d<<std::endl;
-
-      // update of the time bounds
-      if (td2 > tEnd) {
-        tEnd = td2;
-      }
-
-      // we update the pointer and index to the last digit in the cluster
-      d1 = d2;
-      iEnd = i;
-    }
-
-    // step 3: loop on digits from current orbit, stop when no more digits can be added to the current cluster
-    for (size_t i = 0; i < digits[currentBufId].size(); i++) {
-
-      // skip digits that have already been merged to a time cluster
-      if (merged[currentBufId][i]) {
-        continue;
-      }
-
-      // we check the time difference between the current digit and the last one in the cluster,
-      // in units of bunch crossings
-      Digit* d2 = &(digits[currentBufId][i]);
-      uint64_t td2 = d2->getTime().getBXTime();
-
-      // the cluster is ended if the digit is outside of the time bounds by more than 10 ADC samples,
-      // or equivalently 40 bunch crossings.
-      if (((td2+40) < tStart) || (td2 > (tEnd + 40))) {
-        //std::cout<<"sendTimeCluster[2]  new digit: "<<d2<<std::endl;
-        break;
-      }
-
-      // the digit is added to the time cluster and marked as merged
-      if (sPrint) {
-        std::cout << "[mergeAndSendTimeClusters] adding digit to cluster [2]: " << *d2 << std::endl;
-      }
-      timeClusterDigits.push_back(d2);
-      merged[currentBufId][i] = true;
-
-      // update of the time bounds
-      if (td2 > tEnd) {
-        tEnd = td2;
-      } else if (td2 < tStart) {
-        tStart = td2;
-      }
-
-      // we update the pointer to the last digit in the cluster
-      // the index is not updated because it refers to the vector of digits
-      // in the previous orbit
-      d1 = d2;
-    }
-
-    if (!timeClusterDigits.empty()) {
-      //std::cout<<"sendTimeCluster[3]\n";
-      sendTimeCluster(timeClusterDigits);
-    }
-
-    // we set the new seed to the digit immediately following the last one in the current cluster
-    iStart = iEnd + 1;
-  }
-}
-
 //_________________________________________________________________________________________________
-void TimeClusterFinder::DetectionElement::mergeAndSendTimeClusters2()
+void TimeClusterFinder::DetectionElement::mergeAndSendTimeClusters()
 {
   if (sPrint) {
     std::cout << "\n[mergeAndSendTimeClusters] list of digits:\n";
@@ -293,8 +137,6 @@ void TimeClusterFinder::DetectionElement::mergeAndSendTimeClusters2()
 
     // the added digit is marked as merged
     iStart->second = true;
-    //std::cout<<"[mergeAndSendTimeClusters] digits in current cluster:\n";
-    //for(auto& d : timeClusterDigits) std::cout<<*d<<std::endl;
 
     // initialize the time bounds of the current cluster
     tStart = d1->getTime().getBXTime();
@@ -326,8 +168,6 @@ void TimeClusterFinder::DetectionElement::mergeAndSendTimeClusters2()
       }
       timeClusterDigits.push_back(d2);
       iDigit->second = true;
-      //std::cout<<"[mergeAndSendTimeClusters] digits in current cluster:\n";
-      //for(auto& d : timeClusterDigits) std::cout<<*d<<std::endl;
 
       // update of the time bounds
       if (td2 > tEnd) {
@@ -355,7 +195,6 @@ void TimeClusterFinder::DetectionElement::mergeAndSendTimeClusters2()
       // the cluster is ended if the digit is outside of the time bounds by more than 10 ADC samples,
       // or equivalently 40 bunch crossings.
       if (((td2+40) < tStart) || (td2 > (tEnd + 40))) {
-        //std::cout<<"sendTimeCluster[2]  new digit: "<<d2<<std::endl;
         break;
       }
 
@@ -380,7 +219,6 @@ void TimeClusterFinder::DetectionElement::mergeAndSendTimeClusters2()
     }
 
     if (!timeClusterDigits.empty()) {
-      //std::cout<<"sendTimeCluster[3]\n";
       sendTimeCluster(timeClusterDigits);
     }
 
@@ -440,7 +278,6 @@ void TimeClusterFinder::loadDigits(gsl::span<const Digit> digits)
     assert(deIndex >= 0 && deIndex < SNDEs);
 
     DetectionElement& de(*(mDEs[deIndex]));
-    //std::cout<<"[loadDigits] storing digit: "<<digit<<std::endl;
     de.storeDigit(digit);
   }
 }
@@ -459,6 +296,7 @@ bool expandArray(gsl::span<T>& array, size_t newSize)
   return true;
 }
 
+//_________________________________________________________________________________________________
 void TimeClusterFinder::storeCluster(std::vector<const Digit*>& digits)
 {
   if (sPrint) {

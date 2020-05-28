@@ -8,9 +8,10 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-/// @since 2016-10-20
-/// @author P. Pillot
-/// @brief Class to group the fired pads into preclusters
+/// \file TimeClusterFinder.h
+/// \brief Class to group the fired pads according to their time stamp
+///
+/// \author Andrea Ferrero, CEA
 
 #ifndef ALICEO2_MCH_TIMECLUSTERFINDER_H_
 #define ALICEO2_MCH_TIMECLUSTERFINDER_H_
