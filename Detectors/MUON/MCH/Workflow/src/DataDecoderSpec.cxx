@@ -163,6 +163,9 @@ class DataDecoderTask
 
       // add orbit to vector if not present yet
       if (std::find(mOrbits.begin(), mOrbits.end(), orbitInfo) == mOrbits.end()) {
+        if (mPrint) {
+          printf("Orbit info: %lX (%u %d %d)\n", orbitInfo, orbit, linkId, feeId);
+        }
         mOrbits.push_back(orbitInfo);
       }
     };
@@ -308,6 +311,8 @@ class DataDecoderTask
         std::cout << " DE# " << d.getDetID() << " PadId " << d.getPadID() << " ADC " << d.getADC() << " time " << d.getTime().sampaTime << std::endl;
       }
     }
+
+    if(digits.empty()) digits.push_back(o2::mch::Digit());
 
     const size_t OUT_SIZE = sizeof(o2::mch::Digit) * digits.size();
 
