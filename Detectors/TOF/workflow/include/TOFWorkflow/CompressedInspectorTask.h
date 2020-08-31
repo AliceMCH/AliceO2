@@ -35,8 +35,8 @@ namespace tof
 
 using namespace compressed;
 
-template <typename RAWDataHeader>
-class CompressedInspectorTask : public DecoderBaseT<RAWDataHeader>, public Task
+template <typename RDH>
+class CompressedInspectorTask : public DecoderBaseT<RDH>, public Task
 {
  public:
   CompressedInspectorTask() = default;
@@ -46,6 +46,8 @@ class CompressedInspectorTask : public DecoderBaseT<RAWDataHeader>, public Task
 
  private:
   /** decoding handlers **/
+  void rdhHandler(const RDH* rdh) override{};
+
   void headerHandler(const CrateHeader_t* crateHeader, const CrateOrbit_t* crateOrbit) override;
 
   void frameHandler(const CrateHeader_t* crateHeader, const CrateOrbit_t* crateOrbit,

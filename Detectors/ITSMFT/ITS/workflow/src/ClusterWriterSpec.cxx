@@ -15,7 +15,6 @@
 #include "ITSWorkflow/ClusterWriterSpec.h"
 #include "DPLUtils/MakeRootTreeWriterSpec.h"
 #include "DataFormatsITSMFT/CompCluster.h"
-#include "DataFormatsITSMFT/Cluster.h"
 #include "DataFormatsITSMFT/ROFRecord.h"
 #include "SimulationDataFormat/MCCompLabel.h"
 #include "SimulationDataFormat/MCTruthContainer.h"
@@ -31,7 +30,6 @@ template <typename T>
 using BranchDefinition = MakeRootTreeWriterSpec::BranchDefinition<T>;
 using CompClusType = std::vector<o2::itsmft::CompClusterExt>;
 using PatternsType = std::vector<unsigned char>;
-using ClustersType = std::vector<o2::itsmft::Cluster>;
 using ROFrameRType = std::vector<o2::itsmft::ROFRecord>;
 using LabelsType = o2::dataformats::MCTruthContainer<o2::MCCompLabel>;
 using ROFRecLblT = std::vector<o2::itsmft::MC2ROFRecord>;
@@ -56,18 +54,14 @@ DataProcessorSpec getClusterWriterSpec(bool useMC)
                                                                compClustersSizeGetter},
                                 BranchDefinition<PatternsType>{InputSpec{"patterns", "ITS", "PATTERNS", 0},
                                                                "ITSClusterPatt"},
-                                // this has been marked to be removed in the original implementation
-                                // RSTODO being eliminated
-                                BranchDefinition<ClustersType>{InputSpec{"clusters", "ITS", "CLUSTERS", 0},
-                                                               "ITSCluster"},
-                                BranchDefinition<ROFrameRType>{InputSpec{"ROframes", "ITS", "ClusterROF", 0},
+                                BranchDefinition<ROFrameRType>{InputSpec{"ROframes", "ITS", "CLUSTERSROF", 0},
                                                                "ITSClustersROF",
                                                                logger},
                                 BranchDefinition<LabelsType>{InputSpec{"labels", "ITS", "CLUSTERSMCTR", 0},
                                                              "ITSClusterMCTruth",
                                                              (useMC ? 1 : 0), // one branch if mc labels enabled
                                                              ""},
-                                BranchDefinition<ROFRecLblT>{InputSpec{"MC2ROframes", "ITS", "ClusterMC2ROF", 0},
+                                BranchDefinition<ROFRecLblT>{InputSpec{"MC2ROframes", "ITS", "CLUSTERSMC2ROF", 0},
                                                              "ITSClustersMC2ROF",
                                                              (useMC ? 1 : 0), // one branch if mc labels enabled
                                                              ""})();

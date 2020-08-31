@@ -31,8 +31,6 @@ void SimConfig::initOptions(boost::program_options::options_description& options
     "startEvent", bpo::value<unsigned int>()->default_value(0), "index of first event to be used (when applicable)")(
     "extKinFile", bpo::value<std::string>()->default_value("Kinematics.root"),
     "name of kinematics file for event generator from file (when applicable)")(
-    "HepMCFile", bpo::value<std::string>()->default_value("kinematics.hepmc"),
-    "name of HepMC file for event generator from file (when applicable)")(
     "extGenFile", bpo::value<std::string>()->default_value("extgen.C"),
     "name of .C file with definition of external event generator")(
     "extGenFunc", bpo::value<std::string>()->default_value(""),
@@ -43,8 +41,6 @@ void SimConfig::initOptions(boost::program_options::options_description& options
     "function call to load the definition of external event generator trigger")(
     "embedIntoFile", bpo::value<std::string>()->default_value(""),
     "filename containing the reference events to be used for the embedding")(
-    "decayConfig", bpo::value<std::string>()->default_value(""),
-    "filename containing the external decayer configuration")(
     "bMax,b", bpo::value<float>()->default_value(0.), "maximum value for impact parameter sampling (when applicable)")(
     "isMT", bpo::value<bool>()->default_value(false), "multi-threaded mode (Geant4 only")(
     "outPrefix,o", bpo::value<std::string>()->default_value("o2sim"), "prefix of output files")(
@@ -71,7 +67,13 @@ bool SimConfig::resetFromParsedMap(boost::program_options::variables_map const& 
   if (active.size() == 1 && active[0] == "all") {
     active.clear();
     for (int d = DetID::First; d <= DetID::Last; ++d) {
+#ifdef ENABLE_UPGRADES
+      if (d != DetID::IT3 && d != DetID::IT4) {
+        active.emplace_back(DetID::getName(d));
+      }
+#else
       active.emplace_back(DetID::getName(d));
+#endif
     }
     // add passive components manually (make a PassiveDetID for them!)
     active.emplace_back("HALL");
@@ -96,13 +98,11 @@ bool SimConfig::resetFromParsedMap(boost::program_options::variables_map const& 
   mConfigData.mTrigger = vm["trigger"].as<std::string>();
   mConfigData.mNEvents = vm["nEvents"].as<unsigned int>();
   mConfigData.mExtKinFileName = vm["extKinFile"].as<std::string>();
-  mConfigData.mHepMCFileName = vm["HepMCFile"].as<std::string>();
   mConfigData.mExtGenFileName = vm["extGenFile"].as<std::string>();
   mConfigData.mExtGenFuncName = vm["extGenFunc"].as<std::string>();
   mConfigData.mExtTrgFileName = vm["extTrgFile"].as<std::string>();
   mConfigData.mExtTrgFuncName = vm["extTrgFunc"].as<std::string>();
   mConfigData.mEmbedIntoFileName = vm["embedIntoFile"].as<std::string>();
-  mConfigData.mDecayConfig = vm["decayConfig"].as<std::string>();
   mConfigData.mStartEvent = vm["startEvent"].as<unsigned int>();
   mConfigData.mBMax = vm["bMax"].as<float>();
   mConfigData.mIsMT = vm["isMT"].as<bool>();

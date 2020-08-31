@@ -18,7 +18,7 @@
 
 // These are basic and non-comprex data types, which will also be visible on the GPU.
 // Please add complex data types required on the host but not GPU to GPUHostDataTypes.h and forward-declare!
-#ifndef __OPENCL__
+#ifndef GPUCA_GPUCODE_DEVICE
 #include <cstddef>
 #endif
 #ifdef GPUCA_NOCOMPAT_ALLOPENCL
@@ -36,6 +36,9 @@ namespace tpc
 struct ClusterNativeAccess;
 struct CompressedClustersFlat;
 class Digit;
+namespace constants
+{
+} // namespace constants
 } // namespace tpc
 } // namespace o2
 #endif
@@ -82,13 +85,14 @@ namespace gpu
 #define GPUCA_RECO_STEP GPUDataTypes
 #endif
 
-#ifdef __OPENCL__
+#if defined(__OPENCL__) && !defined(__OPENCLCPP__)
 MEM_CLASS_PRE() // Macro with some template magic for OpenCL 1.2
 #endif
 class GPUTPCTrack;
 class GPUTPCHitId;
 class GPUTPCGMMergedTrack;
 struct GPUTPCGMMergedTrackHit;
+struct GPUTPCGMMergedTrackHitXYZ;
 class GPUTRDTrackletWord;
 class GPUTPCMCInfo;
 struct GPUTPCClusterData;
@@ -132,6 +136,8 @@ class GPUDataTypes
   static constexpr const char* const GENERAL_STEP_NAMES[] = {"Prepare", "QA"};
   typedef bitfield<RecoStep, unsigned int> RecoStepField;
   typedef bitfield<InOutType, unsigned int> InOutTypeField;
+  constexpr static int N_RECO_STEPS = sizeof(GPUDataTypes::RECO_STEP_NAMES) / sizeof(GPUDataTypes::RECO_STEP_NAMES[0]);
+  constexpr static int N_GENERAL_STEPS = sizeof(GPUDataTypes::GENERAL_STEP_NAMES) / sizeof(GPUDataTypes::GENERAL_STEP_NAMES[0]);
 #endif
 #ifdef GPUCA_NOCOMPAT
   static constexpr unsigned int NSLICES = 36;
@@ -217,7 +223,9 @@ struct GPUTrackingInOutPointers {
   const GPUTPCGMMergedTrack* mergedTracks = nullptr;
   unsigned int nMergedTracks = 0;
   const GPUTPCGMMergedTrackHit* mergedTrackHits = nullptr;
+  const GPUTPCGMMergedTrackHitXYZ* mergedTrackHitsXYZ = nullptr;
   unsigned int nMergedTrackHits = 0;
+  unsigned int* mergedTrackHitAttachment = nullptr;
   const o2::tpc::CompressedClustersFlat* tpcCompressedClusters = nullptr;
   const GPUTRDTrackletWord* trdTracklets = nullptr;
   unsigned int nTRDTracklets = 0;

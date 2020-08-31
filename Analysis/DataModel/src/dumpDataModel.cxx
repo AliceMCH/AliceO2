@@ -9,6 +9,11 @@
 // or submit itself to any jurisdiction.
 #include "Framework/AnalysisDataModel.h"
 #include "Analysis/SecondaryVertex.h"
+#include "Analysis/SecondaryVertexHF.h"
+#include "PID/PIDResponse.h"
+#include "Analysis/Multiplicity.h"
+#include "Analysis/Centrality.h"
+#include "Analysis/TrackSelectionTables.h"
 #include "Analysis/Jet.h"
 #include <fmt/printf.h>
 #include <map>
@@ -146,22 +151,32 @@ size="5,5"
 node[shape=plain,style=filled,fillcolor=gray95]
 edge[dir=back, arrowtail=empty]
 )");
-  dumpCluster<Tracks, TracksCov, TracksExtra>();
+  dumpCluster<Tracks, TracksCov, TracksExtra, TracksExtended, TrackSelection>();
   dumpTable<Collisions>();
   dumpTable<Calos>();
   dumpTable<CaloTriggers>();
   dumpTable<Muons>();
+  dumpTable<StoredMuons>();
   dumpTable<MuonClusters>();
   dumpTable<Zdcs>();
   dumpTable<Run2V0s>();
-  dumpTable<V0s>();
-  dumpTable<Cascades>();
+  dumpTable<StoredV0s>();
+  dumpTable<StoredCascades>();
   dumpTable<BCs>();
   dumpTable<FT0s>();
   dumpTable<FV0s>();
   dumpTable<FDDs>();
+  dumpTable<Timestamps>();
   dumpTable<SecVtx2Prong>(true, StyleType::GREEN);
   dumpTable<Cand2Prong>(true, StyleType::GREEN);
+  dumpTable<HfTrackIndexProng2>(true, StyleType::GREEN);
+  dumpTable<HfTrackIndexProng3>(true, StyleType::GREEN);
+
+  dumpTable<pidRespTOF>(true, StyleType::GREEN);
+  dumpTable<pidRespTPC>(true, StyleType::GREEN);
+  dumpTable<Mults>(true, StyleType::GREEN);
+  dumpTable<Cents>(true, StyleType::GREEN);
+
   dumpTable<Jets>(true, StyleType::BLUE);
   dumpTable<JetConstituents>(true, StyleType::BLUE);
   dumpTable<UnassignedTracks>();

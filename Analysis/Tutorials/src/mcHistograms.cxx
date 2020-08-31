@@ -10,6 +10,7 @@
 #include "Framework/runDataProcessing.h"
 #include "Framework/AnalysisTask.h"
 #include "Framework/AnalysisDataModel.h"
+#include "Analysis/MC.h"
 
 #include <TH1F.h>
 #include <cmath>
@@ -23,8 +24,8 @@ struct ATask {
 
   void process(aod::McCollision const& mcCollision)
   {
-    LOGF(info, "MC. vtx-z = %f", mcCollision.z());
-    vertex->Fill(mcCollision.z());
+    LOGF(info, "MC. vtx-z = %f", mcCollision.posZ());
+    vertex->Fill(mcCollision.posZ());
   }
 };
 
@@ -33,12 +34,17 @@ struct BTask {
   OutputObj<TH1F> phiH{TH1F("phi", "phi", 100, 0., 2. * M_PI)};
   OutputObj<TH1F> etaH{TH1F("eta", "eta", 102, -2.01, 2.01)};
 
-  void process(aod::McCollision const& mcCollision, aod::McParticles const& mcParticles)
+  //  void process(aod::McCollision const& mcCollision, aod::McParticles& mcParticles)
+  void process(aod::McParticles& mcParticles)
   {
-    LOGF(info, "MC. vtx-z = %f", mcCollision.z());
+    //LOGF(info, "MC. vtx-z = %f", mcCollision.posZ());
+    LOGF(info, "First: %d | Length: %d", mcParticles.begin().index(), mcParticles.size());
+    LOGF(info, "Particles mother: %d", (mcParticles.begin() + 1000).mother0());
     for (auto& mcParticle : mcParticles) {
-      phiH->Fill(mcParticle.phi());
-      etaH->Fill(mcParticle.eta());
+      if (MC::isPhysicalPrimary(mcParticles, mcParticle)) {
+        phiH->Fill(mcParticle.phi());
+        etaH->Fill(mcParticle.eta());
+      }
     }
   }
 };
@@ -50,7 +56,7 @@ struct CTask {
 
   void process(soa::Join<aod::Collisions, aod::McCollisionLabels>::iterator const& collision, soa::Join<aod::Tracks, aod::McTrackLabels> const& tracks, aod::McParticles const& mcParticles, aod::McCollisions const& mcCollisions)
   {
-    LOGF(info, "vtx-z (data) = %f | vtx-z (MC) = %f", collision.posZ(), collision.label().z());
+    LOGF(info, "vtx-z (data) = %f | vtx-z (MC) = %f", collision.posZ(), collision.label().posZ());
     for (auto& track : tracks) {
       //if (track.trackType() != 0)
       //  continue;

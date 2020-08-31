@@ -12,6 +12,7 @@
 #include "Framework/AnalysisDataModel.h"
 #include "Framework/ASoAHelpers.h"
 #include "Analysis/SecondaryVertex.h"
+#include "Analysis/decayUtilities.h"
 #include "DetectorsVertexing/DCAFitterN.h"
 #include "ReconstructionDataFormats/Track.h"
 
@@ -242,8 +243,9 @@ struct CandidateBuildingDzero {
       trackdec0.getPxPyPzGlo(pvec0);
       trackdec1.getPxPyPzGlo(pvec1);
       LOGF(info, "Pt track 0 from table %f and from calc %f", secVtx2prong.px0(), pvec0[0]);
-      if (abs(secVtx2prong.px0() - pvec0[0]) > 0.000000001)
+      if (abs(secVtx2prong.px0() - pvec0[0]) > 0.000000001) {
         LOGF(info, "BIG ERRROR");
+      }
     }
   }
 };

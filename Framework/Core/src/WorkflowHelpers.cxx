@@ -163,6 +163,7 @@ void WorkflowHelpers::injectServiceDevices(WorkflowSpec& workflow, ConfigContext
     LOG(INFO) << "To be hidden / removed at some point.";
     // mark this dummy process as ready-to-quit
     ic.services().get<ControlService>().readyToQuit(QuitRequest::Me);
+  
     return [](ProcessingContext& pc) {
       // this callback is never called since there is no expiring input
       pc.services().get<RawDeviceService>().device()->WaitFor(std::chrono::seconds(2));
@@ -173,20 +174,19 @@ void WorkflowHelpers::injectServiceDevices(WorkflowSpec& workflow, ConfigContext
     "internal-dpl-ccdb-backend",
     {},
     {},
-    fakeCallback,
-  };
+    AlgorithmSpec::dummyAlgorithm()};
   DataProcessorSpec transientStore{"internal-dpl-transient-store",
                                    {},
                                    {},
-                                   fakeCallback};
+                                   AlgorithmSpec::dummyAlgorithm()};
   DataProcessorSpec qaStore{"internal-dpl-qa-store",
                             {},
                             {},
-                            fakeCallback};
+                            AlgorithmSpec::dummyAlgorithm()};
   DataProcessorSpec timer{"internal-dpl-clock",
                           {},
                           {},
-                          fakeCallback};
+                          AlgorithmSpec::dummyAlgorithm()};
 
   // In case InputSpec of origin AOD are
   // requested but not available as part of the workflow,
@@ -205,6 +205,7 @@ void WorkflowHelpers::injectServiceDevices(WorkflowSpec& workflow, ConfigContext
     readers::AODReaderHelpers::rootFileReaderCallback(),
     {ConfigParamSpec{"aod-file", VariantType::String, "aod.root", {"Input AOD file"}},
      ConfigParamSpec{"json-file", VariantType::String, {"json configuration file"}},
+     ConfigParamSpec{"time-limit", VariantType::Int64, 0ll, {"Maximum run time limit in seconds"}},
      ConfigParamSpec{"start-value-enumeration", VariantType::Int64, 0ll, {"initial value for the enumeration"}},
      ConfigParamSpec{"end-value-enumeration", VariantType::Int64, -1ll, {"final value for the enumeration"}},
      ConfigParamSpec{"step-value-enumeration", VariantType::Int64, 1ll, {"step between one value and the other"}}}};
@@ -266,7 +267,9 @@ void WorkflowHelpers::injectServiceDevices(WorkflowSpec& workflow, ConfigContext
         requestedAODs.emplace_back(input);
       }
       if (DataSpecUtils::partialMatch(input, header::DataOrigin{"DYN"})) {
-        requestedDYNs.emplace_back(input);
+        if (std::find_if(requestedDYNs.begin(), requestedDYNs.end(), [&](InputSpec const& spec) { return input.binding == spec.binding; }) == requestedDYNs.end()) {
+          requestedDYNs.emplace_back(input);
+        }
       }
     }
     std::stable_sort(timer.outputs.begin(), timer.outputs.end(), [](OutputSpec const& a, OutputSpec const& b) { return *DataSpecUtils::getOptionalSubSpec(a) < *DataSpecUtils::getOptionalSubSpec(b); });

@@ -35,6 +35,7 @@
 #include <unistd.h>
 #include "GPUParam.h"
 #include "GPUReconstructionConvert.h"
+#include "GPURawData.h"
 #include "DetectorsRaw/RawFileWriter.h"
 #include "DetectorsRaw/HBFUtils.h"
 #include "DetectorsRaw/RDHUtils.h"
@@ -96,8 +97,10 @@ DataProcessorSpec getZSEncoderSpec(std::vector<int> const& inputIds, bool zs10bi
       GPUTrackingInOutDigits inDigitsGPU;
 
       GPUParam _GPUParam;
-      _GPUParam.SetDefaults(5.00668);
-      const GPUParam mGPUParam = _GPUParam;
+      GPUO2InterfaceConfiguration config;
+      config.configEvent.solenoidBz = 5.00668;
+      config.ReadConfigurableParam();
+      _GPUParam.SetDefaults(&config.configEvent, &config.configReconstruction, &config.configProcessing, nullptr);
 
       int operation = 0;
       std::vector<InputSpec> filter = {{"check", ConcreteDataTypeMatcher{gDataOriginTPC, "DIGITS"}, Lifetime::Timeframe}};
@@ -127,7 +130,7 @@ DataProcessorSpec getZSEncoderSpec(std::vector<int> const& inputIds, bool zs10bi
       sizes.resize(NSectors * NEndpoints);
       bool zs12bit = !zs10bit;
       o2::InteractionRecord ir = o2::raw::HBFUtils::Instance().getFirstIR();
-      zsEncoder->RunZSEncoder<o2::tpc::Digit, DigitArray>(inputDigits, &zsoutput, sizes.data(), nullptr, &ir, mGPUParam, zs12bit, verify, threshold);
+      zsEncoder->RunZSEncoder<o2::tpc::Digit, DigitArray>(inputDigits, &zsoutput, sizes.data(), nullptr, &ir, _GPUParam, zs12bit, verify, threshold);
       ZeroSuppressedContainer8kb* page = reinterpret_cast<ZeroSuppressedContainer8kb*>(zsoutput.get());
       unsigned int offset = 0;
       for (unsigned int i = 0; i < NSectors; i++) {
@@ -150,7 +153,7 @@ DataProcessorSpec getZSEncoderSpec(std::vector<int> const& inputIds, bool zs10bi
         const auto grp = o2::parameters::GRPObject::loadFrom(inputGRP);
         o2::raw::RawFileWriter writer{"TPC"}; // to set the RDHv6.sourceID if V6 is used
         writer.setContinuousReadout(grp->isDetContinuousReadOut(o2::detectors::DetID::TPC)); // must be set explicitly
-        uint32_t rdhV = 4;
+        uint32_t rdhV = o2::raw::RDHUtils::getVersion<o2::gpu::RAWDataHeaderGPU>();
         writer.useRDHVersion(rdhV);
         std::string outDir = "./";
         const unsigned int defaultLink = rdh_utils::UserLogicLinkID;
@@ -178,7 +181,7 @@ DataProcessorSpec getZSEncoderSpec(std::vector<int> const& inputIds, bool zs10bi
         if (useGrouping != LinksGrouping::Link) {
           writer.useCaching();
         }
-        zsEncoder->RunZSEncoder<o2::tpc::Digit>(inputDigits, nullptr, nullptr, &writer, &ir, mGPUParam, zs12bit, false, threshold);
+        zsEncoder->RunZSEncoder<o2::tpc::Digit>(inputDigits, nullptr, nullptr, &writer, &ir, _GPUParam, zs12bit, false, threshold);
         writer.writeConfFile("TPC", "RAWDATA", fmt::format("{}tpcraw.cfg", outDir));
       }
       zsoutput.reset(nullptr);
@@ -299,7 +302,7 @@ DataProcessorSpec getZStoDigitsSpec(std::vector<int> const& inputIds)
             }
             count = 0;
             lastFEE = o2::raw::RDHUtils::getFEEID(*rdh);
-            cruID = int(rdh->cruID);
+            cruID = int(o2::raw::RDHUtils::getCRUID(*rdh));
             if (it.size() == 0) {
               ptr = nullptr;
               continue;

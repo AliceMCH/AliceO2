@@ -62,6 +62,11 @@
 #include <vector>
 #include <csignal>
 
+#ifdef ENABLE_UPGRADES
+#include <ITS3Simulation/Detector.h>
+#include <ITS4Simulation/Detector.h>
+#endif
+
 namespace o2
 {
 namespace devices
@@ -664,7 +669,7 @@ void O2HitMerger::initDetInstances()
     auto active = std::find(modulelist.begin(), modulelist.end(), s) != modulelist.end();
     return active; };
 
-  mDetectorInstances.resize(DetID::Last);
+  mDetectorInstances.resize(DetID::nDetectors);
   // like a factory of detector objects
 
   int counter = 0;
@@ -733,11 +738,20 @@ void O2HitMerger::initDetInstances()
       mDetectorInstances[i] = std::move(std::make_unique<o2::zdc::Detector>(true));
       counter++;
     }
-
+#ifdef ENABLE_UPGRADES
+    if (i == DetID::IT3) {
+      mDetectorInstances[i] = std::move(std::make_unique<o2::its3::Detector>(true));
+      counter++;
+    }
+    if (i == DetID::IT4) {
+      mDetectorInstances[i] = std::move(std::make_unique<o2::its4::Detector>(true));
+      counter++;
+    }
+#endif
     // init the detector specific output files
     initHitTreeAndOutFile(i);
   }
-  if (counter != DetID::Last) {
+  if (counter != DetID::nDetectors) {
     LOG(WARNING) << " O2HitMerger: Some Detectors are potentially missing in this initialization ";
   }
 }

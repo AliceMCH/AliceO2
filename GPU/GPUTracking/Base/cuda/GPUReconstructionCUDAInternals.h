@@ -24,6 +24,7 @@ namespace gpu
 {
 struct GPUReconstructionCUDAInternals {
   CUcontext CudaContext;                       // Pointer to CUDA context
+  unsigned int cudaContextObtained = 0;        // If multiple instances of GPUThreadContextCUDA are obtained, we count them and return the context only after all are destroyed
   cudaStream_t Streams[GPUCA_MAX_STREAMS];     // Pointer to array of CUDA Streams
 };
 
@@ -67,7 +68,8 @@ class ThrustVolatileAsyncAllocator
 } // namespace GPUCA_NAMESPACE
 
 // Override synchronize call at end of thrust algorithm running on stream, just don't run cudaStreamSynchronize
-THRUST_BEGIN_NS
+namespace thrust
+{
 namespace cuda_cub
 {
 
@@ -84,6 +86,6 @@ __host__ __device__ inline cudaError_t synchronize<thrustStreamPolicy>(thrustStr
 }
 
 } // namespace cuda_cub
-THRUST_END_NS
+} // namespace thrust
 
 #endif

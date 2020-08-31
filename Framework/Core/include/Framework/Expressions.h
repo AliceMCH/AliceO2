@@ -51,7 +51,7 @@ struct LiteralStorage {
   using stored_pack = framework::pack<T...>;
 };
 
-using LiteralValue = LiteralStorage<int, bool, float, double>;
+using LiteralValue = LiteralStorage<int, bool, float, double, uint8_t>;
 
 template <typename T>
 constexpr auto selectArrowType()
@@ -64,10 +64,12 @@ constexpr auto selectArrowType()
     return atype::FLOAT;
   } else if constexpr (std::is_same_v<T, double>) {
     return atype::DOUBLE;
-  } else if constexpr (std::is_same_v<T, uint8_t>) {
+  } else if constexpr (std::is_same_v<T, int8_t>) {
     return atype::INT8;
   } else if constexpr (std::is_same_v<T, uint16_t>) {
     return atype::INT16;
+  } else if constexpr (std::is_same_v<T, uint8_t>) {
+    return atype::UINT8;
   } else {
     return atype::NA;
   }
@@ -75,6 +77,7 @@ constexpr auto selectArrowType()
 }
 
 std::shared_ptr<arrow::DataType> concreteArrowType(atype::type type);
+std::string upcastTo(atype::type f);
 
 /// An expression tree node corresponding to a literal value
 struct LiteralNode {
@@ -236,6 +239,21 @@ inline Node operator/(Node left, Node right)
   return Node{OpNode{BasicOp::Division}, std::move(left), std::move(right)};
 }
 
+inline Node operator/(BindingNode left, Node right)
+{
+  return Node{OpNode{BasicOp::Division}, left, std::move(right)};
+}
+
+inline Node operator/(Node left, BindingNode right)
+{
+  return Node{OpNode{BasicOp::Division}, std::move(left), right};
+}
+
+inline Node operator/(BindingNode left, BindingNode right)
+{
+  return Node{OpNode{BasicOp::Division}, left, right};
+}
+
 inline Node operator+(Node left, Node right)
 {
   return Node{OpNode{BasicOp::Addition}, std::move(left), std::move(right)};
@@ -244,6 +262,11 @@ inline Node operator+(Node left, Node right)
 inline Node operator-(Node left, Node right)
 {
   return Node{OpNode{BasicOp::Subtraction}, std::move(left), std::move(right)};
+}
+
+inline Node operator-(BindingNode left, BindingNode right)
+{
+  return Node{OpNode{BasicOp::Subtraction}, left, right};
 }
 
 /// arithmetical operations between node and literal
@@ -278,9 +301,33 @@ inline Node operator+(Node left, T right)
 }
 
 template <typename T>
+inline Node operator+(T left, Node right)
+{
+  return Node{OpNode{BasicOp::Addition}, LiteralNode{left}, std::move(right)};
+}
+
+template <>
+inline Node operator+(Node left, BindingNode right)
+{
+  return Node{OpNode{BasicOp::Addition}, std::move(left), right};
+}
+
+template <>
+inline Node operator+(BindingNode left, Node right)
+{
+  return Node{OpNode{BasicOp::Addition}, left, std::move(right)};
+}
+
+template <typename T>
 inline Node operator-(Node left, T right)
 {
   return Node{OpNode{BasicOp::Subtraction}, std::move(left), LiteralNode{right}};
+}
+
+template <typename T>
+inline Node operator-(T left, Node right)
+{
+  return Node{OpNode{BasicOp::Subtraction}, LiteralNode{left}, std::move(right)};
 }
 /// semi-binary
 template <typename T>
@@ -290,6 +337,11 @@ inline Node npow(Node left, T right)
 }
 
 /// unary operations on nodes
+inline Node nsqrt(Node left)
+{
+  return Node{OpNode{BasicOp::Sqrt}, std::move(left)};
+}
+
 inline Node nexp(Node left)
 {
   return Node{OpNode{BasicOp::Exp}, std::move(left)};
@@ -308,6 +360,36 @@ inline Node nlog10(Node left)
 inline Node nabs(Node left)
 {
   return Node{OpNode{BasicOp::Abs}, std::move(left)};
+}
+
+inline Node nsin(Node left)
+{
+  return Node{OpNode{BasicOp::Sin}, std::move(left)};
+}
+
+inline Node ncos(Node left)
+{
+  return Node{OpNode{BasicOp::Cos}, std::move(left)};
+}
+
+inline Node ntan(Node left)
+{
+  return Node{OpNode{BasicOp::Tan}, std::move(left)};
+}
+
+inline Node nasin(Node left)
+{
+  return Node{OpNode{BasicOp::Asin}, std::move(left)};
+}
+
+inline Node nacos(Node left)
+{
+  return Node{OpNode{BasicOp::Acos}, std::move(left)};
+}
+
+inline Node natan(Node left)
+{
+  return Node{OpNode{BasicOp::Atan}, std::move(left)};
 }
 
 /// A struct, containing the root of the expression tree
@@ -356,6 +438,25 @@ void updateExpressionInfos(expressions::Filter const& filter, std::vector<Expres
 gandiva::ConditionPtr makeCondition(gandiva::NodePtr node);
 /// Function to create gandiva projecting expression from generic gandiva expression tree
 gandiva::ExpressionPtr makeExpression(gandiva::NodePtr node, gandiva::FieldPtr result);
+
+template <typename... C>
+std::shared_ptr<gandiva::Projector> createProjectors(framework::pack<C...>, gandiva::SchemaPtr schema)
+{
+  std::shared_ptr<gandiva::Projector> projector;
+  auto s = gandiva::Projector::Make(
+    schema,
+    {makeExpression(
+      framework::expressions::createExpressionTree(
+        framework::expressions::createOperations(C::Projector()),
+        schema),
+      C::asArrowField())...},
+    &projector);
+  if (s.ok()) {
+    return projector;
+  } else {
+    throw std::runtime_error(fmt::format("Failed to create projector: {}", s.ToString()));
+  }
+}
 } // namespace o2::framework::expressions
 
 #endif // O2_FRAMEWORK_EXPRESSIONS_H_

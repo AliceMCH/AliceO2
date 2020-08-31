@@ -70,12 +70,7 @@ int RawPixelDecoder<Mapping>::decodeNextTrigger()
   mInteractionRecord.clear();
   int nLinksWithData = 0, nru = mRUDecodeVec.size();
 #ifdef WITH_OPENMP
-  if (mNThreads > 0) { // otherwhise, rely on default
-    omp_set_num_threads(mNThreads);
-  } else {
-    mNThreads = omp_get_num_threads();
-    LOG(INFO) << mSelfName << " will use " << mNThreads << " threads";
-  }
+  omp_set_num_threads(mNThreads);
 #pragma omp parallel for schedule(dynamic) reduction(+ \
                                                      : nLinksWithData, mNChipsFiredROF, mNPixelsFiredROF)
 #endif
@@ -157,7 +152,8 @@ void RawPixelDecoder<Mapping>::setupLinks(InputRecord& inputs)
 {
   mCurRUDecodeID = NORUDECODED;
   auto nLinks = mGBTLinks.size();
-  std::vector<InputSpec> filter{InputSpec{"filter", ConcreteDataTypeMatcher{mMAP.getOrigin(), "RAWDATA"}, Lifetime::Timeframe}};
+  auto origin = (mUserDataOrigin == o2::header::gDataOriginInvalid) ? mMAP.getOrigin() : mUserDataOrigin;
+  std::vector<InputSpec> filter{InputSpec{"filter", ConcreteDataTypeMatcher{origin, "RAWDATA"}, Lifetime::Timeframe}};
   DPLRawParser parser(inputs, filter);
   uint32_t currSSpec = 0xffffffff; // dummy starting subspec
   int linksAdded = 0;
@@ -289,7 +285,7 @@ template <class Mapping>
 void RawPixelDecoder<Mapping>::setNThreads(int n)
 {
 #ifdef WITH_OPENMP
-  mNThreads = n;
+  mNThreads = n > 0 ? n : 1;
 #else
   LOG(WARNING) << mSelfName << " Multithreading is not supported, imposing single thread";
   mNThreads = 1;

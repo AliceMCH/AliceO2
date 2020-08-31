@@ -29,6 +29,7 @@
 
 #include <FairMQDevice.h>
 #include <ROOT/RDataFrame.hxx>
+#include <TGrid.h>
 #include <TFile.h>
 
 #include <arrow/ipc/reader.h>
@@ -41,25 +42,6 @@
 
 namespace o2::framework::readers
 {
-
-namespace
-{
-auto tableTypeFromInput(InputSpec const& spec)
-{
-  auto description = std::visit(
-    overloaded{
-      [](ConcreteDataMatcher const& matcher) { return matcher.description; },
-      [](auto&&) { return header::DataDescription{""}; }},
-    spec.matcher);
-
-  if (description == header::DataDescription{"TRACKPAR"}) {
-    return o2::aod::TracksMetadata{};
-  } else {
-    throw std::runtime_error("Not an extended table");
-  }
-}
-} // namespace
-
 enum AODTypeMask : uint64_t {
   None = 0,
   Track = 1 << 0,
@@ -159,45 +141,6 @@ std::vector<OutputRoute> getListOfUnknown(std::vector<OutputRoute> const& routes
   return unknows;
 }
 
-/// Expression-based column generator to materialize columns
-template <typename... C>
-auto spawner(framework::pack<C...> columns, arrow::Table* atable)
-{
-  arrow::TableBatchReader reader(*atable);
-  std::shared_ptr<arrow::RecordBatch> batch;
-  arrow::ArrayVector v;
-  std::vector<arrow::ArrayVector> chunks(sizeof...(C));
-
-  auto projectors = framework::expressions::createProjectors(columns, atable->schema());
-  while (true) {
-    auto s = reader.ReadNext(&batch);
-    if (!s.ok()) {
-      throw std::runtime_error(fmt::format("Cannot read batches from table {}", s.ToString()));
-    }
-    if (batch == nullptr) {
-      break;
-    }
-    s = projectors->Evaluate(*batch, arrow::default_memory_pool(), &v);
-    if (!s.ok()) {
-      throw std::runtime_error(fmt::format("Cannot apply projector {}", s.ToString()));
-    }
-    for (auto i = 0u; i < sizeof...(C); ++i) {
-      chunks[i].emplace_back(v.at(i));
-    }
-  }
-  std::vector<std::shared_ptr<arrow::ChunkedArray>> results(sizeof...(C));
-  for (auto i = 0u; i < sizeof...(C); ++i) {
-    results[i] = std::make_shared<arrow::ChunkedArray>(chunks[i]);
-  }
-  return results;
-}
-
-template <typename T>
-auto extractTable(ProcessingContext& pc)
-{
-  return pc.inputs().get<TableConsumer>(aod::MetadataTrait<T>::metadata::tableLabel())->asArrowTable();
-}
-
 AlgorithmSpec AODReaderHelpers::aodSpawnerCallback(std::vector<InputSpec> requested)
 {
   return AlgorithmSpec::InitCallback{[requested](InitContext& ic) {
@@ -213,19 +156,34 @@ AlgorithmSpec AODReaderHelpers::aodSpawnerCallback(std::vector<InputSpec> reques
       auto outputs = pc.outputs();
       // spawn tables
       for (auto& input : requested) {
-        using metadata = decltype(tableTypeFromInput(input));
-        using table_t = metadata::table_t;
-        using base_t = metadata::base_table_t;
-        using expressions = metadata::expression_pack_t;
-        auto schema = o2::soa::createSchemaFromColumns(table_t::persistent_columns_t{});
-        auto original_table = extractTable<base_t>(pc);
-        auto arrays = spawner(expressions{}, original_table.get());
-        std::vector<std::shared_ptr<arrow::ChunkedArray>> columns = original_table->columns();
-        for (auto i = 0u; i < framework::pack_size(expressions{}); ++i) {
-          columns.push_back(arrays[i]);
+        auto description = std::visit(
+          overloaded{
+            [](ConcreteDataMatcher const& matcher) { return matcher.description; },
+            [](auto&&) { return header::DataDescription{""}; }},
+          input.matcher);
+
+        auto origin = std::visit(
+          overloaded{
+            [](ConcreteDataMatcher const& matcher) { return matcher.origin; },
+            [](auto&&) { return header::DataOrigin{""}; }},
+          input.matcher);
+
+        auto maker = [&](auto metadata) {
+          using metadata_t = decltype(metadata);
+          using expressions = typename metadata_t::expression_pack_t;
+          auto original_table = pc.inputs().get<TableConsumer>(input.binding)->asArrowTable();
+          return o2::soa::spawner(expressions{}, original_table.get());
+        };
+
+        if (description == header::DataDescription{"TRACKPAR"}) {
+          outputs.adopt(Output{origin, description}, maker(o2::aod::TracksMetadata{}));
+        } else if (description == header::DataDescription{"TRACKPARCOV"}) {
+          outputs.adopt(Output{origin, description}, maker(o2::aod::TracksCovMetadata{}));
+        } else if (description == header::DataDescription{"MUON"}) {
+          outputs.adopt(Output{origin, description}, maker(o2::aod::MuonsMetadata{}));
+        } else {
+          throw std::runtime_error("Not an extended table");
         }
-        auto new_table = arrow::Table::Make(schema, columns);
-        outputs.adopt(Output{metadata::origin(), metadata::description()}, new_table);
       }
     };
   }};
@@ -246,6 +204,9 @@ AlgorithmSpec AODReaderHelpers::rootFileReaderCallback()
       }
     }
 
+    // get the run time watchdog
+    auto* watchdog = new RuntimeWatchdog(options.get<int64_t>("time-limit"));
+
     // analyze type of requested tables
     uint64_t readMask = calculateReadMask(spec.outputs, header::DataOrigin{"AOD"});
     std::vector<OutputRoute> unknowns;
@@ -256,14 +217,24 @@ AlgorithmSpec AODReaderHelpers::rootFileReaderCallback()
     auto counter = std::make_shared<int>(0);
     return adaptStateless([readMask,
                            unknowns,
-                           counter,
+                           watchdog,
                            didir](DataAllocator& outputs, ControlService& control, DeviceSpec const& device) {
+      // check if RuntimeLimit is reached
+      if (!watchdog->update()) {
+        LOGP(INFO, "Run time exceeds run time limit of {} seconds!", watchdog->runTimeLimit);
+        LOGP(INFO, "Stopping after time frame {}.", watchdog->numberTimeFrames - 1);
+        didir->closeInputFiles();
+        control.endOfStream();
+        control.readyToQuit(QuitRequest::All);
+        return;
+      }
+
       // Each parallel reader reads the files whose index is associated to
       // their inputTimesliceId
       assert(device.inputTimesliceId < device.maxInputTimeslices);
-      size_t fi = (*counter * device.maxInputTimeslices) + device.inputTimesliceId;
-      *counter += 1;
+      size_t fi = (watchdog->numberTimeFrames * device.maxInputTimeslices) + device.inputTimesliceId;
 
+      // check if EoF is reached
       if (didir->atEnd(fi)) {
         LOGP(INFO, "All input files processed");
         didir->closeInputFiles();
@@ -289,11 +260,11 @@ AlgorithmSpec AODReaderHelpers::rootFileReaderCallback()
       };
       tableMaker(o2::aod::CollisionsMetadata{}, AODTypeMask::Collision, "O2collision");
       tableMaker(o2::aod::StoredTracksMetadata{}, AODTypeMask::Track, "O2track");
-      tableMaker(o2::aod::TracksCovMetadata{}, AODTypeMask::TrackCov, "O2track");
+      tableMaker(o2::aod::StoredTracksCovMetadata{}, AODTypeMask::TrackCov, "O2track");
       tableMaker(o2::aod::TracksExtraMetadata{}, AODTypeMask::TrackExtra, "O2track");
       tableMaker(o2::aod::CalosMetadata{}, AODTypeMask::Calo, "O2calo");
       tableMaker(o2::aod::CaloTriggersMetadata{}, AODTypeMask::Calo, "O2calotrigger");
-      tableMaker(o2::aod::MuonsMetadata{}, AODTypeMask::Muon, "O2muon");
+      tableMaker(o2::aod::StoredMuonsMetadata{}, AODTypeMask::Muon, "O2muon");
       tableMaker(o2::aod::MuonClustersMetadata{}, AODTypeMask::Muon, "O2muoncluster");
       tableMaker(o2::aod::ZdcsMetadata{}, AODTypeMask::Zdc, "O2zdc");
       tableMaker(o2::aod::BCsMetadata{}, AODTypeMask::BC, "O2bc");

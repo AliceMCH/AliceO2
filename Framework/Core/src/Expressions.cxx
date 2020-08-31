@@ -51,6 +51,8 @@ struct OpNodeHelper {
 std::shared_ptr<arrow::DataType> concreteArrowType(atype::type type)
 {
   switch (type) {
+    case atype::UINT8:
+      return arrow::uint8();
     case atype::INT8:
       return arrow::int8();
     case atype::INT16:
@@ -65,6 +67,22 @@ std::shared_ptr<arrow::DataType> concreteArrowType(atype::type type)
       return arrow::boolean();
     default:
       return nullptr;
+  }
+}
+
+std::string upcastTo(atype::type f)
+{
+  switch (f) {
+    case atype::INT32:
+      return "castINT";
+    case atype::INT64:
+      return "castBIGINT";
+    case atype::FLOAT:
+      return "castFLOAT4";
+    case atype::DOUBLE:
+      return "castFLOAT8";
+    default:
+      throw std::runtime_error(fmt::format("Do not know how to cast to {}", f));
   }
 }
 
@@ -199,17 +217,20 @@ Operations createOperations(Filter const& expression)
       return atype::FLOAT;
     }
 
-    if (t1 == t2)
+    if (t1 == t2) {
       return t1;
+    }
 
-    if (t1 == atype::INT32) {
+    if (t1 == atype::INT32 || t1 == atype::INT8 || t1 == atype::INT16 || t1 == atype::UINT8) {
+      if (t2 == atype::INT32 || t2 == atype::INT8 || t2 == atype::INT16 || t2 == atype::UINT8)
+        return atype::FLOAT;
       if (t2 == atype::FLOAT)
         return atype::FLOAT;
       if (t2 == atype::DOUBLE)
         return atype::DOUBLE;
     }
     if (t1 == atype::FLOAT) {
-      if (t2 == atype::INT32)
+      if (t2 == atype::INT32 || t2 == atype::INT8 || t2 == atype::INT16 || t2 == atype::UINT8)
         return atype::FLOAT;
       if (t2 == atype::DOUBLE)
         return atype::DOUBLE;
@@ -371,6 +392,8 @@ gandiva::NodePtr createExpressionTree(Operations const& opSpecs,
         return gandiva::TreeExprBuilder::MakeLiteral(std::get<float>(content));
       if (content.index() == 3)
         return gandiva::TreeExprBuilder::MakeLiteral(std::get<double>(content));
+      if (content.index() == 4)
+        return gandiva::TreeExprBuilder::MakeLiteral(std::get<uint8_t>(content));
       throw std::runtime_error("Malformed LiteralNode");
     }
 
@@ -380,7 +403,11 @@ gandiva::NodePtr createExpressionTree(Operations const& opSpecs,
       if (lookup != fieldNodes.end()) {
         return lookup->second;
       }
-      auto node = gandiva::TreeExprBuilder::MakeField(Schema->GetFieldByName(name));
+      auto field = Schema->GetFieldByName(name);
+      if (field == nullptr) {
+        throw std::runtime_error(fmt::format("Cannot find field \"{}\"", name));
+      }
+      auto node = gandiva::TreeExprBuilder::MakeField(field);
       fieldNodes.insert({name, node});
       return node;
     }
@@ -391,6 +418,25 @@ gandiva::NodePtr createExpressionTree(Operations const& opSpecs,
   for (auto it = opSpecs.rbegin(); it != opSpecs.rend(); ++it) {
     auto leftNode = datumNode(it->left);
     auto rightNode = datumNode(it->right);
+
+    auto insertUpcastNode = [&](gandiva::NodePtr node, atype::type t) {
+      if (t != it->type) {
+        auto upcast = gandiva::TreeExprBuilder::MakeFunction(upcastTo(it->type), {node}, concreteArrowType(it->type));
+        node = upcast;
+      }
+      return node;
+    };
+
+    auto insertEqualizeUpcastNode = [&](gandiva::NodePtr& node1, gandiva::NodePtr& node2, atype::type t1, atype::type t2) {
+      if (t2 > t1) {
+        auto upcast = gandiva::TreeExprBuilder::MakeFunction(upcastTo(t2), {node1}, concreteArrowType(t2));
+        node1 = upcast;
+      } else if (t1 > t2) {
+        auto upcast = gandiva::TreeExprBuilder::MakeFunction(upcastTo(t1), {node2}, concreteArrowType(t1));
+        node2 = upcast;
+      }
+    };
+
     switch (it->op) {
       case BasicOp::LogicalOr:
         tree = gandiva::TreeExprBuilder::MakeOr({leftNode, rightNode});
@@ -399,9 +445,16 @@ gandiva::NodePtr createExpressionTree(Operations const& opSpecs,
         tree = gandiva::TreeExprBuilder::MakeAnd({leftNode, rightNode});
         break;
       default:
-        if (it->op < BasicOp::Exp) {
+        if (it->op < BasicOp::Sqrt) {
+          if (it->type != atype::BOOL) {
+            leftNode = insertUpcastNode(leftNode, it->left.type);
+            rightNode = insertUpcastNode(rightNode, it->right.type);
+          } else if (it->op == BasicOp::Equal || it->op == BasicOp::NotEqual) {
+            insertEqualizeUpcastNode(leftNode, rightNode, it->left.type, it->right.type);
+          }
           tree = gandiva::TreeExprBuilder::MakeFunction(binaryOperationsMap[it->op], {leftNode, rightNode}, concreteArrowType(it->type));
         } else {
+          leftNode = insertUpcastNode(leftNode, it->left.type);
           tree = gandiva::TreeExprBuilder::MakeFunction(binaryOperationsMap[it->op], {leftNode}, concreteArrowType(it->type));
         }
         break;
