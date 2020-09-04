@@ -312,24 +312,25 @@ class DataDecoderTask
       }
     }
 
-    if(digits.empty()) digits.push_back(o2::mch::Digit());
-
-    const size_t OUT_SIZE = sizeof(o2::mch::Digit) * digits.size();
-
     // send the output buffer via DPL
-    char* outbuffer = nullptr;
-    outbuffer = (char*)realloc(outbuffer, OUT_SIZE);
-    memcpy(outbuffer, digits.data(), OUT_SIZE);
+    const size_t digitsSize = sizeof(o2::mch::Digit) * digits.size();
+    char* digitsBuffer = nullptr;
+    if (digitsSize > 0) {
+      digitsBuffer = (char*)malloc(digitsSize);
+      memcpy(digitsBuffer, digits.data(), digitsSize);
+    }
 
-    char* outbuffer2 = nullptr;
     size_t orbitsSize = mOrbits.size() * sizeof(decltype(mOrbits)::value_type);
-    outbuffer2 = (char*)realloc(outbuffer2, orbitsSize);
-    memcpy(outbuffer2, mOrbits.data(), orbitsSize);
+    char* orbitsBuffer = nullptr;
+    if (orbitsSize > 0) {
+      orbitsBuffer = (char*)malloc(orbitsSize);
+      memcpy(orbitsBuffer, mOrbits.data(), orbitsSize);
+    }
 
     // create the output message
     auto freefct = [](void* data, void*) { free(data); };
-    pc.outputs().adoptChunk(Output{"MCH", "DIGITS", 0}, outbuffer, OUT_SIZE, freefct, nullptr);
-    pc.outputs().adoptChunk(Output{"MCH", "ORBITS", 0}, outbuffer2, orbitsSize, freefct, nullptr);
+    pc.outputs().adoptChunk(Output{"MCH", "DIGITS", 0}, digitsBuffer, digitsSize, freefct, nullptr);
+    pc.outputs().adoptChunk(Output{"MCH", "ORBITS", 0}, orbitsBuffer, orbitsSize, freefct, nullptr);
   }
 
  private:
