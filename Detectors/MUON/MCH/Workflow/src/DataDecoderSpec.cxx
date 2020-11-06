@@ -93,7 +93,7 @@ class DataDecoderTask
       gsl::span<const std::byte> buffer(reinterpret_cast<const std::byte*>(raw), sizeof(RDH) + payloadSize);
       mDecoder->decodeBuffer(buffer);
 
-    .}
+    }
   }
 
   //_________________________________________________________________________________________________
@@ -130,19 +130,6 @@ class DataDecoderTask
   //_________________________________________________________________________________________________
   void run(framework::ProcessingContext& pc)
   {
-    mDecoder->reset();
-    decodeTF(pc);
-    for (auto&& input : pc.inputs()) {
-      if (input.spec->binding == "readout")
-        decodeReadout(input);
-    }
-
-    if (mPrint) {
-      for (auto d : digits) {
-        std::cout << " DE# " << d.getDetID() << " PadId " << d.getPadID() << " ADC " << d.getADC() << " time " << d.getTime().sampaTime << std::endl;
-      }
-    }
-
     auto createBuffer = [&](auto& vec, size_t& size) {
       size = vec.empty() ? 0 : sizeof(*(vec.begin())) * vec.size();
       char* buf = nullptr;
@@ -160,8 +147,21 @@ class DataDecoderTask
       return buf;
     };
 
+    mDecoder->reset();
+    decodeTF(pc);
+    for (auto&& input : pc.inputs()) {
+      if (input.spec->binding == "readout")
+        decodeReadout(input);
+    }
+
     auto& digits = mDecoder->getOutputDigits();
     auto& orbits = mDecoder->getOrbits();
+
+    if (mPrint) {
+      for (auto d : digits) {
+        std::cout << " DE# " << d.getDetID() << " PadId " << d.getPadID() << " ADC " << d.getADC() << " time " << d.getTime().sampaTime << std::endl;
+      }
+    }
     // send the output buffer via DPL
     size_t digitsSize, orbitsSize;
     char* digitsBuffer = createBuffer(digits, digitsSize);
