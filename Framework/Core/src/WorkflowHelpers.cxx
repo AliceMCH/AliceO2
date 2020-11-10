@@ -15,6 +15,7 @@
 #include "Framework/ConfigContext.h"
 #include "Framework/DeviceSpec.h"
 #include "Framework/DataSpecUtils.h"
+#include "Framework/DataAllocator.h"
 #include "Framework/ControlService.h"
 #include "Framework/RawDeviceService.h"
 #include "Framework/StringHelpers.h"
@@ -39,6 +40,12 @@ std::ostream& operator<<(std::ostream& out, TopoIndexInfo const& info)
   out << "(" << info.index << ", " << info.layer << ")";
   return out;
 }
+
+enum OutputType : char {
+  UNKNOWN = 0,
+  DANGLING = 1,
+  ANALYSIS = 2,
+};
 
 std::vector<TopoIndexInfo>
   WorkflowHelpers::topologicalSort(size_t nodeCount,
@@ -442,9 +449,9 @@ void WorkflowHelpers::injectServiceDevices(WorkflowSpec& workflow, ConfigContext
   // has to be created in any case!
   std::vector<InputSpec> outputsInputsAOD;
   for (auto ii = 0u; ii < OutputsInputs.size(); ii++) {
-    if ((outputTypes[ii] & 2) == 2) {
+    if ((outputTypes[ii] & ANALYSIS) == ANALYSIS) {
       auto ds = dod->getDataOutputDescriptors(OutputsInputs[ii]);
-      if (ds.size() > 0 || (outputTypes[ii] & 1) == 1) {
+      if (ds.size() > 0 || (outputTypes[ii] & DANGLING) == DANGLING) {
         outputsInputsAOD.emplace_back(OutputsInputs[ii]);
       }
     }
@@ -465,7 +472,7 @@ void WorkflowHelpers::injectServiceDevices(WorkflowSpec& workflow, ConfigContext
   // select dangling outputs which are not of type AOD
   std::vector<InputSpec> outputsInputsDangling;
   for (auto ii = 0u; ii < OutputsInputs.size(); ii++) {
-    if ((outputTypes[ii] & 1) == 1 && (outputTypes[ii] & 2) == 0) {
+    if ((outputTypes[ii] & DANGLING) == DANGLING && (outputTypes[ii] & ANALYSIS) == 0) {
       outputsInputsDangling.emplace_back(OutputsInputs[ii]);
     }
   }
@@ -905,15 +912,15 @@ std::tuple<std::vector<InputSpec>, std::vector<unsigned char>> WorkflowHelpers::
     auto& outputSpec = workflow[output.workflowId].outputs[output.id];
 
     // compute output type
-    unsigned char outputType = 0;
+    unsigned char outputType = UNKNOWN;
 
     // is AOD?
     if (DataSpecUtils::partialMatch(outputSpec, header::DataOrigin("AOD"))) {
-      outputType += 2;
+      outputType |= ANALYSIS;
     }
     // is RN2?
     if (DataSpecUtils::partialMatch(outputSpec, header::DataOrigin("RN2"))) {
-      outputType += 2;
+      outputType |= ANALYSIS;
     }
 
     // is dangling output?
@@ -931,7 +938,7 @@ std::tuple<std::vector<InputSpec>, std::vector<unsigned char>> WorkflowHelpers::
       }
     }
     if (!matched) {
-      outputType += 1;
+      outputType |= DANGLING;
     }
 
     // update results and outputTypes
