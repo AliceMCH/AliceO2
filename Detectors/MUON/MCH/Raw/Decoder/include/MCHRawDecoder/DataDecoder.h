@@ -41,7 +41,7 @@ class BaseMerger;
 class DataDecoder
 {
  public:
-  DataDecoder(SampaChannelHandler channelHandler, RdhHandler rdhHandler, std::string mapCRUfile, std::string mapFECfile, bool ds2manu, bool verbose);
+  DataDecoder(SampaChannelHandler channelHandler, RdhHandler rdhHandler, std::string mapCRUfile, std::string mapFECfile, bool ds2manu, bool skipMerging, bool verbose);
 
   void reset();
   void decodeBuffer(gsl::span<const std::byte> page);
@@ -69,6 +69,7 @@ class DataDecoder
 
   bool mPrint{false};
   bool mDs2manu{false};
+  bool mSkipMerging{false};
 
   BaseMerger* mMerger = {nullptr};
 };

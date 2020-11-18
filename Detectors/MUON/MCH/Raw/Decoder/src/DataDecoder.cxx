@@ -109,8 +109,8 @@ static void patchPage(gsl::span<const std::byte> rdhBuffer, bool verbose)
 //=======================
 // Data decoder
 
-DataDecoder::DataDecoder(SampaChannelHandler channelHandler, RdhHandler rdhHandler, std::string mapCRUfile, std::string mapFECfile, bool ds2manu, bool verbose)
-  : mChannelHandler(channelHandler), mRdhHandler(rdhHandler), mMapCRUfile(mapCRUfile), mMapFECfile(mapFECfile), mDs2manu(ds2manu), mPrint(verbose)
+DataDecoder::DataDecoder(SampaChannelHandler channelHandler, RdhHandler rdhHandler, std::string mapCRUfile, std::string mapFECfile, bool ds2manu, bool skipMerging, bool verbose)
+  : mChannelHandler(channelHandler), mRdhHandler(rdhHandler), mMapCRUfile(mapCRUfile), mMapFECfile(mapFECfile), mDs2manu(ds2manu), mPrint(verbose), mSkipMerging(skipMerging)
 {
   init();
 }
@@ -209,7 +209,7 @@ void DataDecoder::decodeBuffer(gsl::span<const std::byte> page)
     auto isStopRDH = o2::raw::RDHUtils::getStop(rdhAny);
 
     if (!mMerger) {
-      if (linkId == 15) {
+      if (linkId == 15 && !mSkipMerging) {
         mMerger = new Merger;
       } else {
         mMerger = new NoOpMerger;

@@ -67,11 +67,12 @@ class DataDecoderTask
     RdhHandler rdhHandler;
 
     auto ds2manu = ic.options().get<bool>("ds2manu");
+    auto skipMerging = ic.options().get<bool>("skip-merging");
     mPrint = ic.options().get<bool>("print");
     auto mapCRUfile = ic.options().get<std::string>("cru-map");
     auto mapFECfile = ic.options().get<std::string>("fec-map");
 
-    mDecoder = new DataDecoder(channelHandler, rdhHandler, mapCRUfile, mapFECfile, ds2manu, mPrint);
+    mDecoder = new DataDecoder(channelHandler, rdhHandler, mapCRUfile, mapFECfile, ds2manu, skipMerging, mPrint);
   }
 
   //_________________________________________________________________________________________________
@@ -189,7 +190,9 @@ o2::framework::DataProcessorSpec getDecodingSpec(std::string inputSpec)
     Options{{"print", VariantType::Bool, false, {"print digits"}},
             {"cru-map", VariantType::String, "", {"custom CRU mapping"}},
             {"fec-map", VariantType::String, "", {"custom FEC mapping"}},
-            {"ds2manu", VariantType::Bool, false, {"convert channel numbering from Run3 to Run1-2 order"}}}};
+            {"ds2manu", VariantType::Bool, false, {"convert channel numbering from Run3 to Run1-2 order"}},
+            {"skip-merging", VariantType::Bool, false, {"skip the digits merging step"}}
+    }};
 }
 
 } // namespace raw
