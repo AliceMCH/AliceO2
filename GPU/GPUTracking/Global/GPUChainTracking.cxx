@@ -184,7 +184,7 @@ bool GPUChainTracking::ValidateSteps()
     GPUError("Invalid GPU Reconstruction Step Setting: dEdx requires TPC Merger to be active");
     return false;
   }
-  if (!param().earlyTpcTransform) {
+  if (!param().par.earlyTpcTransform) {
     if (((GetRecoSteps() & GPUDataTypes::RecoStep::TPCSliceTracking) || (GetRecoSteps() & GPUDataTypes::RecoStep::TPCMerging)) && !(GetRecoSteps() & GPUDataTypes::RecoStep::TPCConversion)) {
       GPUError("Invalid Reconstruction Step Setting: Tracking without early transform requires TPC Conversion to be active");
       return false;
@@ -272,7 +272,7 @@ bool GPUChainTracking::ValidateSettings()
     GPUError("Cannot do error interpolation with NWays = 1!");
     return false;
   }
-  if ((param().rec.mergerReadFromTrackerDirectly || !param().earlyTpcTransform) && param().rec.NonConsecutiveIDs) {
+  if ((param().rec.mergerReadFromTrackerDirectly || !param().par.earlyTpcTransform) && param().rec.NonConsecutiveIDs) {
     GPUError("incompatible settings for non consecutive ids");
     return false;
   }
@@ -280,7 +280,7 @@ bool GPUChainTracking::ValidateSettings()
     GPUError("OMP Kernels require mergerReadFromTrackerDirectly");
     return false;
   }
-  if (param().continuousMaxTimeBin > (int)GPUSettings::TPC_MAX_TF_TIME_BIN) {
+  if (param().par.continuousMaxTimeBin > (int)GPUSettings::TPC_MAX_TF_TIME_BIN) {
     GPUError("configure max time bin exceeds 256 orbits");
     return false;
   }
@@ -305,6 +305,10 @@ bool GPUChainTracking::ValidateSettings()
       GPUError("Invalid reconstruction settings for double pipeline");
       return false;
     }
+  }
+  if (!(GetRecoStepsGPU() & GPUDataTypes::RecoStep::TPCCompression) && (ProcessingSettings().tpcCompressionGatherMode == 1 || ProcessingSettings().tpcCompressionGatherMode == 3)) {
+    GPUError("Invalid tpcCompressionGatherMode for compression on CPU");
+    return false;
   }
   return true;
 }
@@ -417,7 +421,7 @@ int GPUChainTracking::ForceInitQA()
 
 int GPUChainTracking::Finalize()
 {
-  if (GetProcessingSettings().runQA && mQA->IsInitialized()) {
+  if (GetProcessingSettings().runQA && mQA->IsInitialized() && !(mConfigQA && mConfigQA->shipToQC)) {
     mQA->DrawQAHistograms();
   }
   if (GetProcessingSettings().debugLevel >= 6) {
@@ -507,7 +511,7 @@ int GPUChainTracking::ConvertNativeToClusterData()
       TransferMemoryResourceLinkToGPU(RecoStep::TPCConversion, mInputsHost->mResourceClusterNativeAccess, 0);
     }
   }
-  if (!param().earlyTpcTransform) {
+  if (!param().par.earlyTpcTransform) {
     if (GetProcessingSettings().debugLevel >= 3) {
       GPUInfo("Early transform inactive, skipping TPC Early transformation kernel, transformed on the fly during slice data creation / refit");
     }
@@ -538,7 +542,7 @@ void GPUChainTracking::ConvertNativeToClusterDataLegacy()
   if (tmp != mIOPtrs.clustersNative) {
     *tmp = *mIOPtrs.clustersNative;
   }
-  GPUReconstructionConvert::ConvertNativeToClusterData(mIOMem.clusterNativeAccess.get(), mIOMem.clusterData, mIOPtrs.nClusterData, processors()->calibObjects.fastTransform, param().continuousMaxTimeBin);
+  GPUReconstructionConvert::ConvertNativeToClusterData(mIOMem.clusterNativeAccess.get(), mIOMem.clusterData, mIOPtrs.nClusterData, processors()->calibObjects.fastTransform, param().par.continuousMaxTimeBin);
   for (unsigned int i = 0; i < NSLICES; i++) {
     mIOPtrs.clusterData[i] = mIOMem.clusterData[i].get();
     if (GetProcessingSettings().registerStandaloneInputMemory) {
@@ -969,7 +973,7 @@ int GPUChainTracking::RunTPCClusterizer_prepare(bool restorePointers)
   if (mCFContext == nullptr) {
     mCFContext.reset(new GPUTPCCFChainContext);
   }
-  mCFContext->tpcMaxTimeBin = std::max<int>(param().continuousMaxTimeBin, TPC_MAX_FRAGMENT_LEN);
+  mCFContext->tpcMaxTimeBin = std::max<int>(param().par.continuousMaxTimeBin, TPC_MAX_FRAGMENT_LEN);
   const CfFragment fragmentMax{(tpccf::TPCTime)mCFContext->tpcMaxTimeBin + 1, TPC_MAX_FRAGMENT_LEN};
   mCFContext->prepare(mIOPtrs.tpcZS, fragmentMax);
   if (mIOPtrs.tpcZS) {
@@ -1084,7 +1088,7 @@ int GPUChainTracking::RunTPCClusterizer(bool synchronizeOutput)
 
   auto* digitsMC = propagateMCLabels ? processors()->ioPtrs.tpcPackedDigits->tpcDigitsMC : nullptr;
 
-  if (param().continuousMaxTimeBin > 0 && mCFContext->tpcMaxTimeBin >= (unsigned int)std::max(param().continuousMaxTimeBin + 1, TPC_MAX_FRAGMENT_LEN)) {
+  if (param().par.continuousMaxTimeBin > 0 && mCFContext->tpcMaxTimeBin >= (unsigned int)std::max(param().par.continuousMaxTimeBin + 1, TPC_MAX_FRAGMENT_LEN)) {
     GPUError("Input data has invalid time bin\n");
     return 1;
   }
@@ -1424,7 +1428,7 @@ int GPUChainTracking::RunTPCTrackingSlices_internal()
   }
   bool doGPU = GetRecoStepsGPU() & RecoStep::TPCSliceTracking;
   bool doSliceDataOnGPU = processors()->tpcTrackers[0].SliceDataOnGPU();
-  if (!param().earlyTpcTransform) {
+  if (!param().par.earlyTpcTransform) {
     for (unsigned int i = 0; i < NSLICES; i++) {
       processors()->tpcTrackers[i].Data().SetClusterData(nullptr, mIOPtrs.clustersNative->nClustersSector[i], mIOPtrs.clustersNative->clusterOffset[i][0]);
       if (doGPU) {
@@ -1553,7 +1557,7 @@ int GPUChainTracking::RunTPCTrackingSlices_internal()
     if (GetProcessingSettings().debugLevel >= 3) {
       GPUInfo("Copying Slice Data to GPU and initializing temporary memory");
     }
-    if (GetProcessingSettings().keepAllMemory && !doSliceDataOnGPU) {
+    if (GetProcessingSettings().keepDisplayMemory && !doSliceDataOnGPU) {
       memset((void*)trk.Data().HitWeights(), 0, trkShadow.Data().NumberOfHitsPlusAlign() * sizeof(*trkShadow.Data().HitWeights()));
     } else {
       runKernel<GPUMemClean16>(GetGridAutoStep(useStream, RecoStep::TPCSliceTracking), krnlRunRangeNone, {}, trkShadow.Data().HitWeights(), trkShadow.Data().NumberOfHitsPlusAlign() * sizeof(*trkShadow.Data().HitWeights()));
@@ -2033,6 +2037,9 @@ int GPUChainTracking::RunTPCTrackingMerger(bool synchronizeOutput)
     runKernel<GPUTPCGMMergerFinalize, 1>(GetGridAuto(0, deviceType), krnlRunRangeNone, krnlEventNone);
     runKernel<GPUTPCGMMergerFinalize, 2>(GetGridAuto(0, deviceType), krnlRunRangeNone, krnlEventNone);
   }
+  if (param().rec.tpcMergeLoopersAfterburner) {
+    runKernel<GPUTPCGMMergerMergeLoopers>(GetGridAuto(0, deviceType), krnlRunRangeNone, krnlEventNone);
+  }
   DoDebugAndDump(RecoStep::TPCMerging, 0, doGPUall, Merger, &GPUTPCGMMerger::DumpFinal, *mDebugFile);
 
   if (doGPUall) {
@@ -2042,7 +2049,7 @@ int GPUChainTracking::RunTPCTrackingMerger(bool synchronizeOutput)
     } else {
       GPUMemCpy(RecoStep::TPCMerging, Merger.OutputTracks(), MergerShadowAll.OutputTracks(), Merger.NOutputTracks() * sizeof(*Merger.OutputTracks()), mRec->NStreams() - 2, 0, nullptr, &mEvents->single);
       GPUMemCpy(RecoStep::TPCMerging, Merger.Clusters(), MergerShadowAll.Clusters(), Merger.NOutputTrackClusters() * sizeof(*Merger.Clusters()), mRec->NStreams() - 2, 0);
-      if (param().earlyTpcTransform) {
+      if (param().par.earlyTpcTransform) {
         GPUMemCpy(RecoStep::TPCMerging, Merger.ClustersXYZ(), MergerShadowAll.ClustersXYZ(), Merger.NOutputTrackClusters() * sizeof(*Merger.ClustersXYZ()), mRec->NStreams() - 2, 0);
       }
       GPUMemCpy(RecoStep::TPCMerging, Merger.ClusterAttachment(), MergerShadowAll.ClusterAttachment(), Merger.NMaxClusters() * sizeof(*Merger.ClusterAttachment()), mRec->NStreams() - 2, 0);
@@ -2093,6 +2100,10 @@ int GPUChainTracking::RunTPCCompression()
       }
     }
   }
+
+  if (ProcessingSettings().tpcCompressionGatherMode == 3) {
+    mRec->AllocateVolatileDeviceMemory(0); // make future device memory allocation volatile
+  }
   SetupGPUProcessor(&Compressor, true);
   new (Compressor.mMemory) GPUTPCCompression::memory;
 
@@ -2121,6 +2132,12 @@ int GPUChainTracking::RunTPCCompression()
   O->nComppressionModes = param().rec.tpcCompressionModes;
   size_t outputSize = AllocateRegisteredMemory(Compressor.mMemoryResOutputHost, mOutputCompressedClusters);
   Compressor.mOutputFlat->set(outputSize, *Compressor.mOutput);
+  char* hostFlatPtr = (char*)Compressor.mOutput->qTotU; // First array as allocated in GPUTPCCompression::SetPointersCompressedClusters
+  size_t copySize = 0;
+  if (ProcessingSettings().tpcCompressionGatherMode == 3) {
+    CompressorShadow.mOutputA = Compressor.mOutput;
+    copySize = AllocateRegisteredMemory(Compressor.mMemoryResOutputGPU); // We overwrite Compressor.mOutput with the allocated output pointers on the GPU
+  }
   const o2::tpc::CompressedClustersPtrs* P = nullptr;
   HighResTimer* gatherTimer = nullptr;
   int outputStream = 0;
@@ -2129,38 +2146,59 @@ int GPUChainTracking::RunTPCCompression()
     outputStream = mRec->NStreams() - 2;
   }
 
-  if (ProcessingSettings().tpcCompressionGatherMode == 2) {
-    void* devicePtr = mRec->getGPUPointer(Compressor.mOutputFlat);
-    if (devicePtr != Compressor.mOutputFlat) {
-      CompressedClustersPtrs& ptrs = *Compressor.mOutput; // We need to update the ptrs with the gpu-mapped version of the host address space
-      for (unsigned int i = 0; i < sizeof(ptrs) / sizeof(void*); i++) {
-        reinterpret_cast<char**>(&ptrs)[i] = reinterpret_cast<char**>(&ptrs)[i] + (reinterpret_cast<char*>(devicePtr) - reinterpret_cast<char*>(Compressor.mOutputFlat));
+  if (ProcessingSettings().tpcCompressionGatherMode >= 2) {
+    if (ProcessingSettings().tpcCompressionGatherMode == 2) {
+      void* devicePtr = mRec->getGPUPointer(Compressor.mOutputFlat);
+      if (devicePtr != Compressor.mOutputFlat) {
+        CompressedClustersPtrs& ptrs = *Compressor.mOutput; // We need to update the ptrs with the gpu-mapped version of the host address space
+        for (unsigned int i = 0; i < sizeof(ptrs) / sizeof(void*); i++) {
+          reinterpret_cast<char**>(&ptrs)[i] = reinterpret_cast<char**>(&ptrs)[i] + (reinterpret_cast<char*>(devicePtr) - reinterpret_cast<char*>(Compressor.mOutputFlat));
+        }
       }
     }
     TransferMemoryResourcesToGPU(myStep, &Compressor, outputStream);
-    unsigned int nBlocks = 2;
+    constexpr unsigned int nBlocksDefault = 2;
+    constexpr unsigned int nBlocksMulti = 1 + 2 * 200;
     switch (ProcessingSettings().tpcCompressionGatherModeKernel) {
       case 0:
-        runKernel<GPUTPCCompressionGatherKernels, GPUTPCCompressionGatherKernels::unbuffered>(GetGridBlkStep(nBlocks, outputStream, RecoStep::TPCCompression), krnlRunRangeNone, krnlEventNone);
+        runKernel<GPUTPCCompressionGatherKernels, GPUTPCCompressionGatherKernels::unbuffered>(GetGridBlkStep(nBlocksDefault, outputStream, RecoStep::TPCCompression), krnlRunRangeNone, krnlEventNone);
         getKernelTimer<GPUTPCCompressionGatherKernels, GPUTPCCompressionGatherKernels::unbuffered>(RecoStep::TPCCompression, 0, outputSize);
         break;
       case 1:
-        runKernel<GPUTPCCompressionGatherKernels, GPUTPCCompressionGatherKernels::buffered32>(GetGridBlkStep(nBlocks, outputStream, RecoStep::TPCCompression), krnlRunRangeNone, krnlEventNone);
+        runKernel<GPUTPCCompressionGatherKernels, GPUTPCCompressionGatherKernels::buffered32>(GetGridBlkStep(nBlocksDefault, outputStream, RecoStep::TPCCompression), krnlRunRangeNone, krnlEventNone);
         getKernelTimer<GPUTPCCompressionGatherKernels, GPUTPCCompressionGatherKernels::buffered32>(RecoStep::TPCCompression, 0, outputSize);
         break;
       case 2:
-        runKernel<GPUTPCCompressionGatherKernels, GPUTPCCompressionGatherKernels::buffered64>(GetGridBlkStep(nBlocks, outputStream, RecoStep::TPCCompression), krnlRunRangeNone, krnlEventNone);
+        runKernel<GPUTPCCompressionGatherKernels, GPUTPCCompressionGatherKernels::buffered64>(GetGridBlkStep(nBlocksDefault, outputStream, RecoStep::TPCCompression), krnlRunRangeNone, krnlEventNone);
         getKernelTimer<GPUTPCCompressionGatherKernels, GPUTPCCompressionGatherKernels::buffered64>(RecoStep::TPCCompression, 0, outputSize);
         break;
       case 3:
-        runKernel<GPUTPCCompressionGatherKernels, GPUTPCCompressionGatherKernels::buffered128>(GetGridBlkStep(nBlocks, outputStream, RecoStep::TPCCompression), krnlRunRangeNone, krnlEventNone);
+        runKernel<GPUTPCCompressionGatherKernels, GPUTPCCompressionGatherKernels::buffered128>(GetGridBlkStep(nBlocksDefault, outputStream, RecoStep::TPCCompression), krnlRunRangeNone, krnlEventNone);
         getKernelTimer<GPUTPCCompressionGatherKernels, GPUTPCCompressionGatherKernels::buffered128>(RecoStep::TPCCompression, 0, outputSize);
+        break;
+      case 4:
+
+        static_assert((nBlocksMulti & 1) && nBlocksMulti >= 3);
+        runKernel<GPUTPCCompressionGatherKernels, GPUTPCCompressionGatherKernels::multiBlock>(GetGridBlkStep(nBlocksMulti, outputStream, RecoStep::TPCCompression), krnlRunRangeNone, krnlEventNone);
+        getKernelTimer<GPUTPCCompressionGatherKernels, GPUTPCCompressionGatherKernels::multiBlock>(RecoStep::TPCCompression, 0, outputSize);
         break;
       default:
         GPUError("Invalid compression kernel selected.");
         return 1;
     }
-
+    if (ProcessingSettings().tpcCompressionGatherMode == 3) {
+      RecordMarker(&mEvents->stream[outputStream], outputStream);
+      char* deviceFlatPts = (char*)Compressor.mOutput->qTotU;
+      if (GetProcessingSettings().doublePipeline) {
+        const size_t blockSize = CAMath::nextMultipleOf<1024>(copySize / 30);
+        const unsigned int n = (copySize + blockSize - 1) / blockSize;
+        for (unsigned int i = 0; i < n; i++) {
+          GPUMemCpy(myStep, hostFlatPtr + i * blockSize, deviceFlatPts + i * blockSize, CAMath::Min(blockSize, copySize - i * blockSize), outputStream, false);
+        }
+      } else {
+        GPUMemCpy(myStep, hostFlatPtr, deviceFlatPts, copySize, outputStream, false);
+      }
+    }
   } else {
     char direction = 0;
     if (ProcessingSettings().tpcCompressionGatherMode == 0) {
@@ -2212,6 +2250,12 @@ int GPUChainTracking::RunTPCCompression()
     gatherTimer->Stop();
   }
   mIOPtrs.tpcCompressedClusters = Compressor.mOutputFlat;
+  if (ProcessingSettings().tpcCompressionGatherMode == 3) {
+    SynchronizeEvents(&mEvents->stream[outputStream]);
+    ReleaseEvent(&mEvents->stream[outputStream]);
+    mRec->ReturnVolatileDeviceMemory();
+  }
+
   if (mPipelineFinalizationCtx == nullptr) {
     SynchronizeStream(outputStream);
   } else {

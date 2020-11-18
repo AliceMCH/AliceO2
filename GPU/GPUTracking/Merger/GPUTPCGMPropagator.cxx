@@ -117,8 +117,8 @@ GPUd() int GPUTPCGMPropagator::RotateToAlpha(float newAlpha)
   // return value is error code (0==no error)
   //
 
-  float newCosAlpha = CAMath::Cos(newAlpha);
-  float newSinAlpha = CAMath::Sin(newAlpha);
+  float newCosAlpha, newSinAlpha;
+  CAMath::SinCos(newAlpha, newSinAlpha, newCosAlpha);
 
   float cc = newCosAlpha * mCosAlpha + newSinAlpha * mSinAlpha; // cos(newAlpha - mAlpha);
   float ss = newSinAlpha * mCosAlpha - newCosAlpha * mSinAlpha; //sin(newAlpha - mAlpha);
@@ -337,11 +337,13 @@ GPUd() int GPUTPCGMPropagator::PropagateToXAlphaBz(float posX, float posAlpha, b
 
   GPUTPCGMPhysicalTrackModel t0e(mT0);
   float dLp = 0;
-  if (t0e.PropagateToXBzLight(posX, Bz, dLp))
+  if (t0e.PropagateToXBzLight(posX, Bz, dLp)) {
     return 1;
+  }
 
-  if (CAMath::Abs(t0e.SinPhi()) >= mMaxSinPhi)
+  if (CAMath::Abs(t0e.SinPhi()) >= mMaxSinPhi) {
     return -3;
+  }
 
   return FollowLinearization(t0e, Bz, dLp, inFlyDirection);
 }
@@ -642,7 +644,7 @@ GPUd() int GPUTPCGMPropagator::Update(float posY, float posZ, int iRow, const GP
   GetErr2(err2Y, err2Z, param, posZ, iRow, clusterState);
 
   if (rejectChi2 >= 2) {
-    if (rejectChi2 == 3 && inter->errorY < 0) {
+    if (rejectChi2 == 3 && inter->errorY < (GPUCA_MERGER_INTERPOLATION_ERROR_TYPE)0) {
       rejectChi2 = 1;
     } else {
       int retVal = InterpolateReject(posY, posZ, clusterState, rejectChi2, inter, err2Y, err2Z);
@@ -686,8 +688,8 @@ GPUd() int GPUTPCGMPropagator::InterpolateReject(float posY, float posZ, short c
     if (mFitInProjections || mT->NDF() <= 0) {
       const float Iz0 = inter->posY - mP[0];
       const float Iz1 = inter->posZ - mP[1];
-      const float Iw0 = 1.f / (mC[0] + inter->errorY);
-      const float Iw2 = 1.f / (mC[2] + inter->errorZ);
+      const float Iw0 = 1.f / (mC[0] + (float)inter->errorY);
+      const float Iw2 = 1.f / (mC[2] + (float)inter->errorZ);
       const float Ik00 = mC[0] * Iw0;
       const float Ik11 = mC[2] * Iw2;
       const float ImP0 = mP[0] + Ik00 * Iz0;
@@ -704,8 +706,8 @@ GPUd() int GPUTPCGMPropagator::InterpolateReject(float posY, float posZ, short c
     } else {
       const float Iz0 = inter->posY - mP[0];
       const float Iz1 = inter->posZ - mP[1];
-      float Iw0 = mC[2] + inter->errorZ;
-      float Iw2 = mC[0] + inter->errorY;
+      float Iw0 = mC[2] + (float)inter->errorZ;
+      float Iw2 = mC[0] + (float)inter->errorY;
       float Idet = CAMath::Max(1e-10f, Iw0 * Iw2 - mC[1] * mC[1]);
       Idet = 1.f / Idet;
       Iw0 *= Idet;

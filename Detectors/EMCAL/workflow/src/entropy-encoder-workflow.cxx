@@ -8,15 +8,9 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-/// \file   mid-entropy-encoder-workflow.cxx
-/// \brief  MID reconstruction workflow
-/// \author ruben.shahoyan@cern.ch
-
-#include <string>
-#include <vector>
-#include "Framework/Variant.h"
+#include "EMCALWorkflow/EntropyEncoderSpec.h"
 #include "CommonUtils/ConfigurableParam.h"
-#include "MIDWorkflow/EntropyEncoderSpec.h"
+#include "Framework/ConfigParamSpec.h"
 
 using namespace o2::framework;
 
@@ -25,21 +19,21 @@ using namespace o2::framework;
 // we need to add workflow options before including Framework/runDataProcessing
 void customize(std::vector<o2::framework::ConfigParamSpec>& workflowOptions)
 {
-  std::string keyvaluehelp("Semicolon separated key=value strings ...");
-  workflowOptions.push_back(ConfigParamSpec{"configKeyValues", VariantType::String, "", {keyvaluehelp}});
+  // option allowing to set parameters
+  std::vector<ConfigParamSpec> options{ConfigParamSpec{"configKeyValues", VariantType::String, "", {"Semicolon separated key=value strings"}}};
+
+  std::swap(workflowOptions, options);
 }
 
 // ------------------------------------------------------------------
 
-#include "Framework/ConfigParamSpec.h"
 #include "Framework/runDataProcessing.h"
 
-WorkflowSpec defineDataProcessing(ConfigContext const& configcontext)
+WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
 {
-  // Update the (declared) parameters if changed from the command line
-  o2::conf::ConfigurableParam::updateFromString(configcontext.options().get<std::string>("configKeyValues"));
-
   WorkflowSpec wf;
-  wf.emplace_back(o2::mid::getEntropyEncoderSpec());
-  return std::move(wf);
+  // Update the (declared) parameters if changed from the command line
+  o2::conf::ConfigurableParam::updateFromString(cfgc.options().get<std::string>("configKeyValues"));
+  wf.emplace_back(o2::emcal::getEntropyEncoderSpec());
+  return wf;
 }

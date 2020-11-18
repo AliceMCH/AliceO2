@@ -16,6 +16,32 @@
 # simply sourced into the target script.
 
 
+o2_cleanup_shm_files() {
+  # check if we have lsof (otherwise we do nothing)
+  which lsof &> /dev/null
+  if [ "$?" = "0" ]; then
+    # find shared memory files **CURRENTLY IN USE** by FairMQ
+    USEDFILES=`lsof -u $(whoami) | grep -e \"/dev/shm/.*fmq\" | sed 's/.*\/dev/\/dev/g' | sort | uniq | tr '\n' ' '`
+
+    echo "${USEDFILES}"
+    if [ ! "${USEDFILES}" ]; then
+      # in this case we can remove everything
+      COMMAND="find /dev/shm/ -user $(whoami) -name \"*fmq_*\" -delete 2> /dev/null"
+    else
+      # build exclusion list
+      for f in ${USEDFILES}; do
+        LOGICALOP=""
+        [ "${EXCLPATTERN}" ] && LOGICALOP="-o"
+        EXCLPATTERN="${EXCLPATTERN} ${LOGICALOP} -wholename ${f}"
+      done
+      COMMAND="find /dev/shm/ -user $(whoami) -type f -not \( ${EXCLPATTERN} \) -delete 2> /dev/null"
+    fi
+    eval "${COMMAND}"
+  else
+    echo "Can't do shared mem cleanup: lsof not found"
+  fi
+}
+
 # Function to find out all the (recursive) child processes starting from a parent PID.
 # The output includes includes the parent
 # output is saved in child_pid_list
@@ -31,6 +57,21 @@ childprocs() {
   if [ ! "$2" ]; then
     echo "${child_pid_list}"
   fi
+}
+
+taskwrapper_cleanup_handler() {
+  PID=$1
+  SIGNAL=$2
+  echo "CLEANUP HANDLER FOR PROCESS ${PID} AND SIGNAL ${SIGNAL}"
+  PROCS=$(childprocs ${PID})
+  # make sure to bring down everything, including all kids
+  for p in ${PROCS}; do
+    echo "killing ${p}"
+    kill -s ${SIGNAL} ${p} 2> /dev/null
+  done
+  o2_cleanup_shm_files
+  # I prefer to exit the current job completely
+  exit 1
 }
 
 # Function wrapping some process and asyncronously supervises and controls it.
@@ -97,6 +138,9 @@ taskwrapper() {
   # THE NEXT PART IS THE SUPERVISION PART
   # get the PID
   PID=$!
+  # register signal handlers
+  trap "taskwrapper_cleanup_handler ${PID} SIGINT" SIGINT
+  trap "taskwrapper_cleanup_handler ${PID} SIGTERM" SIGTERM
 
   cpucounter=1
 
@@ -139,11 +183,15 @@ taskwrapper() {
 
       sleep 2
 
-      # query processes still alive
+      # query processes still alive and terminate them
       for p in $(childprocs ${PID}); do
         echo "killing child $p"
-        kill $p 2> /dev/null
-      done      
+        kill -9 $p 2> /dev/null
+      done
+      sleep 2
+
+      # remove leftover shm files
+      o2_cleanup_shm_files
 
       RC_ACUM=$((RC_ACUM+1))
       [ ! "${JOBUTILS_KEEPJOBSCRIPT}" ] && rm ${SCRIPTNAME} 2> /dev/null
@@ -185,6 +233,23 @@ taskwrapper() {
     echo "command ${command} had nonzero exit code ${RC}"
   fi
   [ ! "${JOBUTILS_KEEPJOBSCRIPT}" ] && rm ${SCRIPTNAME} 2> /dev/null
+
+  # deregister signal handlers
+  trap '' SIGINT
+  trap '' SIGTERM
+
+  o2_cleanup_shm_files #--> better to register a general trap at EXIT
+
+  # this gives some possibility to customize the wrapper
+  # and do some special task at the ordinary exit. The hook takes 3 arguments: 
+  # - The original command
+  # - the logfile
+  # - the return code from the execution
+  if [ "${JOBUTILS_JOB_ENDHOOK}" ]; then
+    hook="${JOBUTILS_JOB_ENDHOOK} '$command' $logfile ${RC}"
+    eval "${hook}"
+  fi
+
   return ${RC}
 }
 
@@ -200,3 +265,4 @@ getNumberOfPhysicalCPUCores() {
   N=`bc <<< "${CORESPERSOCKET}*${SOCKETS}"`
   echo "${N}"
 }
+

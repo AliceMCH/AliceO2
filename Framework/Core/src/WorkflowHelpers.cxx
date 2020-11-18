@@ -382,7 +382,7 @@ void WorkflowHelpers::injectServiceDevices(WorkflowSpec& workflow, ConfigContext
     {}};
 
   DataProcessorSpec indexBuilder{
-    "internal-dpl-index-builder",
+    "internal-dpl-aod-index-builder",
     {},
     {},
     readers::AODReaderHelpers::indexBuilderCallback(requestedIDXs),
@@ -439,20 +439,20 @@ void WorkflowHelpers::injectServiceDevices(WorkflowSpec& workflow, ConfigContext
 
   /// Analyze all ouputs
   //  outputTypes = isAOD*2 + isdangling*1 + 0
-  auto [OutputsInputs, outputTypes] = analyzeOutputs(workflow);
+  auto [outputsInputs, outputTypes] = analyzeOutputs(workflow);
 
   // create DataOutputDescriptor
-  std::shared_ptr<DataOutputDirector> dod = getDataOutputDirector(ctx.options(), OutputsInputs, outputTypes);
+  std::shared_ptr<DataOutputDirector> dod = getDataOutputDirector(ctx.options(), outputsInputs, outputTypes);
 
   // select outputs of type AOD which need to be saved
   // ATTENTION: if there are dangling outputs the getGlobalAODSink
   // has to be created in any case!
   std::vector<InputSpec> outputsInputsAOD;
-  for (auto ii = 0u; ii < OutputsInputs.size(); ii++) {
+  for (auto ii = 0u; ii < outputsInputs.size(); ii++) {
     if ((outputTypes[ii] & ANALYSIS) == ANALYSIS) {
-      auto ds = dod->getDataOutputDescriptors(OutputsInputs[ii]);
+      auto ds = dod->getDataOutputDescriptors(outputsInputs[ii]);
       if (ds.size() > 0 || (outputTypes[ii] & DANGLING) == DANGLING) {
-        outputsInputsAOD.emplace_back(OutputsInputs[ii]);
+        outputsInputsAOD.emplace_back(outputsInputs[ii]);
       }
     }
   }
@@ -468,23 +468,32 @@ void WorkflowHelpers::injectServiceDevices(WorkflowSpec& workflow, ConfigContext
   workflow.insert(workflow.end(), extraSpecs.begin(), extraSpecs.end());
   extraSpecs.clear();
 
-  // file sink for notAOD dangling outputs
-  // select dangling outputs which are not of type AOD
-  std::vector<InputSpec> outputsInputsDangling;
-  for (auto ii = 0u; ii < OutputsInputs.size(); ii++) {
-    if ((outputTypes[ii] & DANGLING) == DANGLING && (outputTypes[ii] & ANALYSIS) == 0) {
-      outputsInputsDangling.emplace_back(OutputsInputs[ii]);
+  // Select dangling outputs which are not of type AOD
+  std::vector<InputSpec> redirectedOutputsInputs;
+  for (auto ii = 0u; ii < outputsInputs.size(); ii++) {
+    if (ctx.options().get<std::string>("forwarding-policy") == "none") {
+      continue;
     }
+    // We forward to the output proxy all the inputs only if they are dangling
+    // or if the forwarding policy is "proxy".
+    if (!(outputTypes[ii] & DANGLING) && (ctx.options().get<std::string>("forwarding-policy") != "all")) {
+      continue;
+    }
+    // AODs are skipped in any case.
+    if ((outputTypes[ii] & ANALYSIS)) {
+      continue;
+    }
+    redirectedOutputsInputs.emplace_back(outputsInputs[ii]);
   }
 
   std::vector<InputSpec> unmatched;
-  if (outputsInputsDangling.size() > 0 && ctx.options().get<std::string>("dangling-outputs-policy") == "file") {
-    auto fileSink = CommonDataProcessors::getGlobalFileSink(outputsInputsDangling, unmatched);
-    if (unmatched.size() != outputsInputsDangling.size()) {
+  if (redirectedOutputsInputs.size() > 0 && ctx.options().get<std::string>("forwarding-destination") == "file") {
+    auto fileSink = CommonDataProcessors::getGlobalFileSink(redirectedOutputsInputs, unmatched);
+    if (unmatched.size() != redirectedOutputsInputs.size()) {
       extraSpecs.push_back(fileSink);
     }
-  } else if (outputsInputsDangling.size() > 0 && ctx.options().get<std::string>("dangling-outputs-policy") == "fairmq") {
-    auto fairMQSink = CommonDataProcessors::getGlobalFairMQSink(outputsInputsDangling);
+  } else if (redirectedOutputsInputs.size() > 0 && ctx.options().get<std::string>("forwarding-destination") == "fairmq") {
+    auto fairMQSink = CommonDataProcessors::getGlobalFairMQSink(redirectedOutputsInputs);
     extraSpecs.push_back(fairMQSink);
   }
   if (unmatched.size() > 0) {
@@ -746,10 +755,10 @@ void WorkflowHelpers::sortEdges(std::vector<size_t>& inEdgeIndex,
   std::sort(outEdgeIndex.begin(), outEdgeIndex.end(), outSorter);
 }
 
-void WorkflowHelpers::verifyWorkflow(const o2::framework::WorkflowSpec& workflow)
+WorkflowParsingState WorkflowHelpers::verifyWorkflow(const o2::framework::WorkflowSpec& workflow)
 {
   if (workflow.empty()) {
-    throw std::runtime_error("Empty workflow!");
+    return WorkflowParsingState::Empty;
   }
   std::set<std::string> validNames;
   std::vector<OutputSpec> availableOutputs;
@@ -790,6 +799,7 @@ void WorkflowHelpers::verifyWorkflow(const o2::framework::WorkflowSpec& workflow
       }
     }
   }
+  return WorkflowParsingState::Valid;
 }
 
 using UnifiedDataSpecType = std::variant<InputSpec, OutputSpec>;
@@ -961,12 +971,12 @@ std::tuple<std::vector<InputSpec>, std::vector<unsigned char>> WorkflowHelpers::
 std::vector<InputSpec> WorkflowHelpers::computeDanglingOutputs(WorkflowSpec const& workflow)
 {
 
-  auto [OutputsInputs, outputTypes] = analyzeOutputs(workflow);
+  auto [outputsInputs, outputTypes] = analyzeOutputs(workflow);
 
   std::vector<InputSpec> results;
-  for (auto ii = 0u; ii < OutputsInputs.size(); ii++) {
-    if ((outputTypes[ii] & 1) == 1) {
-      results.emplace_back(OutputsInputs[ii]);
+  for (auto ii = 0u; ii < outputsInputs.size(); ii++) {
+    if (outputTypes[ii] & DANGLING) {
+      results.emplace_back(outputsInputs[ii]);
     }
   }
 

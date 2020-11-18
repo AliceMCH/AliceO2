@@ -109,9 +109,8 @@ set(HDRS_INSTALL
     TRDTracking/GPUTRDGeometry.h
     TRDTracking/GPUTRDTrackerDebug.h
     TRDTracking/GPUTRDInterfaces.h
-    Standalone/display/GPUDisplayConfig.h
-    Standalone/qa/GPUQAConfig.h
     Base/GPUConstantMem.h
+    Base/GPUParamRTC.h
     Base/GPUReconstructionKernels.h
     Base/GPUReconstructionIncludesITS.h
     Base/GPUReconstructionHelpers.h
@@ -130,15 +129,16 @@ set(HDRS_INSTALL
     Merger/GPUTPCGMMergerTypes.h
     Global/GPUErrorCodes.h
     Standalone/qconfigoptions.h
+    Standalone/qa/GPUQAHelper.h
     Base/GPUSettingsList.h
     DataCompression/GPUTPCClusterRejection.h
 )
 
 # Sources only for O2
 if(ALIGPU_BUILD_TYPE STREQUAL "O2")
-  set(SRCS ${SRCS} Interface/GPUO2Interface.cxx Interface/GPUO2InterfaceRefit.cxx Interface/GPUO2InterfaceConfigurableParam.cxx)
-  set(HDRS_CINT_O2 ${HDRS_CINT_O2} Interface/GPUO2Interface.h Interface/GPUO2InterfaceRefit.h Interface/GPUO2InterfaceConfigurableParam.h dEdx/TPCdEdxCalibrationSplines.h)
-  set(HDRS_CINT_O2_ADDITIONAL Base/GPUSettings.h Base/GPUSettingsList.h) # Manual depencies for ROOT dictionary generation
+  set(SRCS ${SRCS} Interface/GPUO2Interface.cxx Interface/GPUO2InterfaceRefit.cxx Interface/GPUO2InterfaceQA.cxx Interface/GPUO2InterfaceConfigurableParam.cxx)
+  set(HDRS_CINT_O2 ${HDRS_CINT_O2} Interface/GPUO2Interface.h Interface/GPUO2InterfaceRefit.h Interface/GPUO2InterfaceQA.h Interface/GPUO2InterfaceConfigurableParam.h dEdx/TPCdEdxCalibrationSplines.h)
+  set(HDRS_CINT_O2_ADDITIONAL Base/GPUSettings.h Base/GPUSettingsList.h TRDTracking/GPUTRDTrack.h) # Manual dependencies for ROOT dictionary generation
 endif()
 
 # Sources for O2 and for Standalone if requested in config file

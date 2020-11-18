@@ -8,20 +8,19 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-/// \file   mid-reco-workflow.cxx
-/// \brief  MID reconstruction workflow
+/// \file   mid-digits-to-raw.cxx
+/// \brief  MID raw to digits workflow
 /// \author Diego Stocco <Diego.Stocco at cern.ch>
-/// \date   27 September 2019
+/// \date   02 October 2019
 
 #include <string>
 #include <vector>
+#include "Framework/ConfigParamSpec.h"
 #include "Framework/Variant.h"
-#include "CommonUtils/ConfigurableParam.h"
-#include "MIDWorkflow/RecoWorkflowMC.h"
+#include "MIDWorkflow/DigitReaderSpec.h"
+#include "MIDWorkflow/RawWriterSpec.h"
 
 using namespace o2::framework;
-
-// ------------------------------------------------------------------
 
 // we need to add workflow options before including Framework/runDataProcessing
 void customize(std::vector<o2::framework::ConfigParamSpec>& workflowOptions)
@@ -30,17 +29,14 @@ void customize(std::vector<o2::framework::ConfigParamSpec>& workflowOptions)
   workflowOptions.push_back(ConfigParamSpec{"configKeyValues", VariantType::String, "", {keyvaluehelp}});
 }
 
-// ------------------------------------------------------------------
-
-#include "Framework/ConfigParamSpec.h"
 #include "Framework/runDataProcessing.h"
 
 WorkflowSpec defineDataProcessing(ConfigContext const& configcontext)
 {
-  // Update the (declared) parameters if changed from the command line
-  o2::conf::ConfigurableParam::updateFromString(configcontext.options().get<std::string>("configKeyValues"));
-  // write the configuration used for the digitizer workflow
-  o2::conf::ConfigurableParam::writeINI("o2mid-recoflow_configuration.ini");
+  WorkflowSpec specs;
 
-  return std::move(o2::mid::getRecoWorkflowMC());
+  specs.emplace_back(o2::mid::getDigitReaderSpec(false));
+  specs.emplace_back(o2::mid::getRawWriterSpec());
+
+  return specs;
 }

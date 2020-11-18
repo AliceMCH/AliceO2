@@ -8,22 +8,8 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-/// \file   MIDWorkflow/DigitsToRawWorkflow.h
-/// \brief  Definition of the reconstruction workflow for MID MC
-/// \author Diego Stocco <Diego.Stocco at cern.ch>
-/// \date   11 April 2019
+/// \file   CTFHelper.cxx
+/// \author ruben.shahoyan@cern.ch
+/// \brief  Helper for EMCAL CTF creation
 
-#ifndef O2_MID_DIGITSTORAWWORKFLOWSPEC_H
-#define O2_MID_DIGITSTORAWWORKFLOWSPEC_H
-
-#include "Framework/WorkflowSpec.h"
-
-namespace o2
-{
-namespace mid
-{
-framework::WorkflowSpec getDigitsToRawWorkflow();
-}
-} // namespace o2
-
-#endif //O2_MID_DIGITSTORAWWORKFLOWSPEC_H
+#include "EMCALReconstruction/CTFHelper.h"

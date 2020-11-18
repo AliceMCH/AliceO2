@@ -147,6 +147,18 @@ class GPUCommonMath
   template <int I, class T>
   GPUd() CONSTEXPR17 static T nextMultipleOf(T val);
 
+#ifdef GPUCA_NOCOMPAT
+  template <typename... Args>
+  GPUdi() static float Sum2(float w, Args... args)
+  {
+    if constexpr (sizeof...(Args) == 0) {
+      return w * w;
+    } else {
+      return w * w + Sum2(args...);
+    }
+  }
+#endif
+
  private:
   template <class S, class T>
   GPUd() static unsigned int AtomicExchInt(S* addr, T val);
@@ -176,8 +188,9 @@ GPUdi() CONSTEXPR17 T GPUCommonMath::nextMultipleOf(T val)
   CONSTEXPRIF(I & (I - 1))
   {
     T tmp = val % I;
-    if (tmp)
+    if (tmp) {
       val += I - tmp;
+    }
     return val;
   }
   else
@@ -202,12 +215,14 @@ GPUdi() int GPUCommonMath::Nint(float x)
   int i;
   if (x >= 0) {
     i = int(x + 0.5f);
-    if (x + 0.5f == float(i) && i & 1)
+    if (x + 0.5f == float(i) && i & 1) {
       i--;
+    }
   } else {
     i = int(x - 0.5f);
-    if (x - 0.5f == float(i) && i & 1)
+    if (x - 0.5f == float(i) && i & 1) {
       i++;
+    }
   }
   return i;
 }
@@ -226,10 +241,10 @@ GPUhdi() void GPUCommonMath::SinCos(float x, float& s, float& c)
 {
 #if !defined(GPUCA_GPUCODE_DEVICE) && defined(__APPLE__)
   __sincosf(x, &s, &c);
-#elif !defined(GPUCA_GPUCODE_DEVICE) && defined(__GNU_SOURCE__)
+#elif !defined(GPUCA_GPUCODE_DEVICE) && (defined(__GNU_SOURCE__) || defined(_GNU_SOURCE) || defined(GPUCA_GPUCODE))
   sincosf(x, &s, &c);
 #else
-  CHOICE({s = sin(x); c = cos(x); }, sincosf(x, &s, &c), s = sincos(x, &c));
+  CHOICE((void)((s = sinf(x)) + (c = cosf(x))), sincosf(x, &s, &c), s = sincos(x, &c));
 #endif
 }
 
@@ -237,10 +252,10 @@ GPUhdi() void GPUCommonMath::SinCos(double x, double& s, double& c)
 {
 #if !defined(GPUCA_GPUCODE_DEVICE) && defined(__APPLE__)
   __sincos(x, &s, &c);
-#elif !defined(GPUCA_GPUCODE_DEVICE) && defined(__GNU_SOURCE__)
+#elif !defined(GPUCA_GPUCODE_DEVICE) && (defined(__GNU_SOURCE__) || defined(_GNU_SOURCE) || defined(GPUCA_GPUCODE))
   sincos(x, &s, &c);
 #else
-  CHOICE({s = sin(x); c = cos(x); }, sincos(x, &s, &c), s = sincos(x, &c));
+  CHOICE((void)((s = sin(x)) + (c = cos(x))), sincos(x, &s, &c), s = sincos(x, &c));
 #endif
 }
 

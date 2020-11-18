@@ -55,8 +55,9 @@ void Dispatcher::init(InitContext& ctx)
   } else if (ctx.options().isSet("sampling-config-ptree")) {
     policiesTree = ctx.options().get<boost::property_tree::ptree>("sampling-config-ptree");
     mPolicies.clear();
-  } else
+  } else {
     ; // we use policies declared during workflow init.
+  }
 
   for (auto&& policyConfig : policiesTree) {
     // we don't want the Dispatcher to exit due to one faulty Policy
@@ -257,6 +258,10 @@ framework::Options Dispatcher::getOptions()
   options.push_back({"period-timer-stats", framework::VariantType::Int, 10 * 1000000, {"Dispatcher's stats timer period"}});
 
   return options;
+}
+size_t Dispatcher::numberOfPolicies()
+{
+  return mPolicies.size();
 }
 
 } // namespace o2::utilities

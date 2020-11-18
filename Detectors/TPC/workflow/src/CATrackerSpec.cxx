@@ -42,6 +42,7 @@
 #include "DetectorsRaw/HBFUtils.h"
 #include "TPCBase/RDHUtils.h"
 #include "GPUO2InterfaceConfiguration.h"
+#include "GPUO2InterfaceQA.h"
 #include "TPCCFCalibration.h"
 #include "GPUDisplayBackend.h"
 #ifdef GPUCA_BUILD_EVENT_DISPLAY
@@ -64,6 +65,11 @@
 #include <fcntl.h>
 #include "GPUReconstructionConvert.h"
 #include "DetectorsRaw/RDHUtils.h"
+#include <TStopwatch.h>
+#include <TObjArray.h>
+#include <TH1F.h>
+#include <TH2F.h>
+#include <TH1D.h>
 
 using namespace o2::framework;
 using namespace o2::header;
@@ -83,6 +89,8 @@ DataProcessorSpec getCATrackerSpec(CompletionPolicyData* policyData, ca::Config 
     throw std::runtime_error("inconsistent configuration: cluster output is only possible if CA clusterer is activated");
   }
 
+  static TStopwatch timer;
+
   constexpr static size_t NSectors = Sector::MAXSECTOR;
   constexpr static size_t NEndpoints = 20; //TODO: get from mapper?
   using ClusterGroupParser = o2::algorithm::ForwardParser<ClusterGroupHeader>;
@@ -93,6 +101,8 @@ DataProcessorSpec getCATrackerSpec(CompletionPolicyData* policyData, ca::Config 
     std::unique_ptr<TPCFastTransform> fastTransform;
     std::unique_ptr<TPCdEdxCalibrationSplines> dEdxSplines;
     std::unique_ptr<TPCCFCalibration> tpcCalibration;
+    std::unique_ptr<GPUSettingsQA> qaConfig;
+    std::unique_ptr<GPUO2InterfaceQA> qa;
     std::vector<int> clusterOutputIds;
     unsigned long outputBufferSize = 0;
     unsigned long tpcSectorMask = 0;
@@ -130,6 +140,7 @@ DataProcessorSpec getCATrackerSpec(CompletionPolicyData* policyData, ca::Config 
       processAttributes->suppressOutput = (confParam.dump == 2);
       config.configInterface.dumpEvents = confParam.dump;
       config.configInterface.dropSecondaryLegs = confParam.dropSecondaryLegs;
+      config.configInterface.memoryBufferScaleFactor = confParam.memoryBufferScaleFactor;
       if (confParam.display) {
 #ifdef GPUCA_BUILD_EVENT_DISPLAY
         processAttributes->displayBackend.reset(new GPUDisplayBackendGlfw);
@@ -150,6 +161,12 @@ DataProcessorSpec getCATrackerSpec(CompletionPolicyData* policyData, ca::Config 
         LOG(INFO) << "GPU device number selected from pipeline id: " << myId << " / " << idMax;
       }
       config.configProcessing.runMC = specconfig.processMC;
+      if (specconfig.outputQA) {
+        if (!config.configProcessing.runQA) {
+          config.configQA.shipToQC = true;
+        }
+        config.configProcessing.runQA = true;
+      }
       config.configReconstruction.NWaysOuter = true;
       config.configInterface.outputToExternalBuffers = true;
 
@@ -228,6 +245,12 @@ DataProcessorSpec getCATrackerSpec(CompletionPolicyData* policyData, ca::Config 
       if (tracker->initialize(config) != 0) {
         throw std::invalid_argument("GPUCATracking initialization failed");
       }
+      if (specconfig.outputQA) {
+        processAttributes->qaConfig.reset(new GPUSettingsQA(config.configQA));
+        processAttributes->qa = std::make_unique<GPUO2InterfaceQA>(processAttributes->qaConfig.get());
+      }
+      timer.Stop();
+      timer.Reset();
     }
 
     auto& callbacks = ic.services().get<CallbackService>();
@@ -256,10 +279,18 @@ DataProcessorSpec getCATrackerSpec(CompletionPolicyData* policyData, ca::Config 
       }
     });
 
+    // the callback to be set as hook at stop of processing for the framework
+    auto printTiming = []() {
+      LOGF(INFO, "TPC CATracker total timing: Cpu: %.3e Real: %.3e s in %d slots", timer.CpuTime(), timer.RealTime(), timer.Counter() - 1);
+    };
+    ic.services().get<CallbackService>().set(CallbackService::Id::Stop, printTiming);
+
     auto processingFct = [processAttributes, specconfig](ProcessingContext& pc) {
       if (processAttributes->readyToQuit) {
         return;
       }
+      auto cput = timer.CpuTime();
+      timer.Start(false);
       auto& parser = processAttributes->parser;
       auto& tracker = processAttributes->tracker;
       auto& verbosity = processAttributes->verbosity;
@@ -576,12 +607,14 @@ DataProcessorSpec getCATrackerSpec(CompletionPolicyData* policyData, ca::Config 
           outputRegions.clustersNative.size = clusterOutput->get().size() - sizeof(ClusterCountIndex);
         }
       }
-      if (processAttributes->allocateOutputOnTheFly) {
-        outputRegions.tpcTracks.allocator = [&bufferTPCTracksChar, &pc](size_t size) -> void* {bufferTPCTracksChar = pc.outputs().make<char>(Output{gDataOriginTPC, "TRACKSGPU", 0}, size).data(); return bufferTPCTracksChar; };
-      } else {
-        bufferTPCTracks.emplace(pc.outputs().make<std::vector<char>>(Output{gDataOriginTPC, "TRACKSGPU", 0}, processAttributes->outputBufferSize));
-        outputRegions.tpcTracks.ptr = bufferTPCTracksChar = bufferTPCTracks->get().data();
-        outputRegions.tpcTracks.size = bufferTPCTracks->get().size();
+      if (specconfig.outputTracks) {
+        if (processAttributes->allocateOutputOnTheFly) {
+          outputRegions.tpcTracks.allocator = [&bufferTPCTracksChar, &pc](size_t size) -> void* {bufferTPCTracksChar = pc.outputs().make<char>(Output{gDataOriginTPC, "TRACKSGPU", 0}, size).data(); return bufferTPCTracksChar; };
+        } else {
+          bufferTPCTracks.emplace(pc.outputs().make<std::vector<char>>(Output{gDataOriginTPC, "TRACKSGPU", 0}, processAttributes->outputBufferSize));
+          outputRegions.tpcTracks.ptr = bufferTPCTracksChar = bufferTPCTracks->get().data();
+          outputRegions.tpcTracks.size = bufferTPCTracks->get().size();
+        }
       }
       if (specconfig.processMC) {
         outputRegions.clusterLabels.allocator = [&clustersMCBuffer](size_t size) -> void* { return &clustersMCBuffer; };
@@ -673,6 +706,17 @@ DataProcessorSpec getCATrackerSpec(CompletionPolicyData* policyData, ca::Config 
           }
         }
       }
+      if (specconfig.outputQA) {
+        TObjArray out;
+        std::vector<TH1F> copy1 = *outputRegions.qa.hist1; // Internally, this will also be used as output, so we need a non-const copy
+        std::vector<TH2F> copy2 = *outputRegions.qa.hist2;
+        std::vector<TH1D> copy3 = *outputRegions.qa.hist3;
+        processAttributes->qa->postprocess(copy1, copy2, copy3, out);
+        pc.outputs().snapshot({gDataOriginTPC, "TRACKINGQA", 0, Lifetime::Timeframe}, out);
+        processAttributes->qa->cleanup();
+      }
+      timer.Stop();
+      LOG(INFO) << "TPC CATracker time for this TF " << timer.CpuTime() - cput << " s";
     };
 
     return processingFct;
@@ -770,6 +814,9 @@ DataProcessorSpec getCATrackerSpec(CompletionPolicyData* policyData, ca::Config 
           outputSpecs.emplace_back(gDataOriginTPC, "CLNATIVEMCLBL", NSectors, Lifetime::Timeframe);
         }
       }
+    }
+    if (specconfig.outputQA) {
+      outputSpecs.emplace_back(gDataOriginTPC, "TRACKINGQA", 0, Lifetime::Timeframe);
     }
     return std::move(outputSpecs);
   };

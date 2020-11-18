@@ -8,22 +8,32 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-/// \file GPUQAConfig.h
+/// \file qconfigrtc.h
 /// \author David Rohr
 
-#ifndef GPUQACONFIG_H
-#define GPUQACONFIG_H
+#ifndef QCONFIG_RTC_H
+#define QCONFIG_RTC_H
 
-#include "GPUCommonDef.h"
+#include "qconfig.h"
+#include "qconfig_helpers.h"
 
-#include "utils/qconfig.h"
+#ifndef qon_mxstr
+#define qon_mstr(a) #a
+#define qon_mxstr(a) qon_mstr(a)
+#endif
 
-namespace GPUCA_NAMESPACE
+template <class T>
+static std::string qConfigPrintRtc(const T& tSrc, bool useConstexpr)
 {
-namespace gpu
-{
-typedef GPUSettingsQA GPUQAConfig;
+  std::stringstream out;
+#define QCONFIG_PRINT_RTC
+#include "qconfig.h"
+#undef QCONFIG_PRINT_RTC
+  return out.str();
 }
-} // namespace GPUCA_NAMESPACE
+
+#define QCONFIG_CONVERT_RTC
+#include "qconfig.h"
+#undef QCONFIG_CONVERT_RTC
 
 #endif

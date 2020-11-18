@@ -8,22 +8,21 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-/// \file GPUDisplayConfig.h
-/// \author David Rohr
+#ifndef O2_TRD_TRACKING_WORKFLOW_H
+#define O2_TRD_TRACKING_WORKFLOW_H
 
-#ifndef GPUDISPLAYCONFIG_H
-#define GPUDISPLAYCONFIG_H
+/// @file   TRDTrackingWorkflow.h
 
-#include "GPUCommonDef.h"
+#include "Framework/WorkflowSpec.h"
 
-#include "utils/qconfig.h"
-
-namespace GPUCA_NAMESPACE
+namespace o2
 {
-namespace gpu
+namespace trd
 {
-typedef GPUSettingsDisplay GPUDisplayConfig;
-}
-} // namespace GPUCA_NAMESPACE
+
+framework::WorkflowSpec getTRDTrackingWorkflow(bool disableRootInp, bool disableRootOut);
+
+} // namespace trd
+} // namespace o2
 
 #endif

@@ -8,16 +8,9 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-/// \file   mid-digits-to-raw.cxx
-/// \brief  MID raw to digits workflow
-/// \author Diego Stocco <Diego.Stocco at cern.ch>
-/// \date   02 October 2019
-
-#include <string>
-#include <vector>
-#include "Framework/Variant.h"
+#include "FDDWorkflow/EntropyEncoderSpec.h"
 #include "CommonUtils/ConfigurableParam.h"
-#include "MIDWorkflow/DigitsToRawWorkflow.h"
+#include "Framework/ConfigParamSpec.h"
 
 using namespace o2::framework;
 
@@ -26,21 +19,21 @@ using namespace o2::framework;
 // we need to add workflow options before including Framework/runDataProcessing
 void customize(std::vector<o2::framework::ConfigParamSpec>& workflowOptions)
 {
-  std::string keyvaluehelp("Semicolon separated key=value strings ...");
-  workflowOptions.push_back(ConfigParamSpec{"configKeyValues", VariantType::String, "", {keyvaluehelp}});
+  // option allowing to set parameters
+  std::vector<ConfigParamSpec> options{ConfigParamSpec{"configKeyValues", VariantType::String, "", {"Semicolon separated key=value strings"}}};
+
+  std::swap(workflowOptions, options);
 }
 
 // ------------------------------------------------------------------
 
-#include "Framework/ConfigParamSpec.h"
 #include "Framework/runDataProcessing.h"
 
-WorkflowSpec defineDataProcessing(ConfigContext const& configcontext)
+WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
 {
+  WorkflowSpec wf;
   // Update the (declared) parameters if changed from the command line
-  o2::conf::ConfigurableParam::updateFromString(configcontext.options().get<std::string>("configKeyValues"));
-  // write the configuration used for the digitizer workflow
-  o2::conf::ConfigurableParam::writeINI("o2mid-recoflow_configuration.ini");
-
-  return std::move(o2::mid::getDigitsToRawWorkflow());
+  o2::conf::ConfigurableParam::updateFromString(cfgc.options().get<std::string>("configKeyValues"));
+  wf.emplace_back(o2::fdd::getEntropyEncoderSpec());
+  return wf;
 }

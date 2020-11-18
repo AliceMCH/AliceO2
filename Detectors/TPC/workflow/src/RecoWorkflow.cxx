@@ -85,7 +85,7 @@ const std::unordered_map<std::string, OutputType> OutputMap{
   {"disable-writer", OutputType::DisableWriter},
   {"send-clusters-per-sector", OutputType::SendClustersPerSector},
   {"zsraw", OutputType::ZSRaw},
-};
+  {"qa", OutputType::QA}};
 
 framework::WorkflowSpec getWorkflow(CompletionPolicyData* policyData, std::vector<int> const& tpcSectors, std::vector<int> const& laneConfiguration,
                                     bool propagateMC, unsigned nLanes, std::string const& cfgInput, std::string const& cfgOutput,
@@ -238,7 +238,7 @@ framework::WorkflowSpec getWorkflow(CompletionPolicyData* policyData, std::vecto
   // ClusterDecoderRawSpec
   bool produceCompClusters = isEnabled(OutputType::CompClusters);
   bool produceTracks = isEnabled(OutputType::Tracks);
-  bool runTracker = produceTracks || produceCompClusters;
+  bool runTracker = produceTracks || produceCompClusters || (isEnabled(OutputType::Clusters) && caClusterer);
   bool runHWDecoder = !caClusterer && (runTracker || isEnabled(OutputType::Clusters));
   bool runClusterer = !caClusterer && (runHWDecoder || isEnabled(OutputType::ClustersHardware));
   bool zsDecoder = inputType == InputType::ZSRaw;
@@ -442,6 +442,7 @@ framework::WorkflowSpec getWorkflow(CompletionPolicyData* policyData, std::vecto
                                                                produceCompClusters ? ca::Operation::OutputCompClusters : ca::Operation::Noop,
                                                                runClusterEncoder ? ca::Operation::OutputCompClustersFlat : ca::Operation::Noop,
                                                                isEnabled(OutputType::SendClustersPerSector) ? ca::Operation::SendClustersPerSector : ca::Operation::Noop,
+                                                               isEnabled(OutputType::QA) ? ca::Operation::OutputQA : ca::Operation::Noop,
                                                                isEnabled(OutputType::Clusters) && (caClusterer || decompressTPC) ? ca::Operation::OutputCAClusters : ca::Operation::Noop,
                                                              },
                                                  tpcSectors));

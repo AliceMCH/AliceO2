@@ -226,7 +226,7 @@ DataProcessorSpec CommonDataProcessors::getOutputObjHistSink(outputObjects const
   };
 
   DataProcessorSpec spec{
-    "internal-dpl-global-analysis-file-sink",
+    "internal-dpl-aod-global-analysis-file-sink",
     {InputSpec("x", DataSpecUtils::dataDescriptorMatcherFrom(header::DataOrigin{"ATSK"}))},
     Outputs{},
     AlgorithmSpec(writerFunction),
@@ -243,15 +243,15 @@ enum FileType : int {
 // add sink for the AODs
 DataProcessorSpec
   CommonDataProcessors::getGlobalAODSink(std::shared_ptr<DataOutputDirector> dod,
-                                         std::vector<InputSpec> const& OutputInputs)
+                                         std::vector<InputSpec> const& outputInputs)
 {
 
-  auto writerFunction = [dod, OutputInputs](InitContext& ic) -> std::function<void(ProcessingContext&)> {
+  auto writerFunction = [dod, outputInputs](InitContext& ic) -> std::function<void(ProcessingContext&)> {
     LOGP(DEBUG, "======== getGlobalAODSink::Init ==========");
 
     // find out if any table needs to be saved
     bool hasOutputsToWrite = false;
-    for (auto& outobj : OutputInputs) {
+    for (auto& outobj : outputInputs) {
       auto ds = dod->getDataOutputDescriptors(outobj);
       if (ds.size() > 0) {
         hasOutputsToWrite = true;
@@ -375,7 +375,7 @@ DataProcessorSpec
   // see runDataProcessing.h
   DataProcessorSpec spec{
     "internal-dpl-aod-writer",
-    OutputInputs,
+    outputInputs,
     Outputs{},
     AlgorithmSpec(writerFunction),
     {}};
@@ -434,11 +434,13 @@ DataProcessorSpec
 
   std::vector<InputSpec> validBinaryInputs;
   auto onlyTimeframe = [](InputSpec const& input) {
-    return input.lifetime == Lifetime::Timeframe;
+    return (DataSpecUtils::partialMatch(input, o2::header::DataOrigin("TFN")) == false) &&
+           input.lifetime == Lifetime::Timeframe;
   };
 
   auto noTimeframe = [](InputSpec const& input) {
-    return input.lifetime != Lifetime::Timeframe;
+    return (DataSpecUtils::partialMatch(input, o2::header::DataOrigin("TFN")) == true) ||
+           input.lifetime != Lifetime::Timeframe;
   };
 
   std::copy_if(danglingOutputInputs.begin(), danglingOutputInputs.end(),
@@ -478,16 +480,16 @@ DataProcessorSpec CommonDataProcessors::getGlobalFairMQSink(std::vector<InputSpe
   externalChannelSpec.protocol = ChannelProtocol::IPC;
   std::string defaultChannelConfig = formatExternalChannelConfiguration(externalChannelSpec);
   // at some point the formatting tool might add the transport as well so we have to check
-  return specifyFairMQDeviceOutputProxy("internal-dpl-output-proxy", danglingOutputInputs, defaultChannelConfig.c_str());
+  return specifyFairMQDeviceOutputProxy("internal-dpl-injected-output-proxy", danglingOutputInputs, defaultChannelConfig.c_str());
 }
 
 DataProcessorSpec CommonDataProcessors::getDummySink(std::vector<InputSpec> const& danglingOutputInputs)
 {
   return DataProcessorSpec{
-    "internal-dpl-dummy-sink",
+    "internal-dpl-injected-dummy-sink",
     danglingOutputInputs,
     Outputs{},
-  };
+    AlgorithmSpec([](ProcessingContext& ctx) {})};
 }
 
 } // namespace framework
