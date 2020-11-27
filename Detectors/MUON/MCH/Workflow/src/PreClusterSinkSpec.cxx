@@ -94,7 +94,7 @@ class PreClusterSinkTask
             mOutputFile << "the vector of digits is too small to contain the digits of this precluster" << endl;
           }
 
-          bool cathode[2] = { false, false };
+          int cathode[2] = { 0, 0 };
           int i(0);
           mOutputFile << "  nDigits = " << precluster.nDigits << endl;
           for (const auto& digit : digits.subspan(precluster.firstDigit, precluster.nDigits)) {
@@ -102,11 +102,14 @@ class PreClusterSinkTask
             double padX = segmentation.padPositionX(digit.getPadID());
             double padY = segmentation.padPositionY(digit.getPadID());
             int cid = segmentation.isBendingPad(digit.getPadID()) ? 0 : 1;
-            cathode[cid] = true;
+            cathode[cid] += 1;
             mOutputFile << "  digit[" << i++ << "] = " << digit.getDetID() << "-" << digit.getPadID()
                         << "  TIME " << digit.getTime().bunchCrossing << "," << digit.getTime().sampaTime
+                        << "  SIZE " << digit.nofSamples()
                         << "  ADC " << digit.getADC()
-                        << "  position: " << padX << "," << padY << endl;
+                        << "  position: " << padX << "," << padY;
+            if (precluster.nDigits == 1 && cid == 0 && digit.getADC() > 200) mOutputFile << "  <==";
+            mOutputFile << endl;
           }
           mOutputFile << "  cathodes: " << cathode[0] << "," << cathode[1] << endl;
         }
