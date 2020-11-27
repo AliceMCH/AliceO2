@@ -92,7 +92,11 @@ class DigitsSinkTask
       }
       mOutputFile << "---------------" << std::endl;
       for (auto d : digits) {
-        mOutputFile << " DE# " << d.getDetID() << " PadId " << d.getPadID() << " ADC " << d.getADC() << " time " << d.getTime().sampaTime << std::endl;
+        //mOutputFile << " DE# " << d.getDetID() << " PadId " << d.getPadID() << " ADC " << d.getADC() << " time " << d.getTime().sampaTime << std::endl;
+        mOutputFile << " " << d.getDetID() << "-" << d.getPadID()
+                    << "  TIME " << d.getTime().bunchCrossing << "," << d.getTime().sampaTime
+                    << "  SIZE " << d.nofSamples()
+                    << "  ADC " << d.getADC() << ((d.nofSamples() < 13) ? " <==" : "") << std::endl;
       }
     } else {
       int nDigits = digits.size();
