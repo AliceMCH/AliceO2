@@ -40,6 +40,12 @@ o2_add_executable(
         PUBLIC_LINK_LIBRARIES O2::MCHWorkflow)
 
 o2_add_executable(
+        raw-file-to-digits-workflow
+        SOURCES src/raw-file-to-digits-workflow.cxx
+        COMPONENT_NAME mch
+        PUBLIC_LINK_LIBRARIES O2::MCHWorkflow)
+
+o2_add_executable(
         digits-to-preclusters-workflow
         SOURCES src/digits-to-preclusters-workflow.cxx
         COMPONENT_NAME mch
