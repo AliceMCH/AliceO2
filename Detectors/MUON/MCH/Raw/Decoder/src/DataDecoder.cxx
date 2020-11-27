@@ -127,7 +127,41 @@ static bool isValidDeID(int deId)
   return false;
 }
 
-void DataDecoder::decodeBuffer(gsl::span<const std::byte> page)
+
+static std::ostream& operator<<(std::ostream& os, const o2::mch::Digit& d)
+{
+  auto tend = d.getTime().sampaTime + d.nofSamples() - 1;
+  os << fmt::format("PAD ({:04d} {:04d})\tADC {:06d}  TIME ({} {} {:02d})  SIZE {}  END {}",
+      d.getDetID(), d.getPadID(), d.getADC(), d.getTime().orbit, d.getTime().bunchCrossing,
+      d.getTime().sampaTime, d.nofSamples(), tend)
+            << ((tend >= 98) ? " *" : "") << ((d.nofSamples() < 13) ? " <==" : "");
+  return os;
+}
+
+void DataDecoder::decodeBuffer(gsl::span<const std::byte> buf)
+{
+  //if (mPrint) {
+  //  std::cout << "\n\n\n";
+  //}
+  size_t bufSize = buf.size();
+  size_t pageStart = 0;
+  while (bufSize > pageStart) {
+    RDH* rdh = reinterpret_cast<RDH*>(const_cast<std::byte*>(&(buf[pageStart])));
+    auto rdhVersion = o2::raw::RDHUtils::getVersion(rdh);
+    auto rdhHeaderSize = o2::raw::RDHUtils::getHeaderSize(rdh);
+    if (rdhHeaderSize != 64) {
+      break;
+    }
+    auto pageSize = o2::raw::RDHUtils::getOffsetToNext(rdh);
+
+    gsl::span<const std::byte> page(reinterpret_cast<const std::byte*>(rdh), pageSize);
+    decodePage(page);
+
+    pageStart += pageSize;
+  }
+}
+
+void DataDecoder::decodePage(gsl::span<const std::byte> page)
 {
   size_t ndigits{0};
 
@@ -210,9 +244,9 @@ void DataDecoder::decodeBuffer(gsl::span<const std::byte> page)
 
     if (!mMerger) {
       if (linkId == 15 && !mSkipMerging) {
-        mMerger = new Merger;
+        mMerger = new Merger(mPrint);
       } else {
-        mMerger = new NoOpMerger;
+        mMerger = new NoOpMerger(mPrint);
       }
 
       mMerger->setDigitHandler(storeDigit);
@@ -232,8 +266,9 @@ void DataDecoder::decodeBuffer(gsl::span<const std::byte> page)
       }
       float X = segment.padPositionX(d.getPadID());
       float Y = segment.padPositionY(d.getPadID());
-      std::cout << fmt::format("  DE {:4d}  PAD {:5d}  ADC {:6d}  TIME ({} {} {:4d})",
-                               d.getDetID(), d.getPadID(), d.getADC(), d.getTime().orbit, d.getTime().bunchCrossing, d.getTime().sampaTime);
+      //std::cout << fmt::format("  DE {:4d}  PAD {:5d}  ADC {:6d}  TIME ({} {} {:4d})",
+      //                         d.getDetID(), d.getPadID(), d.getADC(), d.getTime().orbit, d.getTime().bunchCrossing, d.getTime().sampaTime);
+      std::cout << d;
       std::cout << fmt::format("\tC {}  PAD_XY {:+2.2f} , {:+2.2f}", (bending ? (int)0 : (int)1), X, Y);
       std::cout << std::endl;
     }
@@ -242,8 +277,7 @@ void DataDecoder::decodeBuffer(gsl::span<const std::byte> page)
   patchPage(page, mPrint);
 
   if (mRdhHandler) {
-    auto& rdhAny = *reinterpret_cast<RDH*>(const_cast<std::byte*>(&(page
-                                                                      [0])));
+    auto& rdhAny = *reinterpret_cast<RDH*>(const_cast<std::byte*>(&(page[0])));
     mRdhHandler(&rdhAny);
   }
 

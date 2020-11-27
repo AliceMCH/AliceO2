@@ -44,12 +44,13 @@ class DataDecoder
   DataDecoder(SampaChannelHandler channelHandler, RdhHandler rdhHandler, std::string mapCRUfile, std::string mapFECfile, bool ds2manu, bool skipMerging, bool verbose);
 
   void reset();
-  void decodeBuffer(gsl::span<const std::byte> page);
+  void decodeBuffer(gsl::span<const std::byte> buf);
 
   std::vector<o2::mch::Digit>& getOutputDigits() { return mOutputDigits; }
   std::vector<OrbitInfo>& getOrbits() { return mOrbits; }
 
  private:
+  void decodePage(gsl::span<const std::byte> page);
   void initElec2DetMapper(std::string filename);
   void initFee2SolarMapper(std::string filename);
   void init();

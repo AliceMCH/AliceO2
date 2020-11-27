@@ -27,23 +27,31 @@ namespace mch
 namespace raw
 {
 
+enum MergerDigitState
+{
+  DIGIT_STATE_UNCHECKED,
+  DIGIT_STATE_MERGED,
+  DIGIT_STATE_COMPLETED
+};
+
 //_________________________________________________________________
 struct MergerBuffer {
-  std::vector<std::pair<Digit,bool>> digits;
+  std::vector<std::pair<Digit,MergerDigitState>> digits;
   uint32_t orbit = {0};
+  std::optional<Digit> lastDigit;
 };
 
 //_________________________________________________________________
 class FeeIdMerger
 {
-  MergerBuffer currentBuffer, previousBuffer;
-  int feeId = {0};
-
-  std::function<void(const Digit&)> sendDigit;
-
  public:
   FeeIdMerger() = default;
   ~FeeIdMerger() = default;
+
+  void setDebug(bool debug)
+  {
+    mDebug = debug;
+  }
 
   void setId(int id)
   {
@@ -68,6 +76,12 @@ class FeeIdMerger
   }
 
   void mergeDigits();
+
+ private:
+  MergerBuffer currentBuffer, previousBuffer;
+  int feeId = {0};
+  std::function<void(const Digit&)> sendDigit;
+  bool mDebug = {false};
 };
 
 //_________________________________________________________________
@@ -86,10 +100,8 @@ class BaseMerger
 
 class NoOpMerger : public BaseMerger
 {
-  std::function<void(const Digit&)> sendDigit;
-
  public:
-  NoOpMerger() = default;
+  NoOpMerger(bool debug): mDebug(debug) { }
   ~NoOpMerger() = default;
 
   void setOrbit(int feeId, uint32_t orbit, bool stop)
@@ -108,16 +120,17 @@ class NoOpMerger : public BaseMerger
   }
 
   void mergeDigits(int feeId) {}
+
+ private:
+  std::function<void(const Digit&)> sendDigit;
+  bool mDebug = {false};
 };
 
 //_________________________________________________________________
 class Merger : public BaseMerger
 {
-  int32_t feeId = {-1};
-  FeeIdMerger mergers[MCH_MERGER_FEEID_MAX + 1];
-
  public:
-  Merger() = default;
+  Merger(bool debug);
   ~Merger() = default;
 
   void setOrbit(int feeId, uint32_t orbit, bool stop);
@@ -128,6 +141,11 @@ class Merger : public BaseMerger
                 int deId, int padId, unsigned long adc, Digit::Time time, uint16_t nSamples);
 
   void mergeDigits(int feeId);
+
+ private:
+  int32_t feeId = {-1};
+  FeeIdMerger mergers[MCH_MERGER_FEEID_MAX + 1];
+  bool mDebug = {false};
 };
 
 } // namespace raw

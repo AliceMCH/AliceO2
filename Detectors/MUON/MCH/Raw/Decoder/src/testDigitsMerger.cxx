@@ -118,7 +118,7 @@ void runMergerSameOrbit(Digit& d1, Digit& d2, std::vector<Digit>& digitsOut)
   int orbit = d1.getTime().orbit;
 
   // initialize the merger object
-  Merger merger;
+  Merger merger(false);
   merger.setDigitHandler(storeDigit);
 
   // start a new orbit, add the two digits, and stop the orbit
@@ -145,7 +145,7 @@ void runMergerConsecutiveOrbits(Digit& d1, Digit& d2, std::vector<Digit>& digits
   int orbit = d1.getTime().orbit;
 
   // initialize the merger object
-  Merger merger;
+  Merger merger(false);
   merger.setDigitHandler(storeDigit);
 
   // start a new orbit, add the two digits, and stop the orbit
