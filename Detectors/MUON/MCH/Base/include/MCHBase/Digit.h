@@ -46,7 +46,7 @@ class Digit
 
     uint64_t getBXTime()
     {
-      return (bunchCrossing + (sampaTime * 4));
+      return (bunchCrossing + (sampaTime << 2));
     }
 
     bool operator==(const Time&) const;
