@@ -85,6 +85,7 @@ class FileReaderTask
     RDH rdh;
     char* buf{nullptr};
     size_t bufSize{0};
+    static size_t nframes = 0;
 
     while (true) {
 
@@ -94,12 +95,10 @@ class FileReaderTask
         return;
       }
 
-      if (mPrint) {
-        printf("mFrameMax: %d\n", mFrameMax);
-      }
       if (mFrameMax > 0) {
         mFrameMax -= 1;
       }
+      nframes += 1;
 
       // read the next RDH, stop if no more data is available
       mInputFile.read((char*)(&rdh), sizeof(RDH));
@@ -115,7 +114,7 @@ class FileReaderTask
       auto rdhVersion = o2::raw::RDHUtils::getVersion(rdh);
       auto rdhHeaderSize = o2::raw::RDHUtils::getHeaderSize(rdh);
       if (mPrint) {
-        std::cout << "header_version=" << (int)rdhVersion << std::endl;
+        std::cout << "[cru-page-reader] " << nframes << " - "; o2::raw::RDHUtils::printRDH(rdh);
       }
       if (rdhVersion < 4 || rdhVersion > 6 || rdhHeaderSize != 64) {
         return;
@@ -123,9 +122,6 @@ class FileReaderTask
 
       // get the frame size from the RDH offsetToNext field
       auto frameSize = o2::raw::RDHUtils::getOffsetToNext(rdh);
-      if (mPrint) {
-        std::cout << "frameSize=" << frameSize << std::endl;
-      }
 
       // stop if the frame size is too small
       if (frameSize < rdhHeaderSize) {
@@ -169,7 +165,9 @@ class FileReaderTask
         // create the output message
         auto freefct = [](void* data, void* /*hint*/) { free(data); };
         pc.outputs().adoptChunk(Output{"ROUT", "RAWDATA"}, buf, bufSize, freefct, nullptr);
-
+        if (mPrint) {
+          std::cout << "\n============================\n\n\n";
+        }
         // stop the readout loop
         break;
       }
