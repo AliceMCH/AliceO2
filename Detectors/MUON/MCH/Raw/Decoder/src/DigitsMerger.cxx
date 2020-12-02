@@ -40,6 +40,13 @@ static std::ostream& operator<<(std::ostream& os, const o2::mch::Digit& d)
   return os;
 }
 
+void MergerBuffer::reset()
+{
+  digits.clear();
+  orbit = 0;
+  lastDigit.reset();
+}
+
 static int64_t digitsTimeDiff(const Digit& d1, const Digit& d2)
 {
   const uint32_t bxCounterRollover = 0x100000;
@@ -178,6 +185,12 @@ void FeeIdMerger::setOrbit(uint32_t orbit, bool stop)
     std::swap(previousBuffer.digits, currentBuffer.digits);
     currentBuffer.orbit = orbit;
   }
+}
+
+void FeeIdMerger::reset()
+{
+  currentBuffer.reset();
+  previousBuffer.reset();
 }
 
 // helper function to check if two digits correspond to the same pad;
@@ -323,6 +336,13 @@ void Merger::mergeDigits(int feeId)
   }
 
   mergers[feeId].mergeDigits();
+}
+
+void Merger::reset()
+{
+  for (int feeId = 0; feeId <= MCH_MERGER_FEEID_MAX; feeId++) {
+    mergers[feeId].reset();
+  }
 }
 
 } // namespace raw

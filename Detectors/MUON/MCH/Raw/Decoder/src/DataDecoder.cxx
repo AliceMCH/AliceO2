@@ -140,9 +140,9 @@ static std::ostream& operator<<(std::ostream& os, const o2::mch::Digit& d)
 
 void DataDecoder::decodeBuffer(gsl::span<const std::byte> buf)
 {
-  //if (mPrint) {
-  //  std::cout << "\n\n\n";
-  //}
+  if (mPrint) {
+    std::cout << "\n\n[DataDecoder::decodeBuffer]\n";
+  }
   size_t bufSize = buf.size();
   size_t pageStart = 0;
   while (bufSize > pageStart) {
@@ -367,6 +367,10 @@ void DataDecoder::reset()
 {
   mOutputDigits.clear();
   mOrbits.clear();
+
+  if (mMerger) {
+    mMerger->reset();
+  }
 }
 
 } // namespace raw

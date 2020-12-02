@@ -39,6 +39,8 @@ struct MergerBuffer {
   std::vector<std::pair<Digit,MergerDigitState>> digits;
   uint32_t orbit = {0};
   std::optional<Digit> lastDigit;
+
+  void reset();
 };
 
 //_________________________________________________________________
@@ -77,6 +79,8 @@ class FeeIdMerger
 
   void mergeDigits();
 
+  void reset();
+
  private:
   MergerBuffer currentBuffer, previousBuffer;
   int feeId = {0};
@@ -96,6 +100,7 @@ class BaseMerger
   virtual void addDigit(int feeId, int solarId, int dsAddr, int chAddr,
                         int deId, int padId, unsigned long adc, Digit::Time time, uint16_t nSamples) = 0;
   virtual void mergeDigits(int feeId) = 0;
+  void reset() { }
 };
 
 class NoOpMerger : public BaseMerger
@@ -141,6 +146,8 @@ class Merger : public BaseMerger
                 int deId, int padId, unsigned long adc, Digit::Time time, uint16_t nSamples);
 
   void mergeDigits(int feeId);
+
+  void reset();
 
  private:
   int32_t feeId = {-1};
