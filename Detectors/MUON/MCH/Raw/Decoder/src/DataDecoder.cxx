@@ -237,10 +237,10 @@ void DataDecoder::decodePage(gsl::span<const std::byte> page)
   const auto updateMerger = [&](gsl::span<const std::byte> rdhBuffer) {
     auto& rdhAny = *reinterpret_cast<RDH*>(const_cast<std::byte*>(&(rdhBuffer[0])));
 
-    auto feeId = o2::raw::RDHUtils::getFEEID(rdhAny) & 0xFF;
-    auto orbit = o2::raw::RDHUtils::getHeartBeatOrbit(rdhAny);
-    auto linkId = o2::raw::RDHUtils::getLinkID(rdhAny);
-    auto isStopRDH = o2::raw::RDHUtils::getStop(rdhAny);
+    feeId = o2::raw::RDHUtils::getFEEID(rdhAny) & 0xFF;
+    orbit = o2::raw::RDHUtils::getHeartBeatOrbit(rdhAny);
+    linkId = o2::raw::RDHUtils::getLinkID(rdhAny);
+    isStopRDH = o2::raw::RDHUtils::getStop(rdhAny);
 
     if (!mMerger) {
       if (linkId == 15 && !mSkipMerging) {

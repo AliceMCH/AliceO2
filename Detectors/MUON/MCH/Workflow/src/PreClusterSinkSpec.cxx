@@ -42,6 +42,29 @@ namespace mch
 using namespace std;
 using namespace o2::framework;
 
+
+static gsl::span<const Digit> curDigits;
+
+double preclusterTime(const PreCluster& precluster)
+{
+  double time = 0;
+  int n = 0;
+  for (const auto& digit : curDigits.subspan(precluster.firstDigit, precluster.nDigits)) {
+    time += digit.getTime().getBXTime();
+    n += 1;
+  }
+  if (n > 1) {
+    time /= n;
+  }
+  return time;
+}
+
+bool operator<(const PreCluster& l, const PreCluster& r)
+{
+  return (preclusterTime(l) < preclusterTime(r));
+}
+
+
 class PreClusterSinkTask
 {
  public:
@@ -78,16 +101,22 @@ class PreClusterSinkTask
     auto preClusters = pc.inputs().get<gsl::span<PreCluster>>("preclusters");
     auto digits = pc.inputs().get<gsl::span<Digit>>("digits");
 
+    curDigits = digits;
+
     if (mText) {
-      mOutputFile << preClusters.size() << " preclusters:" << endl;
+
+      std::vector<PreCluster> preClustersCopy(preClusters.begin(), preClusters.end());
+      std::sort(preClustersCopy.begin(), preClustersCopy.end());
+
+      mOutputFile << "\n\n==============\n" << preClustersCopy.size() << " preclusters:" << endl;
       if (mUseRun2DigitUID) {
         std::vector<Digit> digitsCopy(digits.begin(), digits.end());
         convertPadID2DigitUID(digitsCopy);
-        for (const auto& precluster : preClusters) {
+        for (const auto& precluster : preClustersCopy) {
           precluster.print(mOutputFile, digitsCopy);
         }
       } else {
-        for (const auto& precluster : preClusters) {
+        for (const auto& precluster : preClustersCopy) {
           /// print the precluster, getting the associated digits from the provided span
 
           if (precluster.lastDigit() >= digits.size()) {
@@ -104,11 +133,12 @@ class PreClusterSinkTask
             int cid = segmentation.isBendingPad(digit.getPadID()) ? 0 : 1;
             cathode[cid] += 1;
             mOutputFile << "  digit[" << i++ << "] = " << digit.getDetID() << "-" << digit.getPadID()
-                        << "  TIME " << digit.getTime().bunchCrossing << "," << digit.getTime().sampaTime
+                        << "  TIME " << digit.getTime().getBXTime()
+                        << " (" << digit.getTime().bunchCrossing << "," << digit.getTime().sampaTime << ")"
                         << "  SIZE " << digit.nofSamples()
                         << "  ADC " << digit.getADC()
                         << "  position: " << padX << "," << padY;
-            if (precluster.nDigits == 1 && cid == 0 && digit.getADC() > 200) mOutputFile << "  <==";
+            if (digit.getADC() > 200) mOutputFile << "  <==";
             mOutputFile << endl;
           }
           mOutputFile << "  cathodes: " << cathode[0] << "," << cathode[1] << endl;
@@ -188,6 +218,20 @@ o2::framework::DataProcessorSpec getPreClusterSinkSpec()
     Outputs{},
     AlgorithmSpec{adaptFromTask<PreClusterSinkTask>()},
     Options{{"outfile", VariantType::String, "preclusters.out", {"output filename"}},
+            {"txt", VariantType::Bool, false, {"output preclusters in text format"}},
+            {"useRun2DigitUID", VariantType::Bool, false, {"mPadID = digit UID in run2 format"}}}};
+}
+
+//_________________________________________________________________________________________________
+o2::framework::DataProcessorSpec getTimeClusterSinkSpec()
+{
+  return DataProcessorSpec{
+    "TimeClusterSink",
+    Inputs{InputSpec{"preclusters", "MCH", "TCLUSTERS", 0, Lifetime::Timeframe},
+           InputSpec{"digits", "MCH", "TCLUSTERDIGITS", 0, Lifetime::Timeframe}},
+    Outputs{},
+    AlgorithmSpec{adaptFromTask<PreClusterSinkTask>()},
+    Options{{"outfile", VariantType::String, "timeclusters.out", {"output filename"}},
             {"txt", VariantType::Bool, false, {"output preclusters in text format"}},
             {"useRun2DigitUID", VariantType::Bool, false, {"mPadID = digit UID in run2 format"}}}};
 }

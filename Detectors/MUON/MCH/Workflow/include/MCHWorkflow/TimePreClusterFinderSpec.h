@@ -8,13 +8,14 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-/// \file PreClusterSinkSpec.h
-/// \brief Definition of a data processor to write preclusters
+/// \file TimePreClusterFinderSpec.h
+/// \brief Definition of a data processor to run the preclusterizer after the time clusterizer
 ///
+/// \author Andrea Ferrero, CEA
 /// \author Philippe Pillot, Subatech
 
-#ifndef O2_MCH_PRECLUSTERSINKSPEC_H_
-#define O2_MCH_PRECLUSTERSINKSPEC_H_
+#ifndef O2_MCH_TIMEPRECLUSTERFINDERSPEC_H_
+#define O2_MCH_TIMEPRECLUSTERFINDERSPEC_H_
 
 #include "Framework/DataProcessorSpec.h"
 
@@ -23,11 +24,9 @@ namespace o2
 namespace mch
 {
 
-o2::framework::DataProcessorSpec getPreClusterSinkSpec();
-
-o2::framework::DataProcessorSpec getTimeClusterSinkSpec();
+o2::framework::DataProcessorSpec getTimePreClusterFinderSpec();
 
 } // end namespace mch
 } // end namespace o2
 
-#endif // O2_MCH_PRECLUSTERSINKSPEC_H_
+#endif // O2_MCH_TIMEPRECLUSTERFINDERSPEC_H_

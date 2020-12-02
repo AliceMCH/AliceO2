@@ -222,6 +222,7 @@ public:
         pc.outputs().adoptChunk(Output{"MCH", "ORBITS", 0}, orbitsBuffer, orbitsSize, freefct, nullptr);
 
         // stop the readout loop
+        usleep(100000);
         break;
       }
     } // while (true)
