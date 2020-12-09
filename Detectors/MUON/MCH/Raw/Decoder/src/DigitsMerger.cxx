@@ -47,150 +47,11 @@ void MergerBuffer::reset()
   lastDigit.reset();
 }
 
-static int64_t digitsTimeDiff(const Digit& d1, const Digit& d2)
-{
-  const uint32_t bxCounterRollover = 0x100000;
-  const uint32_t bxCounterHalfRollover = bxCounterRollover / 2;
-
-  // compute time difference
-  Digit::Time t1 = d1.getTime();
-  Digit::Time t2 = d2.getTime();
-  uint32_t bx1 = t1.bunchCrossing;
-  uint32_t bx2 = t2.bunchCrossing;
-  // correct for value rollover
-  if ((bx2 + bxCounterHalfRollover) < bx1) {
-    bx2 += bxCounterRollover;
-  }
-
-  int64_t t1full = bx1 + (t1.sampaTime << 2);
-  int64_t t2full = bx2 + (t2.sampaTime << 2);
-  int64_t timeDiff = t2full - t1full;
-
-  return timeDiff;
-}
-
-static uint32_t digitsTimeGap(const Digit& d1, const Digit& d2)
-{
-  const uint32_t bxCounterRollover = 0x100000;
-
-  // compute time difference
-  Digit::Time startTime = d2.getTime();
-  uint32_t bxStart = startTime.bunchCrossing;
-  Digit::Time stopTime = d1.getTime();
-  stopTime.sampaTime += d1.nofSamples() - 1;
-  uint32_t bxStop = stopTime.bunchCrossing;
-  // correct for value rollover
-  if (bxStart < bxStop) {
-    bxStart += bxCounterRollover;
-  }
-
-  uint32_t stopTimeFull = bxStop + (stopTime.sampaTime << 2);
-  uint32_t startTimeFull = bxStart + (startTime.sampaTime << 2);
-  uint32_t timeDiff = startTimeFull - stopTimeFull;
-
-  return timeDiff;
-}
-
-static int64_t digitTime(const Digit& d)
-{
-  Digit::Time t1 = d.getTime();
-  uint32_t bx1 = t1.bunchCrossing;
-  int64_t t1full = bx1 + (t1.sampaTime << 2);
-
-  return t1full;
-}
-
-void FeeIdMerger::setOrbit(uint32_t orbit, bool stop)
-{
-  // perform the merging and send digits of previous orbit if either the stop RDH is received
-  // or a new orbit is started
-  // the code is written in a way that is robust against the presence of a stop RDH. if missing, the
-  // merging gets triggered by a change in the orbit number, otherwise the stopRDH will trigger the
-  // merging earlier
-  if ((orbit == currentBuffer.orbit) && (!stop)) {
-    return;
-  }
-  if (mDebug) {
-    std::cout << "[FeeIdMerger::setOrbit] changing orbit from " << currentBuffer.orbit << " to " << orbit
-        << " (previous is " << previousBuffer.orbit << ")" << std::endl;
-  }
-
-  // do the merging
-  mergeDigits();
-
-  // send the digits that are not merged into others
-  int nSent = 0;
-  int64_t digitTimeLast = 0;
-  Digit* lastDigit = nullptr;
-  for (auto& d : previousBuffer.digits) {
-    int64_t t = digitTime(d.first);
-    if (t > digitTimeLast) {
-      digitTimeLast = t;
-      lastDigit = &(d.first);
-    }
-    if ((d.second == DIGIT_STATE_UNCHECKED) && (d.first.getPadID() >= 0)) {
-      sendDigit(d.first);
-      nSent += 1;
-    }
-  }
-  if (mDebug) {
-    std::cout << "[FeeIdMerger] sent " << nSent << " digits for orbit " << previousBuffer.orbit << "  current orbit is " << orbit << std::endl;
-  }
-
-  if (lastDigit) {
-    previousBuffer.lastDigit = *lastDigit;
-  }
-
-  if (mDebug) {
-    std::cout << "[FeeIdMerger::setOrbit] last digit of orbit " << previousBuffer.orbit << ": ";
-    if (previousBuffer.lastDigit.has_value()) {
-      std::cout << previousBuffer.lastDigit.value();
-    } else {
-      std::cout << "null";
-    }
-    std::cout << std::endl;
-
-    std::cout<<"[FeeIdMerger::setOrbit] number of digits for orbit " << currentBuffer.orbit
-        << ": " << currentBuffer.digits.size() << std::endl;
-  }
-
-  if (previousBuffer.lastDigit.has_value()) {
-    const uint32_t cBxDiffMax = 1000;
-    for (auto& d : currentBuffer.digits) {
-      if ((d.second == DIGIT_STATE_UNCHECKED) && (d.first.getPadID() >= 0)) {
-        int64_t tdiff = digitsTimeDiff(previousBuffer.lastDigit.value(), d.first);
-        if (mDebug) {
-          std::cout << "  checking digit " << d.first << " - tdiff: " << tdiff <<std::endl;
-        }
-        if (tdiff <= cBxDiffMax) {
-          d.second = DIGIT_STATE_COMPLETED;
-          sendDigit(d.first);
-          nSent += 1;
-        }
-      }
-    }
-  }
-
-  if (stop) {
-    // cleat the previous buffer if a stop RDH is received
-    // this way, the following change in orbit number will not trigger a new merging
-    previousBuffer.digits.clear();
-  }
-
-  if (orbit != currentBuffer.orbit) {
-    // clear the contents of the buffer from the previous orbit, and swap the vectors
-    previousBuffer.digits.clear();
-    previousBuffer.lastDigit.reset();
-    previousBuffer.orbit = currentBuffer.orbit;
-    std::swap(previousBuffer.digits, currentBuffer.digits);
-    currentBuffer.orbit = orbit;
-  }
-}
-
 void FeeIdMerger::reset()
 {
   currentBuffer.reset();
   previousBuffer.reset();
+  mSkipOrbit = true;
 }
 
 // helper function to check if two digits correspond to the same pad;
@@ -272,7 +133,6 @@ static void mergeBuffers(MergerBuffer& buf1, MergerBuffer& buf2, bool debug)
   }
 }
 
-
 void FeeIdMerger::mergeDigits()
 {
   auto& currentBuffer = getCurrentBuffer();
@@ -294,6 +154,149 @@ void FeeIdMerger::mergeDigits()
     std::cout << "[FeeIdMerger::mergeDigits] merging orbits " << orbit1 << " and " << orbit2 <<std::endl;
   }
   mergeBuffers(previousBuffer, currentBuffer, mDebug);
+}
+
+static int64_t digitsTimeDiff(const Digit& d1, const Digit& d2)
+{
+  const uint32_t bxCounterRollover = 0x100000;
+  const uint32_t bxCounterHalfRollover = bxCounterRollover / 2;
+
+  // compute time difference
+  Digit::Time t1 = d1.getTime();
+  Digit::Time t2 = d2.getTime();
+  uint32_t bx1 = t1.bunchCrossing;
+  uint32_t bx2 = t2.bunchCrossing;
+  // correct for value rollover
+  if ((bx2 + bxCounterHalfRollover) < bx1) {
+    bx2 += bxCounterRollover;
+  }
+
+  int64_t t1full = bx1 + (t1.sampaTime << 2);
+  int64_t t2full = bx2 + (t2.sampaTime << 2);
+  int64_t timeDiff = t2full - t1full;
+
+  return timeDiff;
+}
+
+static uint32_t digitsTimeGap(const Digit& d1, const Digit& d2)
+{
+  const uint32_t bxCounterRollover = 0x100000;
+
+  // compute time difference
+  Digit::Time startTime = d2.getTime();
+  uint32_t bxStart = startTime.bunchCrossing;
+  Digit::Time stopTime = d1.getTime();
+  stopTime.sampaTime += d1.nofSamples() - 1;
+  uint32_t bxStop = stopTime.bunchCrossing;
+  // correct for value rollover
+  if (bxStart < bxStop) {
+    bxStart += bxCounterRollover;
+  }
+
+  uint32_t stopTimeFull = bxStop + (stopTime.sampaTime << 2);
+  uint32_t startTimeFull = bxStart + (startTime.sampaTime << 2);
+  uint32_t timeDiff = startTimeFull - stopTimeFull;
+
+  return timeDiff;
+}
+
+static int64_t digitTime(const Digit& d)
+{
+  Digit::Time t1 = d.getTime();
+  uint32_t bx1 = t1.bunchCrossing;
+  int64_t t1full = bx1 + (t1.sampaTime << 2);
+
+  return t1full;
+}
+
+void FeeIdMerger::setOrbit(uint32_t orbit, bool stop)
+{
+  // perform the merging and send digits of previous orbit if either the stop RDH is received
+  // or a new orbit is started
+  // the code is written in a way that is robust against the presence of a stop RDH. if missing, the
+  // merging gets triggered by a change in the orbit number, otherwise the stopRDH will trigger the
+  // merging earlier
+  if ((orbit == currentBuffer.orbit) && (!stop)) {
+    return;
+  }
+  if (mDebug) {
+    std::cout << "[FeeIdMerger::setOrbit] changing orbit from " << currentBuffer.orbit << " to " << orbit
+        << " (previous is " << previousBuffer.orbit << ")" << std::endl;
+  }
+
+  // do the merging
+  mergeDigits();
+
+  // send the digits that are not merged into others
+  int nSent = 0;
+  int64_t digitTimeLast = 0;
+  Digit* lastDigit = nullptr;
+  for (auto& d : previousBuffer.digits) {
+    int64_t t = digitTime(d.first);
+    if (t > digitTimeLast) {
+      digitTimeLast = t;
+      lastDigit = &(d.first);
+    }
+    if ( !mSkipOrbit && (d.second == DIGIT_STATE_UNCHECKED) && (d.first.getPadID() >= 0)) {
+      sendDigit(d.first);
+      nSent += 1;
+    }
+  }
+  if (mDebug) {
+    std::cout << "[FeeIdMerger] sent " << nSent << " digits for orbit " << previousBuffer.orbit << "  current orbit is " << orbit << std::endl;
+  }
+
+  // only skip the first orbit in the input buffer
+  mSkipOrbit = false;
+
+  if (lastDigit) {
+    previousBuffer.lastDigit = *lastDigit;
+  }
+
+  if (mDebug) {
+    std::cout << "[FeeIdMerger::setOrbit] last digit of orbit " << previousBuffer.orbit << ": ";
+    if (previousBuffer.lastDigit.has_value()) {
+      std::cout << previousBuffer.lastDigit.value();
+    } else {
+      std::cout << "null";
+    }
+    std::cout << std::endl;
+
+    std::cout<<"[FeeIdMerger::setOrbit] number of digits for orbit " << currentBuffer.orbit
+        << ": " << currentBuffer.digits.size() << std::endl;
+  }
+
+  if (previousBuffer.lastDigit.has_value()) {
+    const uint32_t cBxDiffMax = 1000;
+    for (auto& d : currentBuffer.digits) {
+      if ((d.second == DIGIT_STATE_UNCHECKED) && (d.first.getPadID() >= 0)) {
+        int64_t tdiff = digitsTimeDiff(previousBuffer.lastDigit.value(), d.first);
+        if (mDebug) {
+          std::cout << "  checking digit " << d.first << " - tdiff: " << tdiff <<std::endl;
+        }
+        if (tdiff <= cBxDiffMax) {
+          d.second = DIGIT_STATE_COMPLETED;
+          sendDigit(d.first);
+          nSent += 1;
+        }
+      }
+    }
+  }
+
+  if (stop) {
+    // cleat the previous buffer if a stop RDH is received
+    // this way, the following change in orbit number will not trigger a new merging
+    previousBuffer.digits.clear();
+  }
+
+  if (orbit != currentBuffer.orbit) {
+    // clear the contents of the buffer from the previous orbit, and swap the vectors
+    previousBuffer.digits.clear();
+    previousBuffer.lastDigit.reset();
+    previousBuffer.orbit = currentBuffer.orbit;
+    std::swap(previousBuffer.digits, currentBuffer.digits);
+    currentBuffer.orbit = orbit;
+  }
 }
 
 Merger::Merger(bool debug): mDebug(debug)

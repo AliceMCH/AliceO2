@@ -85,6 +85,7 @@ class FeeIdMerger
   MergerBuffer currentBuffer, previousBuffer;
   int feeId = {0};
   std::function<void(const Digit&)> sendDigit;
+  bool mSkipOrbit = {true};
   bool mDebug = {false};
 };
 
