@@ -505,7 +505,7 @@ o2::framework::DataProcessorSpec getFileReaderSpec()
     Options{{"infile", VariantType::String, "", {"input file name"}},
             {"nframes", VariantType::Int, -1, {"number of frames to process"}},
             {"full-hbf", VariantType::Bool, false, {"send full HeartBeat frames"}},
-            {"full-tf", VariantType::Bool, true, {"send full time frames"}},
+            {"full-tf", VariantType::Bool, false, {"send full time frames"}},
             {"overlap", VariantType::Int, 1, {"overlap between contiguous TimeFrames"}},
             {"print", VariantType::Bool, false, {"verbose output"}}}};
 }
