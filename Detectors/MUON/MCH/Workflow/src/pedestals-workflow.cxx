@@ -44,7 +44,7 @@
 #include "MCHRawElecMap/Mapper.h"
 #include "MCHMappingInterface/Segmentation.h"
 
-static const size_t SOLAR_ID_MAX = 8 * 8;
+static const size_t SOLAR_ID_MAX = 100 * 8;
 
 namespace o2
 {
@@ -139,9 +139,11 @@ class PedestalsTask
 
     auto mapCRUfile = ic.options().get<std::string>("cru-map");
     auto mapFECfile = ic.options().get<std::string>("fec-map");
-
     initFee2SolarMapper(mMapCRUfile);
     initElec2DetMapper(mMapFECfile);
+
+    mNoiseThreshold = ic.options().get<float>("noise-threshold");
+    mPedestalThreshold = ic.options().get<float>("pedestal-threshold");
 
     ic.services().get<CallbackService>().set(CallbackService::Id::Stop, [this]() { stop(); });
     ic.services().get<CallbackService>().set(CallbackService::Id::Reset, [this]() { reset(); });
@@ -165,16 +167,29 @@ class PedestalsTask
   //_________________________________________________________________________________________________
   void stop()
   {
+    //if (mDebug) {
+      std::cout << "\n\n============================\nStop called\n";
+    //}
     for (int s = 0; s <= SOLAR_ID_MAX; s++) {
       for (int i = 0; i < 40; i++) {
         for (int j = 0; j < 64; j++) {
+          //std::cout << "SOLAR " << s << "  DS " << i << "  CH " << j << "  nhits " << nhits[s][i][j] << std::endl;
           if (nhits[s][i][j] == 0) continue;
 
+          bool ok = true;
           if (pedestal[s][i][j] > mPedestalThreshold) {
+            //std::cout << "SOLAR " << s << "  DS " << i << "  CH " << j << "  excluded, pedestal=" << pedestal[s][i][j] << std::endl;
+            ok = false;
           }
 
           double rms = std::sqrt(noise[s][i][j] / nhits[s][i][j]);
           if (rms > mNoiseThreshold) {
+            //std::cout << "SOLAR " << s << "  DS " << i << "  CH " << j << "  excluded, rms=" << rms << std::endl;
+            ok = false;
+          }
+          if (!ok) {
+            std::cout << "SOLAR " << s << "  DS " << i << "  CH " << j << "  nhits " << nhits[s][i][j]
+                << "  pedestal " << pedestal[s][i][j] << "  RMS " << rms << "  OK " << ok << std::endl;
           }
         }
       }
@@ -193,7 +208,6 @@ class PedestalsTask
       auto solarId = dsElecId.solarId();
       auto dsId = dsElecId.elinkId();
 
-      std::cout << "solarId " << solarId << "  dsId " << dsId << std::endl;
       for (auto s: sc.samples) {
         nhits[solarId][dsId][channel] += 1;
         uint64_t N = nhits[solarId][dsId][channel];
@@ -206,7 +220,10 @@ class PedestalsTask
         double M = M0 + (s - p0) * (s - p);
         noise[solarId][dsId][channel] = M;
       }
-
+      if (mDebug) {
+        std::cout << "solarId " << (int)solarId << "  dsId " << (int)dsId << "  ch " << (int)channel << "  nsamples " << sc.samples.size()
+              << "  nhits "<< nhits[solarId][dsId][channel] << "  ped "<< pedestal[solarId][dsId][channel] << "  noise " << noise[solarId][dsId][channel] << std::endl;
+      }
       ++ndigits;
     };
 
@@ -343,8 +360,8 @@ o2::framework::DataProcessorSpec getPedestalsSpec(std::string inputSpec)
     Outputs{},
     AlgorithmSpec{adaptFromTask<o2::mch::raw::PedestalsTask>(inputSpec)},
     Options{{"debug", VariantType::Bool, false, {"enable verbose output"}},
-            {"noise-threshold", VariantType::Float, 2.0, {"maximum acceptable noise value"}},
-            {"pedestal-threshold", VariantType::Float, 150, {"maximum acceptable pedestal value"}},
+            {"noise-threshold", VariantType::Float, (float)2.0, {"maximum acceptable noise value"}},
+            {"pedestal-threshold", VariantType::Float, (float)150, {"maximum acceptable pedestal value"}},
             {"cru-map", VariantType::String, "", {"custom CRU mapping"}},
             {"fec-map", VariantType::String, "", {"custom FEC mapping"}}}};
 }
