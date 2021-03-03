@@ -8,24 +8,11 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-/// \file ClusterSinkSpec.h
-/// \brief Definition of a data processor to write clusters
-///
-/// \author Philippe Pillot, Subatech
+#ifdef __CLING__
 
-#ifndef O2_MCH_CLUSTERSINKSPEC_H_
-#define O2_MCH_CLUSTERSINKSPEC_H_
+#pragma link off all globals;
+#pragma link off all classes;
+#pragma link off all functions;
+//#pragma link C++ class o2::hmpid::Cluster + ;
 
-#include "Framework/DataProcessorSpec.h"
-
-namespace o2
-{
-namespace mch
-{
-
-o2::framework::DataProcessorSpec getClusterSinkSpec();
-
-} // end namespace mch
-} // end namespace o2
-
-#endif // O2_MCH_CLUSTERSINKSPEC_H_
+#endif

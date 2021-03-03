@@ -8,24 +8,26 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-/// \file ClusterSamplerSpec.h
-/// \brief Definition of a data processor to read and send clusters
-///
-/// \author Philippe Pillot, Subatech
+/// @file   ClusterWriterSpec.h
 
-#ifndef O2_MCH_CLUSTERSAMPLERSPEC_H_
-#define O2_MCH_CLUSTERSAMPLERSPEC_H_
+#ifndef O2_PHOS_WRITER
+#define O2_PHOS_WRITER
 
 #include "Framework/DataProcessorSpec.h"
 
 namespace o2
 {
-namespace mch
+namespace phos
 {
 
-o2::framework::DataProcessorSpec getClusterSamplerSpec();
+/// create a processor spec
+/// write PHOS clusters to ROOT file
+framework::DataProcessorSpec getCellWriterSpec(bool useMC);
 
-} // end namespace mch
-} // end namespace o2
+/// write PHOS clusters to ROOT file
+framework::DataProcessorSpec getClusterWriterSpec(bool useMC);
 
-#endif // O2_MCH_CLUSTERSAMPLERSPEC_H_
+} // namespace phos
+} // namespace o2
+
+#endif /* O2_PHOS_WRITER */
