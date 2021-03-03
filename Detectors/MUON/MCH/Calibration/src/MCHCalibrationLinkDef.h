@@ -14,10 +14,11 @@
 #pragma link off all classes;
 #pragma link off all functions;
 
-#pragma link C++ namespace o2;
-#pragma link C++ namespace o2::mch::calibration;
-
 #pragma link C++ class o2::mch::calibration::PedestalDigit + ;
-#pragma link C++ class std::vector < o2::mch::calibration::PedestalDigit > +;
+
+#pragma link C++ class o2::mch::calibration::MCHChannelData + ;
+#pragma link C++ class o2::mch::calibration::MCHChannelCalibrator + ;
+#pragma link C++ class o2::calibration::TimeSlot < o2::mch::calibration::MCHChannelData> + ;
+#pragma link C++ class o2::calibration::TimeSlotCalibration < o2::mch::calibration::PedestalDigit, o2::mch::calibration::MCHChannelData> + ;
 
 #endif

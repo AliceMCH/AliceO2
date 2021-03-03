@@ -8,9 +8,9 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-/** @file Digit.h
- * C++ simple Muon MCH digit.
- * @author  Michael Winn
+/** @file PedestalDigit.h
+ * C++ Muon MCH digit with ADC samples information.
+ * @author  Andrea Ferrero
  */
 
 #ifndef ALICEO2_MCH_CALIBRATION_PEDESTAL_DIGIT_H_
@@ -35,28 +35,26 @@ class PedestalDigit
  public:
   PedestalDigit() = default;
 
-  PedestalDigit(int feeid, int ds, int ch, uint32_t trigTime, uint32_t time, std::vector<uint16_t> samples);
+  PedestalDigit(int solarid, int ds, int ch, uint32_t trigTime, uint32_t time, std::vector<uint16_t> samples);
   ~PedestalDigit() = default;
 
   uint32_t getTime() const { return mTime; }
   uint32_t getTriggerTime() const { return mTrigTime; }
 
   uint16_t nofSamples() const { return mNofSamples; }
-
-  int getFeeID() const { return mFeeID; }
-  int getDsID() const { return mDsID; }
-  int getChannel() const { return mChannel; }
-
-
   int16_t getSample(uint16_t s) const;
+
+  int getSolarId() const { return mSolarId; }
+  int getDsId() const { return mDsId; }
+  int getChannel() const { return mChannel; }
 
  private:
   uint32_t mTime{0};
   uint32_t mTrigTime{0};
   uint16_t mNofSamples{0}; /// number of samples in the signal
   uint16_t mSamples[MCH_PEDESTALS_MAX_SAMPLES];
-  int mFeeID;
-  int mDsID;         /// PadIndex to which the digit corresponds to
+  int mSolarId;
+  int mDsId;         /// PadIndex to which the digit corresponds to
   int mChannel; /// Amplitude of signal
 
   ClassDefNV(PedestalDigit, 1);
@@ -65,4 +63,4 @@ class PedestalDigit
 } //namespace calibration
 } //namespace mch
 } //namespace o2
-#endif // ALICEO2_MCH_DIGIT_H_
+#endif // ALICEO2_MCH_CALIBRATION_PEDESTAL_DIGIT_H_

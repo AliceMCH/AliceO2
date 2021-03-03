@@ -44,6 +44,8 @@
 #include "MCHRawElecMap/Mapper.h"
 #include "MCHMappingInterface/Segmentation.h"
 
+#include "MCHCalibration/PedestalDigit.h"
+
 static const size_t SOLAR_ID_MAX = 100 * 8;
 
 namespace o2
@@ -136,6 +138,7 @@ class PedestalsTask
   void init(framework::InitContext& ic)
   {
     mDebug = ic.options().get<bool>("debug");
+    mPatchRDH = ic.options().get<bool>("patch-rdh");
 
     auto mapCRUfile = ic.options().get<std::string>("cru-map");
     auto mapFECfile = ic.options().get<std::string>("fec-map");
@@ -161,7 +164,7 @@ class PedestalsTask
   //_________________________________________________________________________________________________
   void reset()
   {
-
+    mDigits.clear();
   }
 
   //_________________________________________________________________________________________________
@@ -208,26 +211,13 @@ class PedestalsTask
       auto solarId = dsElecId.solarId();
       auto dsId = dsElecId.elinkId();
 
-      for (auto s: sc.samples) {
-        nhits[solarId][dsId][channel] += 1;
-        uint64_t N = nhits[solarId][dsId][channel];
-
-        double p0 = pedestal[solarId][dsId][channel];
-        double p = p0 + (s - p0) / N;
-        pedestal[solarId][dsId][channel] = p;
-
-        double M0 = noise[solarId][dsId][channel];
-        double M = M0 + (s - p0) * (s - p);
-        noise[solarId][dsId][channel] = M;
-      }
-      if (mDebug) {
-        std::cout << "solarId " << (int)solarId << "  dsId " << (int)dsId << "  ch " << (int)channel << "  nsamples " << sc.samples.size()
-              << "  nhits "<< nhits[solarId][dsId][channel] << "  ped "<< pedestal[solarId][dsId][channel] << "  noise " << noise[solarId][dsId][channel] << std::endl;
-      }
+      mDigits.emplace_back(o2::mch::calibration::PedestalDigit(solarId, dsId, channel, sc.bunchCrossing, 0, sc.samples));
       ++ndigits;
     };
 
-    patchPage(page, mDebug);
+    if (mPatchRDH) {
+      patchPage(page, mDebug);
+    }
 
     if (!mDecoder) {
       DecodedDataHandlers handlers;
@@ -235,7 +225,11 @@ class PedestalsTask
       mDecoder = mFee2Solar ? o2::mch::raw::createPageDecoder(page, handlers, mFee2Solar)
                             : o2::mch::raw::createPageDecoder(page, handlers);
     }
-    mDecoder(page);
+    try {
+      mDecoder(page);
+    } catch (std::exception& e) {
+      std::cout << e.what() << '\n';
+    }
   }
 
   //_________________________________________________________________________________________________
@@ -301,6 +295,23 @@ class PedestalsTask
   //_________________________________________________________________________________________________
   void run(framework::ProcessingContext& pc)
   {
+    auto createBuffer = [&](auto& vec, size_t& size) {
+      size = vec.empty() ? 0 : sizeof(*(vec.begin())) * vec.size();
+      char* buf = nullptr;
+      if (size > 0) {
+        buf = (char*)malloc(size);
+        if (buf) {
+          char* p = buf;
+          size_t sizeofElement = sizeof(*(vec.begin()));
+          for (auto& element : vec) {
+            memcpy(p, &element, sizeofElement);
+            p += sizeofElement;
+          }
+        }
+      }
+      return buf;
+    };
+
     reset();
     for (auto&& input : pc.inputs()) {
       if (input.spec->binding == "TF") {
@@ -310,11 +321,23 @@ class PedestalsTask
         decodeReadout(input);
       }
     }
+
+    if (mDebug) {
+      usleep(100000);
+    }
+
+    size_t digitsSize;
+    char* digitsBuffer = createBuffer(mDigits, digitsSize);
+
+    // create the output message
+    auto freefct = [](void* data, void*) { free(data); };
+    pc.outputs().adoptChunk(Output{"MCH", "PDIGITS", 0}, digitsBuffer, digitsSize, freefct, nullptr);
   }
 
  private:
   o2::mch::raw::PageDecoder mDecoder;
   SampaChannelHandler mChannelHandler;
+  std::vector<o2::mch::calibration::PedestalDigit> mDigits;
 
   Elec2DetMapper mElec2Det{nullptr};
   FeeLink2SolarMapper mFee2Solar{nullptr};
@@ -329,6 +352,7 @@ class PedestalsTask
   float mPedestalThreshold;
 
   std::string mInputSpec;     /// selection string for the input data
+  bool mPatchRDH = {false};      /// flag to enable verbose output
   bool mDebug = {false};      /// flag to enable verbose output
 };
 
@@ -357,9 +381,10 @@ o2::framework::DataProcessorSpec getPedestalsSpec(std::string inputSpec)
   return DataProcessorSpec{
     "Pedestals",
     o2::framework::select(inputSpec.c_str()),
-    Outputs{},
+    Outputs{OutputSpec{"MCH", "PDIGITS", 0, Lifetime::Timeframe}},
     AlgorithmSpec{adaptFromTask<o2::mch::raw::PedestalsTask>(inputSpec)},
     Options{{"debug", VariantType::Bool, false, {"enable verbose output"}},
+            {"patch-rdh", VariantType::Bool, false, {"fill the FEEID RDH field using the CRUID value"}},
             {"noise-threshold", VariantType::Float, (float)2.0, {"maximum acceptable noise value"}},
             {"pedestal-threshold", VariantType::Float, (float)150, {"maximum acceptable pedestal value"}},
             {"cru-map", VariantType::String, "", {"custom CRU mapping"}},

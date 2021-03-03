@@ -14,8 +14,8 @@
 namespace o2::mch::calibration
 {
 
-PedestalDigit::PedestalDigit(int feeid, int dsid, int ch, uint32_t trigTime, uint32_t time, std::vector<uint16_t> samples)
-  : mFeeID(feeid), mDsID(dsid), mChannel(ch), mTrigTime(trigTime), mTime(time), mNofSamples(samples.size())
+PedestalDigit::PedestalDigit(int solarid, int dsid, int ch, uint32_t trigTime, uint32_t time, std::vector<uint16_t> samples)
+  : mSolarId(solarid), mDsId(dsid), mChannel(ch), mTrigTime(trigTime), mTime(time), mNofSamples(samples.size())
 {
   mNofSamples = samples.size();
   if (mNofSamples > MCH_PEDESTALS_MAX_SAMPLES) {

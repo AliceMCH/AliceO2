@@ -11,14 +11,21 @@
 o2_add_library(MCHCalibration
          SOURCES
 	       src/PedestalDigit.cxx
-	       PUBLIC_LINK_LIBRARIES ROOT::Core FairRoot::Base FairMQ::FairMQ ms_gsl::ms_gsl O2::MCHBase O2::MCHRawDecoder)
+	       src/PedestalProcessor.cxx
+	       src/MCHChannelCalibrator.cxx
+	       PUBLIC_LINK_LIBRARIES ms_gsl::ms_gsl O2::DetectorsCalibration O2::CCDB O2::MCHBase O2::MCHRawDecoder)
 
 o2_target_root_dictionary(MCHCalibration
-  HEADERS include/MCHCalibration/PedestalDigit.h)
+  HEADERS include/MCHCalibration/PedestalDigit.h include/MCHCalibration/PedestalProcessor.h include/MCHCalibration/MCHChannelCalibrator.h)
 
-o2_add_executable(
-        pedestals-workflow
-        SOURCES src/pedestals-workflow.cxx
+o2_add_executable(pedestals-decoding-workflow
+        SOURCES src/pedestals-decoding-workflow.cxx
         COMPONENT_NAME mch
         PUBLIC_LINK_LIBRARIES Boost::program_options O2::Framework O2::DPLUtils O2::MCHCalibration)
+
+o2_add_executable(mch-channel-calib-workflow
+                  COMPONENT_NAME calibration
+                  SOURCES src/channel-calib-workflow.cxx
+                  PUBLIC_LINK_LIBRARIES O2::Framework O2::MCHCalibration O2::DetectorsCalibration)
+
   
