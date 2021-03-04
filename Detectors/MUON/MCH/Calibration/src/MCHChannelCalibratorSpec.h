@@ -65,6 +65,7 @@ class MCHChannelCalibDevice : public o2::framework::Task
     constexpr uint64_t INFINITE_TF = 0xffffffffffffffff;
     mCalibrator->checkSlotsToFinalize(INFINITE_TF);
     mCalibrator->endOfStream();
+    LOG(INFO) << "End of stream reached, sending output to CCDB";
     sendOutput(ec.outputs());
   }
 
@@ -73,26 +74,20 @@ class MCHChannelCalibDevice : public o2::framework::Task
 
   //________________________________________________________________
   void sendOutput(DataAllocator& output)
-  {/*
+  {
     // extract CCDB infos and calibration objects, convert it to TMemFile and send them to the output
     // TODO in principle, this routine is generic, can be moved to Utils.h
     using clbUtils = o2::calibration::Utils;
-    const auto& payloadVec = mCalibrator->getTimeSlewingVector();
-    auto& infoVec = mCalibrator->getTimeSlewingInfoVector(); // use non-const version as we update it
-    assert(payloadVec.size() == infoVec.size());
+    const auto& payload = mCalibrator->getBadChannelsVector();
+    auto& info = mCalibrator->getBadChannelsInfo(); // use non-const version as we update it
+    auto image = o2::ccdb::CcdbApi::createObjectImage(&payload, &info);
+    LOG(INFO) << "Sending object " << info.getPath() << "/" << info.getFileName() << " of size " << image->size()
+                        << " bytes, valid for " << info.getStartValidityTimestamp() << " : " << info.getEndValidityTimestamp();
+    output.snapshot(Output{clbUtils::gDataOriginCLB, clbUtils::gDataDescriptionCLBPayload, 0}, *image.get());
+    output.snapshot(Output{clbUtils::gDataOriginCLB, clbUtils::gDataDescriptionCLBInfo, 0}, info);         // root-serialized
 
-    for (uint32_t i = 0; i < payloadVec.size(); i++) {
-      auto& w = infoVec[i];
-      auto image = o2::ccdb::CcdbApi::createObjectImage(&payloadVec[i], &w);
-      LOG(INFO) << "Sending object " << w.getPath() << "/" << w.getFileName() << " of size " << image->size()
-                << " bytes, valid for " << w.getStartValidityTimestamp() << " : " << w.getEndValidityTimestamp();
-      output.snapshot(Output{clbUtils::gDataOriginCLB, clbUtils::gDataDescriptionCLBPayload, i}, *image.get()); // vector<char>
-      output.snapshot(Output{clbUtils::gDataOriginCLB, clbUtils::gDataDescriptionCLBInfo, i}, w);               // root-serialized
-    }
-    if (payloadVec.size()) {
-      mCalibrator->initOutput(); // reset the outputs once they are already sent
-    }
-  */}
+    mCalibrator->initOutput(); // reset the outputs once they are already sent
+  }
 };
 
 } // namespace calibration
@@ -103,6 +98,7 @@ namespace framework
 
 DataProcessorSpec getMCHChannelCalibDeviceSpec()
 {
+  constexpr int64_t INFINITE_TF = 0xffffffffffffffff;
   using device = o2::mch::calibration::MCHChannelCalibDevice;
   using clbUtils = o2::calibration::Utils;
 
@@ -119,8 +115,8 @@ DataProcessorSpec getMCHChannelCalibDeviceSpec()
     outputs,
     AlgorithmSpec{adaptFromTask<device>()},
     Options{
-      {"tf-per-slot", VariantType::Int, 5, {"number of TFs per calibration time slot"}},
-      {"max-delay", VariantType::Int, 3, {"number of slots in past to consider"}},
+      {"tf-per-slot", VariantType::Int64, INFINITE_TF - 10, {"number of TFs per calibration time slot"}},
+      {"max-delay", VariantType::Int, 1, {"number of slots in past to consider"}},
       {"pedestal-threshold", VariantType::Float, 200.0f, {"maximum allowed pedestal value"}},
       {"noise-threshold", VariantType::Float, 2.0f, {"maximum allowed noise value"}},
       {"ccdb-path", VariantType::String, "http://ccdb-test.cern.ch:8080", {"Path to CCDB"}}}};

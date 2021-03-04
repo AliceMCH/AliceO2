@@ -27,14 +27,46 @@ namespace mch
 namespace calibration
 {
 
+class SampaChannelId
+{
+public:
+  SampaChannelId() = default;
+  SampaChannelId(uint32_t channelId): mChannelId(channelId) {}
+  SampaChannelId(uint16_t solarId, uint8_t dsId, uint8_t channel)
+  {
+    set(solarId, dsId, channel);
+  }
 
-static const size_t SOLAR_ID_MAX = 100 * 8;
+  void set(uint16_t solarId, uint8_t dsId, uint8_t channel)
+  {
+    mChannelId = (static_cast<uint32_t>(solarId) << 16) +
+        (static_cast<uint32_t>(dsId) << 8) + channel;
+  }
+
+private:
+  uint32_t mChannelId{0};
+
+  ClassDefNV(SampaChannelId, 1); // class for MCH readout channel
+};
+
+class BadChannelsVector
+{
+ public:
+  const std::vector<SampaChannelId>& getBadChannels() const { return mBadChannels; }
+  std::vector<SampaChannelId>& getBadChannels() { return mBadChannels; }
+
+  void reset() { mBadChannels.clear(); }
+
+ private:
+  std::vector<SampaChannelId> mBadChannels;
+
+  ClassDefNV(BadChannelsVector, 1); // class for MCH bad channels list
+};
 
 class MCHChannelData
 {
 
   using Slot = o2::calibration::TimeSlot<o2::mch::calibration::MCHChannelData>;
-  using boostHisto = boost::histogram::histogram<std::tuple<boost::histogram::axis::integer<>>, boost::histogram::unlimited_storage<std::allocator<char>>>;
 
  public:
   MCHChannelData()
@@ -47,10 +79,11 @@ class MCHChannelData
   void fill(const gsl::span<const o2::mch::calibration::PedestalDigit> data);
   void merge(const MCHChannelData* prev);
 
-  const std::vector<o2::mch::calibration::PedestalDigit>& getDigits() const { return mDigits; }
+  //const std::vector<o2::mch::calibration::PedestalDigit>& getDigits() const { return mDigits; }
+  const PedestalProcessor::PedestalsMap& getPedestals() { return mPedestalProcessor.getPedestals(); }
 
  private:
-  std::vector<o2::mch::calibration::PedestalDigit> mDigits;
+  PedestalProcessor mPedestalProcessor;
 
   ClassDefNV(MCHChannelData, 1);
 };
@@ -60,21 +93,11 @@ class MCHChannelCalibrator final : public o2::calibration::TimeSlotCalibration<o
   using TFType = uint64_t;
   using Slot = o2::calibration::TimeSlot<o2::mch::calibration::MCHChannelData>;
   using CcdbObjectInfo = o2::ccdb::CcdbObjectInfo;
-  using CcdbObjectInfoVector = std::vector<CcdbObjectInfo>;
 
  public:
   MCHChannelCalibrator(float pedThreshold, float noiseThreshold) :
     mPedestalThreshold(pedThreshold), mNoiseThreshold(noiseThreshold), mTFStart(0xffffffffffffffff)
   {
-    for (int s = 0; s <= SOLAR_ID_MAX; s++) {
-      for (int i = 0; i < 40; i++) {
-        for (int j = 0; j < 64; j++) {
-          mEntries[s][i][j] = 0;
-          mPedestal[s][i][j] = mNoise[s][i][j] = 0;
-        }
-      }
-    }
-
   };
 
   ~MCHChannelCalibrator() final = default;
@@ -85,19 +108,19 @@ class MCHChannelCalibrator final : public o2::calibration::TimeSlotCalibration<o
   Slot& emplaceNewSlot(bool front, TFType tstart, TFType tend) final;
   void endOfStream();
 
+  const BadChannelsVector& getBadChannelsVector() const { return mBadChannelsVector; }
+  const CcdbObjectInfo& getBadChannelsInfo() const { return mBadChannelsInfo; }
+  CcdbObjectInfo& getBadChannelsInfo() { return mBadChannelsInfo; }
+
  private:
   float mNoiseThreshold;
   float mPedestalThreshold;
-  PedestalProcessor mPedestalProcessor;
-
-  uint64_t mEntries[SOLAR_ID_MAX+1][40][64];
-  double mPedestal[SOLAR_ID_MAX+1][40][64];
-  double mNoise[SOLAR_ID_MAX+1][40][64];
 
   TFType mTFStart;
 
   // output
-  CcdbObjectInfoVector mInfoVector;     // vector of CCDB Infos , each element is filled with the CCDB description of the accompanying TimeSlewing object
+  BadChannelsVector mBadChannelsVector;
+  CcdbObjectInfo mBadChannelsInfo;     // vector of CCDB Infos , each element is filled with the CCDB description of the accompanying TimeSlewing object
 
   ClassDefOverride(MCHChannelCalibrator, 1);
 };

@@ -35,46 +35,13 @@ void MCHChannelData::fill(const gsl::span<const o2::mch::calibration::PedestalDi
   bool mDebug = true;
   LOG(INFO) << "[MCHChannelData::fill] digits size " << digits.size();
 
-  mDigits.reserve(mDigits.size() + digits.size());
-  mDigits.insert(mDigits.end(), digits.begin(), digits.end());
-
-  for (auto& d: digits) {
-    auto solarId = d.getSolarId();
-    auto dsId = d.getDsId();
-    auto channel = d.getChannel();
-
-    size_t hIndex = solarId * 40 * 64 + dsId * 64 + channel;
-
-    for (size_t i = 0; i < d.nofSamples(); i++) {
-      const int s = d.getSample(i);
-      float w = 1;
-
-      /*mEntries[solarId][dsId][channel] += 1;
-      uint64_t N = mEntries[solarId][dsId][channel];
-
-      double p0 = mPedestal[solarId][dsId][channel];
-      double p = p0 + (s - p0) / N;
-      mPedestal[solarId][dsId][channel] = p;
-
-      double M0 = mNoise[solarId][dsId][channel];
-      double M = M0 + (s - p0) * (s - p);
-      mNoise[solarId][dsId][channel] = M;*/
-    }
-    /*if (mDebug) {
-      double rms = std::sqrt(mNoise[solarId][dsId][channel] / mEntries[solarId][dsId][channel]);
-      std::cout << "solarId " << (int)solarId << "  dsId " << (int)dsId << "  ch " << (int)channel << "  nsamples " << d.nofSamples()
-            << "  entries "<< mEntries[solarId][dsId][channel] << "  ped "<< mPedestal[solarId][dsId][channel] << "  noise " << mNoise[solarId][dsId][channel] << "  RMS " << rms << std::endl;
-    }*/
-  }
+  mPedestalProcessor.process(digits);
 }
 
 //_____________________________________________
 void MCHChannelData::merge(const MCHChannelData* prev)
 {
   // merge data of 2 slots
-  auto& digits = prev->getDigits();
-  mDigits.reserve(mDigits.size() + digits.size());
-  mDigits.insert(mDigits.end(), digits.begin(), digits.end());
 }
 
 //_____________________________________________
@@ -90,7 +57,7 @@ void MCHChannelData::print() const
 void MCHChannelCalibrator::initOutput()
 {
   // Here we initialize the vector of our output objects
-  mInfoVector.clear();
+  mBadChannelsVector.reset();
   return;
 }
 
@@ -103,7 +70,7 @@ bool MCHChannelCalibrator::hasEnoughData(const Slot& slot) const
 
   const o2::mch::calibration::MCHChannelData* c = slot.getContainer();
   LOG(INFO) << "Checking statistics";
-  return (false);
+  return (true);
 }
 
 //_____________________________________________
@@ -118,8 +85,27 @@ void MCHChannelCalibrator::finalizeSlot(Slot& slot)
     mTFStart = slot.getTFStart();
   }
 
-  auto& digits = c->getDigits();
-  mPedestalProcessor.processDigits(digits);
+  auto pedestals = c->getPedestals();
+  for (auto& p: pedestals) {
+    auto& pMat = p.second;
+    for (size_t dsId = 0; dsId < pMat.size(); dsId++) {
+      auto& pRow = pMat[dsId];
+      for (size_t ch = 0; ch < pRow.size(); ch++) {
+        auto& pRecord = pRow[ch];
+
+        bool bad = true;
+        if (pRecord.mPedestal < mPedestalThreshold) {
+          if (pRecord.getRms() < mNoiseThreshold) {
+            bad = false;
+          }
+        }
+
+        if (bad) {
+          mBadChannelsVector.getBadChannels().emplace_back(p.first, dsId, ch);
+        }
+      }
+    }
+  }
 }
 
 //_____________________________________________
@@ -135,31 +121,11 @@ Slot& MCHChannelCalibrator::emplaceNewSlot(bool front, TFType tstart, TFType ten
 //_____________________________________________
 void MCHChannelCalibrator::endOfStream()
 {
-  for (uint32_t i = 0; i <= mPedestalProcessor.getMaxSolarId(); i++) {
-    for (uint32_t j = 0; j <= mPedestalProcessor.getMaxDsId(); j++) {
-      for (uint32_t k = 0; k <= mPedestalProcessor.getMaxChannel(); k++) {
-        bool badChannel = true;
-
-        // check the pedestal value first, then compute the rms only if needed
-        double ped = mPedestalProcessor.getPedestal(i, j, k);
-        if (ped < mPedestalThreshold) {
-          double rms = mPedestalProcessor.getRms(i, j, k);
-          if (rms < mNoiseThreshold) {
-            badChannel = false;
-          }
-        }
-
-        if (badChannel) {
-          // TODO: fill CDDB object with list of bad channels
-        }
-      }
-    }
-  }
   // create the CCDB entry
-  //auto clName = o2::utils::MemFileHelper::getClassName(ts);
-  //auto flName = o2::ccdb::CcdbApi::generateFileName(clName);
-  //mInfoVector.emplace_back("MCH/ChannelCalib", clName, flName, md, slot.getTFStart(), 99999999999999);
-  //mTimeSlewingVector.emplace_back(ts);
+  auto clName = o2::utils::MemFileHelper::getClassName(mBadChannelsVector);
+  auto flName = o2::ccdb::CcdbApi::generateFileName(clName);
+  std::map<std::string, std::string> md;
+  mBadChannelsInfo = CcdbObjectInfo("MCH/BadChannelCalib", clName, flName, md, mTFStart, 99999999999999);
 }
 
 } // end namespace calibration

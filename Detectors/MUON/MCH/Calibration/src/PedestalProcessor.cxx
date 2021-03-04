@@ -15,6 +15,12 @@
 namespace o2::mch::calibration
 {
 
+  double PedestalProcessor::PedestalRecord::getRms()
+  {
+    double rms = std::sqrt(mVariance / mEntries);
+    return rms;
+  }
+
   PedestalProcessor::PedestalProcessor()
   {
     reset();
@@ -25,15 +31,15 @@ namespace o2::mch::calibration
     for (int s = 0; s < MCH_NUMBER_OF_SOLAR; s++) {
       for (int i = 0; i < 40; i++) {
         for (int j = 0; j < 64; j++) {
-          mNhits[s][i][j] = 0;
-          mPedestal[s][i][j] = 0;
-          mNoise[s][i][j] = 0;
+          //mNhits[s][i][j] = 0;
+          //mPedestal[s][i][j] = 0;
+          //mNoise[s][i][j] = 0;
         }
       }
     }
   }
 
-  void PedestalProcessor::processDigits(gsl::span<const PedestalDigit> digits)
+  void PedestalProcessor::process(gsl::span<const PedestalDigit> digits)
   {
     bool mDebug = false;
     for (auto& d : digits) {
@@ -41,24 +47,38 @@ namespace o2::mch::calibration
       auto dsId = d.getDsId();
       auto channel = d.getChannel();
 
+      auto iPedestals = mPedestals.find(solarId);
+
+      if (iPedestals == mPedestals.end()) {
+        auto iPedestalsNew = mPedestals.emplace(std::make_pair(solarId, PedestalMatrix()));
+        iPedestals = iPedestalsNew.first;
+      }
+
+      if (iPedestals == mPedestals.end()) {
+        std::cout<< "[PedestalProcessor::process] failed to insert new element\n";
+        break;
+      }
+
+      auto& ped = iPedestals->second[dsId][channel];
+
       for (uint16_t i = 0; i < d.nofSamples(); i++) {
         auto s = d.getSample(i);
 
-        mNhits[solarId][dsId][channel] += 1;
-        uint64_t N = mNhits[solarId][dsId][channel];
+        ped.mEntries += 1;
+        uint64_t N = ped.mEntries;
 
-        double p0 = mPedestal[solarId][dsId][channel];
+        double p0 = ped.mPedestal;
         double p = p0 + (s - p0) / N;
-        mPedestal[solarId][dsId][channel] = p;
+        ped.mPedestal = p;
 
-        double M0 = mNoise[solarId][dsId][channel];
+        double M0 = ped.mVariance;
         double M = M0 + (s - p0) * (s - p);
-        mNoise[solarId][dsId][channel] = M;
+        ped.mVariance = M;
       }
 
       if (mDebug) {
         std::cout << "solarId " << (int)solarId << "  dsId " << (int)dsId << "  ch " << (int)channel << "  nsamples " << d.nofSamples()
-                    << "  nhits "<< mNhits[solarId][dsId][channel] << "  ped "<< mPedestal[solarId][dsId][channel] << "  noise " << mNoise[solarId][dsId][channel] << std::endl;
+                    << "  entries "<< ped.mEntries << "  ped "<< ped.mPedestal << "  variance " << ped.mVariance << std::endl;
       }
     }
   }
@@ -69,7 +89,8 @@ namespace o2::mch::calibration
       return 0;
     }
 
-    return mPedestal[solarId][dsId][channel];
+    return 0;
+    //return mPedestal[solarId][dsId][channel];
   }
 
   double PedestalProcessor::getRms(uint32_t solarId, uint32_t dsId, uint32_t channel) const
@@ -78,8 +99,9 @@ namespace o2::mch::calibration
       return 0;
     }
 
-    double rms = std::sqrt(mNoise[solarId][dsId][channel] / mNhits[solarId][dsId][channel]);
-    return rms;
+    return 0;
+    //double rms = std::sqrt(mNoise[solarId][dsId][channel] / mNhits[solarId][dsId][channel]);
+    //return rms;
   }
 
 } // namespace o2::mch::calibration
