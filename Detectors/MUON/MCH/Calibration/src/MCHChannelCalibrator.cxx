@@ -93,6 +93,10 @@ void MCHChannelCalibrator::finalizeSlot(Slot& slot)
       for (size_t ch = 0; ch < pRow.size(); ch++) {
         auto& pRecord = pRow[ch];
 
+        if (pRecord.mEntries == 0) {
+          continue;
+        }
+
         bool bad = true;
         if (pRecord.mPedestal < mPedestalThreshold) {
           if (pRecord.getRms() < mNoiseThreshold) {
@@ -101,6 +105,8 @@ void MCHChannelCalibrator::finalizeSlot(Slot& slot)
         }
 
         if (bad) {
+          LOG(INFO) << "S " << p.first << "  DS " << dsId << "  CH " << ch
+              << "  ENTRIES " << pRecord.mEntries << "  PED " << pRecord.mPedestal << "  RMS " << pRecord.getRms();
           mBadChannelsVector.getBadChannels().emplace_back(p.first, dsId, ch);
         }
       }
