@@ -21,9 +21,9 @@ namespace mch
 
 class DsChannelId
 {
-public:
+ public:
   DsChannelId() = default;
-  DsChannelId(uint32_t channelId): mChannelId(channelId) {}
+  DsChannelId(uint32_t channelId) : mChannelId(channelId) {}
   DsChannelId(uint16_t solarId, uint8_t dsId, uint8_t channel)
   {
     set(solarId, dsId, channel);
@@ -32,10 +32,10 @@ public:
   void set(uint16_t solarId, uint8_t dsId, uint8_t channel)
   {
     mChannelId = (static_cast<uint32_t>(solarId) << 16) +
-        (static_cast<uint32_t>(dsId) << 8) + channel;
+                 (static_cast<uint32_t>(dsId) << 8) + channel;
   }
 
-private:
+ private:
   uint32_t mChannelId{0};
 
   ClassDefNV(DsChannelId, 1); // class for MCH readout channel
