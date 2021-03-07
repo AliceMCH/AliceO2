@@ -35,7 +35,7 @@ void MCHChannelData::fill(const gsl::span<const o2::mch::calibration::PedestalDi
   bool mDebug = true;
   LOG(INFO) << "[MCHChannelData::fill] digits size " << digits.size();
 
-  for (auto& d: digits) {
+  for (auto& d : digits) {
     auto solarId = d.getSolarId();
     auto dsId = d.getDsId();
     auto channel = d.getChannel();

@@ -36,10 +36,8 @@ namespace calibration
 /// \brief helper class to compute the mean and RMS of the pedestals
 class PedestalProcessor
 {
-public:
-
-  struct PedestalRecord
-  {
+ public:
+  struct PedestalRecord {
     int mEntries{0};
     double mPedestal{0};
     double mVariance{0};

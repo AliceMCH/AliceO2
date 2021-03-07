@@ -82,9 +82,9 @@ class MCHChannelCalibDevice : public o2::framework::Task
     auto& info = mCalibrator->getBadChannelsInfo(); // use non-const version as we update it
     auto image = o2::ccdb::CcdbApi::createObjectImage(&payload, &info);
     LOG(INFO) << "Sending object " << info.getPath() << "/" << info.getFileName() << " of size " << image->size()
-                        << " bytes, valid for " << info.getStartValidityTimestamp() << " : " << info.getEndValidityTimestamp();
+              << " bytes, valid for " << info.getStartValidityTimestamp() << " : " << info.getEndValidityTimestamp();
     output.snapshot(Output{clbUtils::gDataOriginCLB, clbUtils::gDataDescriptionCLBPayload, 0}, *image.get());
-    output.snapshot(Output{clbUtils::gDataOriginCLB, clbUtils::gDataDescriptionCLBInfo, 0}, info);         // root-serialized
+    output.snapshot(Output{clbUtils::gDataOriginCLB, clbUtils::gDataDescriptionCLBInfo, 0}, info); // root-serialized
 
     mCalibrator->initOutput(); // reset the outputs once they are already sent
   }

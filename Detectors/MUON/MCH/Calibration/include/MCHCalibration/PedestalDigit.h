@@ -54,7 +54,7 @@ class PedestalDigit
   uint16_t mNofSamples{0}; /// number of samples in the signal
   uint16_t mSamples[MCH_PEDESTALS_MAX_SAMPLES];
   int mSolarId;
-  int mDsId;         /// PadIndex to which the digit corresponds to
+  int mDsId;    /// PadIndex to which the digit corresponds to
   int mChannel; /// Amplitude of signal
 
   ClassDefNV(PedestalDigit, 1);

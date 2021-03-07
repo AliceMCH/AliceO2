@@ -26,7 +26,6 @@ namespace mch
 namespace calibration
 {
 
-
 static const size_t SOLAR_ID_MAX = 100 * 8;
 
 class MCHChannelData
@@ -64,8 +63,7 @@ class MCHChannelCalibrator final : public o2::calibration::TimeSlotCalibration<o
   using CcdbObjectInfoVector = std::vector<CcdbObjectInfo>;
 
  public:
-  MCHChannelCalibrator(float pedThreshold, float noiseThreshold) :
-    mPedestalThreshold(pedThreshold), mNoiseThreshold(noiseThreshold)
+  MCHChannelCalibrator(float pedThreshold, float noiseThreshold) : mPedestalThreshold(pedThreshold), mNoiseThreshold(noiseThreshold)
   {
     for (int s = 0; s <= SOLAR_ID_MAX; s++) {
       for (int i = 0; i < 40; i++) {
@@ -75,7 +73,6 @@ class MCHChannelCalibrator final : public o2::calibration::TimeSlotCalibration<o
         }
       }
     }
-
   };
 
   ~MCHChannelCalibrator() final = default;
@@ -89,12 +86,12 @@ class MCHChannelCalibrator final : public o2::calibration::TimeSlotCalibration<o
   float mNoiseThreshold;
   float mPedestalThreshold;
 
-  uint64_t mEntries[SOLAR_ID_MAX+1][40][64];
-  double mPedestal[SOLAR_ID_MAX+1][40][64];
-  double mNoise[SOLAR_ID_MAX+1][40][64];
+  uint64_t mEntries[SOLAR_ID_MAX + 1][40][64];
+  double mPedestal[SOLAR_ID_MAX + 1][40][64];
+  double mNoise[SOLAR_ID_MAX + 1][40][64];
 
   // output
-  CcdbObjectInfoVector mInfoVector;     // vector of CCDB Infos , each element is filled with the CCDB description of the accompanying TimeSlewing object
+  CcdbObjectInfoVector mInfoVector; // vector of CCDB Infos , each element is filled with the CCDB description of the accompanying TimeSlewing object
 
   ClassDefOverride(MCHChannelCalibrator, 1);
 };

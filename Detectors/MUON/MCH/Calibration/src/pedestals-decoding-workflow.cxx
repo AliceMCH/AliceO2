@@ -171,13 +171,14 @@ class PedestalsTask
   void stop()
   {
     //if (mDebug) {
-      std::cout << "\n\n============================\nStop called\n";
+    std::cout << "\n\n============================\nStop called\n";
     //}
     for (int s = 0; s <= SOLAR_ID_MAX; s++) {
       for (int i = 0; i < 40; i++) {
         for (int j = 0; j < 64; j++) {
           //std::cout << "SOLAR " << s << "  DS " << i << "  CH " << j << "  nhits " << nhits[s][i][j] << std::endl;
-          if (nhits[s][i][j] == 0) continue;
+          if (nhits[s][i][j] == 0)
+            continue;
 
           bool ok = true;
           if (pedestal[s][i][j] > mPedestalThreshold) {
@@ -192,7 +193,7 @@ class PedestalsTask
           }
           if (!ok) {
             std::cout << "SOLAR " << s << "  DS " << i << "  CH " << j << "  nhits " << nhits[s][i][j]
-                << "  pedestal " << pedestal[s][i][j] << "  RMS " << rms << "  OK " << ok << std::endl;
+                      << "  pedestal " << pedestal[s][i][j] << "  RMS " << rms << "  OK " << ok << std::endl;
           }
         }
       }
@@ -207,7 +208,6 @@ class PedestalsTask
     uint32_t orbit;
 
     auto channelHandler = [&](DsElecId dsElecId, uint8_t channel, o2::mch::raw::SampaCluster sc) {
-
       auto solarId = dsElecId.solarId();
       auto dsId = dsElecId.elinkId();
 
@@ -344,22 +344,21 @@ class PedestalsTask
   std::string mMapCRUfile;
   std::string mMapFECfile;
 
-  uint64_t nhits[SOLAR_ID_MAX+1][40][64];
-  double pedestal[SOLAR_ID_MAX+1][40][64];
-  double noise[SOLAR_ID_MAX+1][40][64];
+  uint64_t nhits[SOLAR_ID_MAX + 1][40][64];
+  double pedestal[SOLAR_ID_MAX + 1][40][64];
+  double noise[SOLAR_ID_MAX + 1][40][64];
 
   float mNoiseThreshold;
   float mPedestalThreshold;
 
-  std::string mInputSpec;     /// selection string for the input data
-  bool mPatchRDH = {false};      /// flag to enable verbose output
-  bool mDebug = {false};      /// flag to enable verbose output
+  std::string mInputSpec;   /// selection string for the input data
+  bool mPatchRDH = {false}; /// flag to enable verbose output
+  bool mDebug = {false};    /// flag to enable verbose output
 };
 
 } // namespace raw
 } // namespace mch
 } // end namespace o2
-
 
 using namespace o2::framework;
 

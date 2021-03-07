@@ -16,9 +16,6 @@
 
 #pragma link C++ class o2::mch::calibration::PedestalDigit + ;
 
-#pragma link C++ class o2::mch::calibration::SampaChannelId + ;
-#pragma link C++ class o2::mch::calibration::BadChannelsVector + ;
-
 #pragma link C++ class o2::mch::calibration::MCHChannelData + ;
 #pragma link C++ class o2::mch::calibration::MCHChannelCalibrator + ;
 #pragma link C++ class o2::calibration::TimeSlot < o2::mch::calibration::MCHChannelData> + ;

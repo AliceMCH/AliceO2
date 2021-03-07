@@ -86,7 +86,7 @@ void MCHChannelCalibrator::finalizeSlot(Slot& slot)
   }
 
   auto pedestals = c->getPedestals();
-  for (auto& p: pedestals) {
+  for (auto& p : pedestals) {
     auto& pMat = p.second;
     for (size_t dsId = 0; dsId < pMat.size(); dsId++) {
       auto& pRow = pMat[dsId];
@@ -106,8 +106,8 @@ void MCHChannelCalibrator::finalizeSlot(Slot& slot)
 
         if (bad) {
           LOG(INFO) << "S " << p.first << "  DS " << dsId << "  CH " << ch
-              << "  ENTRIES " << pRecord.mEntries << "  PED " << pRecord.mPedestal << "  RMS " << pRecord.getRms();
-          mBadChannelsVector.getBadChannels().emplace_back(p.first, dsId, ch);
+                    << "  ENTRIES " << pRecord.mEntries << "  PED " << pRecord.mPedestal << "  RMS " << pRecord.getRms();
+          mBadChannelsVector.getChannels().emplace_back(p.first, dsId, ch);
         }
       }
     }

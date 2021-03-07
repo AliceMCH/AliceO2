@@ -27,7 +27,6 @@ PedestalDigit::PedestalDigit(int solarid, int dsid, int ch, uint32_t trigTime, u
   }
 }
 
-
 int16_t PedestalDigit::getSample(uint16_t s) const
 {
   int16_t result = -1;
@@ -37,6 +36,5 @@ int16_t PedestalDigit::getSample(uint16_t s) const
 
   return result;
 }
-
 
 } // namespace o2::mch::calibration

@@ -13,7 +13,7 @@ o2_add_library(MCHCalibration
 	       src/PedestalDigit.cxx
 	       src/PedestalProcessor.cxx
 	       src/MCHChannelCalibrator.cxx
-	       PUBLIC_LINK_LIBRARIES ms_gsl::ms_gsl O2::DetectorsCalibration O2::CCDB O2::MCHBase O2::MCHRawDecoder)
+	       PUBLIC_LINK_LIBRARIES ms_gsl::ms_gsl O2::DetectorsCalibration O2::CCDB O2::MCHBase O2::MCHRawDecoder O2::DataFormatsMCH)
 
 o2_target_root_dictionary(MCHCalibration
   HEADERS include/MCHCalibration/PedestalDigit.h include/MCHCalibration/PedestalProcessor.h include/MCHCalibration/MCHChannelCalibrator.h)

@@ -11,6 +11,7 @@
 #ifndef MCH_CHANNEL_CALIBRATOR_H_
 #define MCH_CHANNEL_CALIBRATOR_H_
 
+#include "DataFormatsMCH/DsChannelGroup.h"
 #include "DetectorsCalibration/TimeSlotCalibration.h"
 #include "DetectorsCalibration/TimeSlot.h"
 #include "CCDB/CcdbObjectInfo.h"
@@ -27,52 +28,13 @@ namespace mch
 namespace calibration
 {
 
-class SampaChannelId
-{
-public:
-  SampaChannelId() = default;
-  SampaChannelId(uint32_t channelId): mChannelId(channelId) {}
-  SampaChannelId(uint16_t solarId, uint8_t dsId, uint8_t channel)
-  {
-    set(solarId, dsId, channel);
-  }
-
-  void set(uint16_t solarId, uint8_t dsId, uint8_t channel)
-  {
-    mChannelId = (static_cast<uint32_t>(solarId) << 16) +
-        (static_cast<uint32_t>(dsId) << 8) + channel;
-  }
-
-private:
-  uint32_t mChannelId{0};
-
-  ClassDefNV(SampaChannelId, 1); // class for MCH readout channel
-};
-
-class BadChannelsVector
-{
- public:
-  const std::vector<SampaChannelId>& getBadChannels() const { return mBadChannels; }
-  std::vector<SampaChannelId>& getBadChannels() { return mBadChannels; }
-
-  void reset() { mBadChannels.clear(); }
-
- private:
-  std::vector<SampaChannelId> mBadChannels;
-
-  ClassDefNV(BadChannelsVector, 1); // class for MCH bad channels list
-};
-
 class MCHChannelData
 {
 
   using Slot = o2::calibration::TimeSlot<o2::mch::calibration::MCHChannelData>;
 
  public:
-  MCHChannelData()
-  {
-  }
-
+  MCHChannelData() = default;
   ~MCHChannelData() = default;
 
   void print() const;
@@ -92,13 +54,11 @@ class MCHChannelCalibrator final : public o2::calibration::TimeSlotCalibration<o
 {
   using TFType = uint64_t;
   using Slot = o2::calibration::TimeSlot<o2::mch::calibration::MCHChannelData>;
+  using BadChannelsVector = o2::mch::DsChannelGroup;
   using CcdbObjectInfo = o2::ccdb::CcdbObjectInfo;
 
  public:
-  MCHChannelCalibrator(float pedThreshold, float noiseThreshold) :
-    mPedestalThreshold(pedThreshold), mNoiseThreshold(noiseThreshold), mTFStart(0xffffffffffffffff)
-  {
-  };
+  MCHChannelCalibrator(float pedThreshold, float noiseThreshold) : mPedestalThreshold(pedThreshold), mNoiseThreshold(noiseThreshold), mTFStart(0xffffffffffffffff){};
 
   ~MCHChannelCalibrator() final = default;
 
@@ -120,7 +80,7 @@ class MCHChannelCalibrator final : public o2::calibration::TimeSlotCalibration<o
 
   // output
   BadChannelsVector mBadChannelsVector;
-  CcdbObjectInfo mBadChannelsInfo;     // vector of CCDB Infos , each element is filled with the CCDB description of the accompanying TimeSlewing object
+  CcdbObjectInfo mBadChannelsInfo; // vector of CCDB Infos , each element is filled with the CCDB description of the accompanying TimeSlewing object
 
   ClassDefOverride(MCHChannelCalibrator, 1);
 };
