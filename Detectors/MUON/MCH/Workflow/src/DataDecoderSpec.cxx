@@ -21,6 +21,7 @@
 #include <stdexcept>
 #include <array>
 #include <functional>
+#include <chrono>
 
 #include "Framework/CallbackService.h"
 #include "Framework/ConfigParamRegistry.h"
@@ -73,6 +74,15 @@ class DataDecoderTask
     auto mapFECfile = ic.options().get<std::string>("fec-map");
 
     mDecoder = new DataDecoder(channelHandler, rdhHandler, mapCRUfile, mapFECfile, ds2manu, mDebug);
+
+    auto stop = [this]() {
+      if (mTFcount > 0) {
+        LOG(INFO) << "\n\n==================\ntime spent for decoding (ms):\n  min=" << mTimeDecoderMin->count() << "\n  max="
+                  << mTimeDecoderMax->count() << "\n  mean=" << mTimeDecoder.count() / mTFcount
+                  << "\n==================\n";
+      }
+    };
+    ic.services().get<CallbackService>().set(CallbackService::Id::Stop, stop);
   }
 
   //_________________________________________________________________________________________________
@@ -83,15 +93,31 @@ class DataDecoderTask
     auto& inputs = pc.inputs();
     DPLRawParser parser(inputs, o2::framework::select(mInputSpec.c_str()));
 
+    auto tStart = std::chrono::high_resolution_clock::now();
+    size_t totPayloadSize = 0;
     for (auto it = parser.begin(), end = parser.end(); it != end; ++it) {
       auto const* raw = it.raw();
       if (!raw) {
         continue;
       }
       size_t payloadSize = it.size();
+      totPayloadSize += payloadSize;
 
       gsl::span<const std::byte> buffer(reinterpret_cast<const std::byte*>(raw), sizeof(RDH) + payloadSize);
       mDecoder->decodeBuffer(buffer);
+    }
+    auto tEnd = std::chrono::high_resolution_clock::now();
+
+    if (totPayloadSize > 0) {
+      std::chrono::duration<double, std::milli> elapsed = tEnd - tStart;
+      mTimeDecoder += elapsed;
+      if (!mTimeDecoderMin || (elapsed < mTimeDecoderMin)) {
+        mTimeDecoderMin = elapsed;
+      }
+      if (!mTimeDecoderMax || (elapsed > mTimeDecoderMax)) {
+        mTimeDecoderMax = elapsed;
+      }
+      mTFcount += 1;
     }
   }
 
@@ -177,6 +203,11 @@ class DataDecoderTask
   std::string mInputSpec;            /// selection string for the input data
   bool mDebug = {false};             /// flag to enable verbose output
   DataDecoder* mDecoder = {nullptr}; /// pointer to the data decoder instance
+
+  std::chrono::duration<double, std::milli> mTimeDecoder{};
+  std::optional<std::chrono::duration<double, std::milli>> mTimeDecoderMin{};
+  std::optional<std::chrono::duration<double, std::milli>> mTimeDecoderMax{};
+  size_t mTFcount{0};
 };
 
 //_________________________________________________________________________________________________
