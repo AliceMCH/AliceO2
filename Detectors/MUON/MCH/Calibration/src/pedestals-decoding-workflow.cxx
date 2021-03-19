@@ -231,7 +231,8 @@ class PedestalsTask
   {
     // get the input buffer
     auto& inputs = pc.inputs();
-    DPLRawParser parser(inputs, o2::framework::select(mInputSpec.c_str()));
+    //DPLRawParser parser(inputs, o2::framework::select(mInputSpec.c_str()));
+    DPLRawParser parser(inputs, o2::framework::select("TF:MCH/RAWDATA"));
 
     auto tStart = std::chrono::high_resolution_clock::now();
     size_t totPayloadSize = 0;
@@ -305,6 +306,11 @@ class PedestalsTask
   //_________________________________________________________________________________________________
   void run(framework::ProcessingContext& pc)
   {
+    std::cout<<"Pedestals::run called, inputs:\n";
+    for (auto&& input : pc.inputs()) {
+      std::cout<<"  "<<input.spec->binding<<std::endl;
+    }
+
     auto createBuffer = [&](auto& vec, size_t& size) {
       size = vec.empty() ? 0 : sizeof(*(vec.begin())) * vec.size();
       char* buf = nullptr;
