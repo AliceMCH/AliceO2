@@ -85,7 +85,8 @@ class MCHChannelCalibDevice : public o2::framework::Task
   void run(o2::framework::ProcessingContext& pc) final
   {
     const o2::framework::DataProcessingHeader* header = o2::header::get<o2::framework::DataProcessingHeader*>(pc.inputs().get("input").header);
-    if (!header) return;
+    if (!header)
+      return;
     auto tfcounter = header->startTime; // is this the timestamp of the current TF?
 
     auto data = pc.inputs().get<gsl::span<o2::mch::calibration::PedestalDigit>>("input");
