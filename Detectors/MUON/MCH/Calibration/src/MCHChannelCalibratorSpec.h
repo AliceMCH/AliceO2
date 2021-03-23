@@ -84,7 +84,9 @@ class MCHChannelCalibDevice : public o2::framework::Task
   //_________________________________________________________________________________________________
   void run(o2::framework::ProcessingContext& pc) final
   {
-    auto tfcounter = o2::header::get<o2::framework::DataProcessingHeader*>(pc.inputs().get("input").header)->startTime; // is this the timestamp of the current TF?
+    const o2::framework::DataProcessingHeader* header = o2::header::get<o2::framework::DataProcessingHeader*>(pc.inputs().get("input").header);
+    if (!header) return;
+    auto tfcounter = header->startTime; // is this the timestamp of the current TF?
 
     auto data = pc.inputs().get<gsl::span<o2::mch::calibration::PedestalDigit>>("input");
     mCalibrator->process(tfcounter, data);
@@ -153,7 +155,7 @@ class MCHChannelCalibDevice : public o2::framework::Task
 namespace framework
 {
 
-DataProcessorSpec getMCHChannelCalibDeviceSpec()
+DataProcessorSpec getMCHChannelCalibDeviceSpec(const std::string inputSpec)
 {
   constexpr int64_t INFINITE_TF = 0xffffffffffffffff;
   using device = o2::mch::calibration::MCHChannelCalibDevice;
@@ -169,7 +171,7 @@ DataProcessorSpec getMCHChannelCalibDeviceSpec()
 
   return DataProcessorSpec{
     "calib-mchchannel-calibration",
-    inputs,
+    select(inputSpec.data()),
     outputs,
     AlgorithmSpec{adaptFromTask<device>()},
     Options{
