@@ -8,15 +8,16 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-#include "Analysis/TriggerAliases.h"
+#include "AnalysisCore/TriggerAliases.h"
+#include "Framework/Logger.h"
 
-void TriggerAliases::Print()
+void TriggerAliases::AddClassIdToAlias(uint32_t aliasId, int classId)
 {
-  for (auto& al : GetAliasToClassIdsMap()) {
-    printf("%d", al.first);
-    for (auto& classIndex : al.second) {
-      printf(" %d", classIndex);
-    }
-    printf("\n");
+  if (classId < 0 || classId > 99) {
+    LOGF(fatal, "Invalid classId = %d for aliasId = %d\n", classId, aliasId);
+  } else if (classId < 50) {
+    mAliasToTriggerMask[aliasId] |= 1ull << classId;
+  } else {
+    mAliasToTriggerMaskNext50[aliasId] |= 1ull << (classId - 50);
   }
 }

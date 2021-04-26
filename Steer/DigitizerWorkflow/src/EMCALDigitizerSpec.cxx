@@ -9,6 +9,7 @@
 // or submit itself to any jurisdiction.
 
 #include "EMCALDigitizerSpec.h"
+#include "CommonConstants/Triggers.h"
 #include "Framework/ConfigParamRegistry.h"
 #include "Framework/ControlService.h"
 #include "Framework/DataProcessorSpec.h"
@@ -48,8 +49,9 @@ void DigitizerSpec::initDigitizerTask(framework::InitContext& ctx)
 
 void DigitizerSpec::run(framework::ProcessingContext& ctx)
 {
-  if (mFinished)
+  if (mFinished) {
     return;
+  }
 
   // read collision context from input
   auto context = ctx.inputs().get<o2::steer::DigitizationContext*>("collisioncontext");
@@ -58,8 +60,9 @@ void DigitizerSpec::run(framework::ProcessingContext& ctx)
   LOG(DEBUG) << "GOT " << timesview.size() << " COLLISSION TIMES";
 
   // if there is nothing to do ... return
-  if (timesview.size() == 0)
+  if (timesview.size() == 0) {
     return;
+  }
 
   TStopwatch timer;
   timer.Start();
@@ -76,7 +79,10 @@ void DigitizerSpec::run(framework::ProcessingContext& ctx)
   // loop over all composite collisions given from context
   // (aka loop over all the interaction records)
   for (int collID = 0; collID < timesview.size(); ++collID) {
-    if (!mDigitizer.isEmpty() && (o2::emcal::SimParam::Instance().isDisablePileup() || !mDigitizer.isLive(timesview[collID].getTimeNS()))) {
+
+    mDigitizer.setEventTime(timesview[collID].getTimeNS());
+
+    if (!mDigitizer.isEmpty() && (o2::emcal::SimParam::Instance().isDisablePileup() || !mDigitizer.isLive())) {
       // copy digits into accumulator
       mDigits.clear();
       mLabels.clear();
@@ -90,10 +96,9 @@ void DigitizerSpec::run(framework::ProcessingContext& ctx)
       mLabels.clear();
     }
 
-    mDigitizer.setEventTime(timesview[collID].getTimeNS());
-
-    if (!mDigitizer.isLive())
+    if (!mDigitizer.isLive()) {
       continue;
+    }
 
     if (mDigitizer.isEmpty()) {
       mDigitizer.initCycle();
@@ -125,7 +130,7 @@ void DigitizerSpec::run(framework::ProcessingContext& ctx)
     std::copy(mDigits.begin(), mDigits.end(), std::back_inserter(mAccumulatedDigits));
     labelAccum.mergeAtBack(mLabels);
     LOG(INFO) << "Have " << mAccumulatedDigits.size() << " digits ";
-    triggers.emplace_back(timesview[trigID], indexStart, mDigits.size());
+    triggers.emplace_back(timesview[trigID], o2::trigger::PhT, indexStart, mDigits.size());
     indexStart = mAccumulatedDigits.size();
     mDigits.clear();
     mLabels.clear();

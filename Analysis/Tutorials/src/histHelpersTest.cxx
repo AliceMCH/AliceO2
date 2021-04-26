@@ -9,7 +9,7 @@
 // or submit itself to any jurisdiction.
 
 #include "Framework/AnalysisTask.h"
-#include "Analysis/HistHelpers.h"
+#include "AnalysisCore/HistHelpers.h"
 
 #include "Framework/AnalysisDataModel.h"
 #include "Framework/runDataProcessing.h"
@@ -203,8 +203,8 @@ struct HistHelpersTest {
  * Workflow definition.
  */
 //****************************************************************************************
-WorkflowSpec defineDataProcessing(ConfigContext const&)
+WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
 {
   return WorkflowSpec{
-    adaptAnalysisTask<HistHelpersTest>("hist-helpers-test")};
+    adaptAnalysisTask<HistHelpersTest>(cfgc, TaskName{"hist-helpers-test"})};
 }

@@ -12,11 +12,11 @@
 # convenient bag for all the deps needed in the executables below
 add_library(allsim INTERFACE)
 
-if(ENABLE_UPGRADES)
 target_link_libraries(allsim
                       INTERFACE O2::SimConfig
                                 O2::Steer
                                 O2::SimSetup
+                                O2::SimulationDataFormat
                                 FairMQ::FairMQ
                                 O2::CPVSimulation
                                 O2::DetectorsPassive
@@ -25,9 +25,7 @@ target_link_libraries(allsim
                                 O2::Field
                                 O2::HMPIDSimulation
                                 O2::ITSSimulation
-                                O2::ITS3Simulation
-                                O2::ITS4Simulation
-				                        O2::MCHBase
+				O2::MCHBase
                                 O2::MCHSimulation
                                 O2::MFTSimulation
                                 O2::MIDSimulation
@@ -38,34 +36,11 @@ target_link_libraries(allsim
                                 O2::TRDSimulation
                                 O2::FV0Simulation
                                 O2::ZDCSimulation
+                                $<$<BOOL:${ENABLE_UPGRADES}>:O2::Alice3DetectorsPassive>
+                                $<$<BOOL:${ENABLE_UPGRADES}>:O2::ITS3Simulation>
+                                $<$<BOOL:${ENABLE_UPGRADES}>:O2::TRKSimulation>
+                                $<$<BOOL:${ENABLE_UPGRADES}>:O2::FT3Simulation>
                                 O2::Generators)
-else()
-target_link_libraries(allsim
-                      INTERFACE O2::SimConfig
-                                O2::Steer
-                                O2::SimSetup
-                                FairMQ::FairMQ
-                                O2::CPVSimulation
-                                O2::DetectorsPassive
-                                O2::EMCALSimulation
-                                O2::FDDSimulation
-                                O2::Field
-                                O2::HMPIDSimulation
-                                O2::ITSSimulation
-				                        O2::MCHBase
-                                O2::MCHSimulation
-                                O2::MFTSimulation
-                                O2::MIDSimulation
-                                O2::PHOSSimulation
-                                O2::FT0Simulation
-                                O2::TOFSimulation
-                                O2::TPCSimulation
-                                O2::TRDSimulation
-                                O2::FV0Simulation
-                                O2::ZDCSimulation
-                                O2::Generators)
-endif()
-
 
 add_library(internal::allsim ALIAS allsim)
 
@@ -81,7 +56,7 @@ o2_add_executable(serial
 
 o2_add_executable(sim
                   SOURCES o2sim_parallel.cxx
-                  PUBLIC_LINK_LIBRARIES internal::allsim O2::Framework)
+                  PUBLIC_LINK_LIBRARIES internal::allsim O2::Version)
 
 o2_add_executable(primary-server-device-runner
                   COMPONENT_NAME sim
@@ -167,7 +142,7 @@ o2_add_test(CheckStackG4
   NAME o2sim_checksimkinematics_G4
   WORKING_DIRECTORY ${SIMTESTDIR}
   COMMAND_LINE_ARGS o2simG4
-  PUBLIC_LINK_LIBRARIES O2::SimulationDataFormat
+  PUBLIC_LINK_LIBRARIES O2::SimulationDataFormat O2::Steer
   NO_BOOST_TEST
   LABELS "g4;sim;long")
 
@@ -206,7 +181,7 @@ o2_add_test(CheckStackG3
   NAME o2sim_checksimkinematics_G3
   WORKING_DIRECTORY ${SIMTESTDIR}
   COMMAND_LINE_ARGS o2simG3
-  PUBLIC_LINK_LIBRARIES O2::SimulationDataFormat
+  PUBLIC_LINK_LIBRARIES O2::SimulationDataFormat O2::Steer
   NO_BOOST_TEST
   LABELS "g3;sim;long")
 

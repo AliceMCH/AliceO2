@@ -17,14 +17,14 @@
 #include "Framework/AnalysisDataModel.h"
 #include "Framework/ASoA.h"
 
-#include "Analysis/HFSecondaryVertex.h"
-#include "Analysis/HFCandidateSelectionTables.h"
+#include "AnalysisDataModel/HFSecondaryVertex.h"
+#include "AnalysisDataModel/HFCandidateSelectionTables.h"
 
 #include "fastjet/PseudoJet.hh"
 #include "fastjet/ClusterSequenceArea.hh"
 
-#include "Analysis/Jet.h"
-#include "Analysis/JetFinder.h"
+#include "AnalysisDataModel/Jet.h"
+#include "AnalysisCore/JetFinder.h"
 
 using namespace o2;
 using namespace o2::framework;
@@ -106,8 +106,8 @@ struct JetFinderHFTask {
   }
 };
 
-WorkflowSpec defineDataProcessing(ConfigContext const&)
+WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
 {
   return WorkflowSpec{
-    adaptAnalysisTask<JetFinderHFTask>("jet-finder-hf")};
+    adaptAnalysisTask<JetFinderHFTask>(cfgc, TaskName{"jet-finder-hf"})};
 }

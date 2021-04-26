@@ -167,19 +167,20 @@ bool Compressor<RDH, verbose>::processHBF()
   }
   mDecoderSaveBufferDataSize = 0;
 
-  /** bring encoder pointer back if fatal error **/
+  /** updated encoder RDH open **/
+  mEncoderRDH->memorySize = reinterpret_cast<char*>(mEncoderPointer) - reinterpret_cast<char*>(mEncoderRDH);
+  mEncoderRDH->offsetToNext = mEncoderRDH->memorySize;
+
+  /** bring encoder pointer back if fatal error and flag it **/
   if (mDecoderFatal) {
     mFatalCounter++;
     mEncoderPointer = mEncoderPointerStart;
+    mEncoderRDH->detectorField |= 0x00010000;
   }
 
   if (mDecoderError) {
     mErrorCounter++;
   }
-
-  /** updated encoder RDH open **/
-  mEncoderRDH->memorySize = reinterpret_cast<char*>(mEncoderPointer) - reinterpret_cast<char*>(mEncoderRDH);
-  mEncoderRDH->offsetToNext = mEncoderRDH->memorySize;
 
   /** copy RDH close to encoder buffer **/
   /** CAREFUL WITH THE PAGE COUNTER **/
@@ -418,7 +419,9 @@ bool Compressor<RDH, verbose>::processDRM()
       /** check event **/
       checkerCheck();
       *mEncoderPointer |= mCheckerSummary.nDiagnosticWords;
+#if ENCODE_TDC_ERRORS
       *mEncoderPointer |= (mCheckerSummary.nTDCErrors << 16);
+#endif
 
       if (verbose && mEncoderVerbose) {
         auto CrateTrailer = reinterpret_cast<compressed::CrateTrailer_t*>(mEncoderPointer);
@@ -445,6 +448,7 @@ bool Compressor<RDH, verbose>::processDRM()
       /** encode TDC errors **/
       for (int itrm = 0; itrm < 10; ++itrm) {
         for (int ichain = 0; ichain < 2; ++ichain) {
+#if ENCODE_TDC_ERRORS
           for (int ierror = 0; ierror < mDecoderSummary.trmErrors[itrm][ichain]; ++ierror) {
             *mEncoderPointer = *mDecoderSummary.trmError[itrm][ichain][ierror];
             *mEncoderPointer &= 0xFF07FFFF;
@@ -460,6 +464,7 @@ bool Compressor<RDH, verbose>::processDRM()
             }
             encoderNext();
           }
+#endif
           mDecoderSummary.trmErrors[itrm][ichain] = 0;
         }
       }

@@ -9,11 +9,15 @@
 // or submit itself to any jurisdiction.
 
 #include "Generators/GeneratorFromFile.h"
+#include "Generators/GeneratorFromO2KineParam.h"
+#include "SimulationDataFormat/MCTrack.h"
+#include "SimulationDataFormat/MCEventHeader.h"
 #include <FairLogger.h>
 #include <FairPrimaryGenerator.h>
 #include <TBranch.h>
 #include <TClonesArray.h>
 #include <TFile.h>
+#include <TMCProcess.h>
 #include <TParticle.h>
 #include <TTree.h>
 #include <sstream>
@@ -40,8 +44,9 @@ GeneratorFromFile::GeneratorFromFile(const char* name)
     // std::cout << "probing for " << eventstring << "\n";
     object = mEventFile->Get(eventstringstr.str().c_str());
     // std::cout << "got " << object << "\n";
-    if (object != nullptr)
+    if (object != nullptr) {
       mEventsAvailable++;
+    }
   } while (object != nullptr);
   LOG(INFO) << "Found " << mEventsAvailable << " events in this file \n";
 }
@@ -109,7 +114,7 @@ Bool_t GeneratorFromFile::ReadEvent(FairPrimaryGenerator* primGen)
     auto isFirstTrackableDescendant = [](TParticle const& p) {
       const int kTransportBit = BIT(14);
       // The particle should have not set kDone bit and its status should not exceed 1
-      if (p.GetUniqueID() > 0 || !p.TestBit(kTransportBit)) {
+      if ((p.GetUniqueID() > 0 && p.GetUniqueID() != kPNoProcess) || !p.TestBit(kTransportBit)) {
         return false;
       }
       return true;
@@ -152,7 +157,125 @@ Bool_t GeneratorFromFile::ReadEvent(FairPrimaryGenerator* primGen)
   return kFALSE;
 }
 
+// based on O2 kinematics
+
+GeneratorFromO2Kine::GeneratorFromO2Kine(const char* name)
+{
+  mEventFile = TFile::Open(name);
+  if (mEventFile == nullptr) {
+    LOG(FATAL) << "EventFile " << name << " not found";
+    return;
+  }
+  // the kinematics will be stored inside a branch MCTrack
+  // different events are stored inside different entries
+  auto tree = (TTree*)mEventFile->Get("o2sim");
+  if (tree) {
+    mEventBranch = tree->GetBranch("MCTrack");
+    if (mEventBranch) {
+      mEventsAvailable = mEventBranch->GetEntries();
+      LOG(INFO) << "Found " << mEventsAvailable << " events in this file";
+      return;
+    }
+  }
+  LOG(ERROR) << "Problem reading events from file " << name;
+}
+
+bool GeneratorFromO2Kine::Init()
+{
+
+  // read and set params
+  auto& param = GeneratorFromO2KineParam::Instance();
+  LOG(INFO) << "Init \'FromO2Kine\' generator with following parameters";
+  LOG(INFO) << param;
+  mSkipNonTrackable = param.skipNonTrackable;
+  mContinueMode = param.continueMode;
+
+  return true;
+}
+
+void GeneratorFromO2Kine::SetStartEvent(int start)
+{
+  if (start < mEventsAvailable) {
+    mEventCounter = start;
+  } else {
+    LOG(ERROR) << "start event bigger than available events\n";
+  }
+}
+
+bool GeneratorFromO2Kine::importParticles()
+{
+  // NOTE: This should be usable with kinematics files without secondaries
+  // It might need some adjustment to make it work with secondaries or to continue
+  // from a kinematics snapshot
+
+  if (mEventCounter < mEventsAvailable) {
+    int particlecounter = 0;
+
+    std::vector<o2::MCTrack>* tracks = nullptr;
+    mEventBranch->SetAddress(&tracks);
+    mEventBranch->GetEntry(mEventCounter);
+
+    for (auto& t : *tracks) {
+
+      // in case we do not want to continue, take only primaries
+      if (!mContinueMode && !t.isPrimary()) {
+        continue;
+      }
+
+      auto pdg = t.GetPdgCode();
+      auto px = t.Px();
+      auto py = t.Py();
+      auto pz = t.Pz();
+      auto vx = t.Vx();
+      auto vy = t.Vy();
+      auto vz = t.Vz();
+      auto m1 = t.getMotherTrackId();
+      auto m2 = t.getSecondMotherTrackId();
+      auto d1 = t.getFirstDaughterTrackId();
+      auto d2 = t.getLastDaughterTrackId();
+      auto e = t.GetEnergy();
+      auto vt = t.T();
+      auto weight = 1.; // p.GetWeight() ??
+      auto wanttracking = t.getToBeDone();
+
+      if (mContinueMode) { // in case we want to continue, do only inhibited tracks
+        wanttracking &= t.getInhibited();
+      }
+
+      LOG(DEBUG) << "Putting primary " << pdg;
+
+      mParticles.push_back(TParticle(pdg, wanttracking, m1, m2, d1, d2, px, py, pz, e, vx, vy, vz, vt));
+      mParticles.back().SetUniqueID((unsigned int)t.getProcess()); // we should propagate the process ID
+
+      particlecounter++;
+    }
+    mEventCounter++;
+
+    if (tracks) {
+      delete tracks;
+    }
+
+    LOG(INFO) << "Event generator put " << particlecounter << " on stack";
+    return true;
+  } else {
+    LOG(ERROR) << "GeneratorFromO2Kine: Ran out of events\n";
+  }
+  return false;
+}
+
+void GeneratorFromO2Kine::updateHeader(o2::dataformats::MCEventHeader* eventHeader)
+{
+  /** update header **/
+
+  // put information about input file and event number of the current event
+
+  eventHeader->putInfo<std::string>("generator", "generatorFromO2Kine");
+  eventHeader->putInfo<std::string>("inputFile", mEventFile->GetName());
+  eventHeader->putInfo<int>("inputEventNumber", mEventCounter - 1);
+}
+
 } // namespace eventgen
 } // end namespace o2
 
 ClassImp(o2::eventgen::GeneratorFromFile);
+ClassImp(o2::eventgen::GeneratorFromO2Kine);

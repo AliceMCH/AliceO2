@@ -19,8 +19,8 @@
 #include "Framework/OutputObjHeader.h"
 #include "Framework/StringHelpers.h"
 #include "Framework/Output.h"
-#include <ROOT/RDataFrame.hxx>
 #include <string>
+#include "Framework/Logger.h"
 
 namespace o2::framework
 {
@@ -117,7 +117,8 @@ struct Produces<soa::Table<C...>> : WritingCursor<typename soa::PackToTable<type
 /// Helper template for table transformations
 template <typename METADATA>
 struct TableTransform {
-  using SOURCES = typename METADATA::originals;
+  using SOURCES = typename METADATA::sources;
+  using ORIGINALS = typename METADATA::originals;
 
   using metadata = METADATA;
   using sources = SOURCES;
@@ -125,6 +126,11 @@ struct TableTransform {
   constexpr auto sources_pack() const
   {
     return SOURCES{};
+  }
+
+  constexpr auto originals_pack() const
+  {
+    return ORIGINALS{};
   }
 
   template <typename Oi>
@@ -283,31 +289,40 @@ struct IndexSparse {
 
     using rest_it_t = decltype(pack_from_tuple(iterators));
 
-    int32_t idx = -1;
-    auto setValue = [&](auto& x) -> bool {
+    auto setValue = [&](auto& x, int idx) -> bool {
       using type = std::decay_t<decltype(x)>;
       constexpr auto position = framework::has_type_at_v<type>(rest_it_t{});
 
-      lowerBound<Key>(idx, x);
-      if (x == soa::RowViewSentinel{static_cast<uint64_t>(x.mMaxRow)}) {
-        values[position] = -1;
-        return false;
-      } else if (x.template getId<Key>() != idx) {
-        values[position] = -1;
-        return false;
-      } else {
-        values[position] = x.globalIndex();
-        ++x;
+      if constexpr (std::is_same_v<framework::pack_element_t<position, framework::pack<std::decay_t<T>...>>, Key>) {
+        values[position] = idx;
         return true;
+      } else {
+        lowerBound<Key>(idx, x);
+        if (x == soa::RowViewSentinel{static_cast<uint64_t>(x.mMaxRow)}) {
+          values[position] = -1;
+          return false;
+        } else if (x.template getId<Key>() != idx) {
+          values[position] = -1;
+          return false;
+        } else {
+          values[position] = x.globalIndex();
+          ++x;
+          return true;
+        }
       }
     };
 
     auto first = std::get<first_t>(tables);
     for (auto& row : first) {
-      idx = row.template getId<Key>();
+      auto idx = -1;
+      if constexpr (std::is_same_v<first_t, Key>) {
+        idx = row.globalIndex();
+      } else {
+        idx = row.template getId<Key>();
+      }
       std::apply(
         [&](auto&... x) {
-          (setValue(x), ...);
+          (setValue(x, idx), ...);
         },
         iterators);
 
@@ -367,18 +382,20 @@ template <typename T>
 struct OutputObj {
   using obj_t = T;
 
-  OutputObj(T&& t, OutputObjHandlingPolicy policy_ = OutputObjHandlingPolicy::AnalysisObject)
+  OutputObj(T&& t, OutputObjHandlingPolicy policy_ = OutputObjHandlingPolicy::AnalysisObject, OutputObjSourceType sourceType_ = OutputObjSourceType::OutputObjSource)
     : object(std::make_shared<T>(t)),
       label(t.GetName()),
       policy{policy_},
+      sourceType{sourceType_},
       mTaskHash{0}
   {
   }
 
-  OutputObj(std::string const& label_, OutputObjHandlingPolicy policy_ = OutputObjHandlingPolicy::AnalysisObject)
+  OutputObj(std::string const& label_, OutputObjHandlingPolicy policy_ = OutputObjHandlingPolicy::AnalysisObject, OutputObjSourceType sourceType_ = OutputObjSourceType::OutputObjSource)
     : object(nullptr),
       label(label_),
       policy{policy_},
+      sourceType{sourceType_},
       mTaskHash{0}
   {
   }
@@ -439,12 +456,13 @@ struct OutputObj {
   OutputRef ref()
   {
     return OutputRef{std::string{label}, 0,
-                     o2::header::Stack{OutputObjHeader{policy, mTaskHash}}};
+                     o2::header::Stack{OutputObjHeader{policy, sourceType, mTaskHash}}};
   }
 
   std::shared_ptr<T> object;
   std::string label;
   OutputObjHandlingPolicy policy;
+  OutputObjSourceType sourceType;
   uint32_t mTaskHash;
 };
 
@@ -486,6 +504,13 @@ struct Partition {
   {
   }
 
+  void bindTable(T& table)
+  {
+    mFiltered.reset(getTableFromFilter(table, filter));
+    bindExternalIndices(&table);
+    getBoundToExternalIndices(table);
+  }
+
   void setTable(const T& table)
   {
     mFiltered.reset(getTableFromFilter(table, filter));
@@ -515,6 +540,8 @@ struct Partition {
   expressions::Filter filter;
   std::unique_ptr<o2::soa::Filtered<T>> mFiltered = nullptr;
 
+  using iterator = typename o2::soa::Filtered<T>::iterator;
+  using const_iterator = typename o2::soa::Filtered<T>::const_iterator;
   using filtered_iterator = typename o2::soa::Filtered<T>::iterator;
   using filtered_const_iterator = typename o2::soa::Filtered<T>::const_iterator;
   inline filtered_iterator begin()

@@ -46,6 +46,10 @@ void RawFileWriter::close()
 
   if (!mFirstIRAdded.isDummy()) { // flushing and completing the last HBF makes sense only if data was added.
     auto irmax = getIRMax();
+    // for CRU detectors link.updateIR and hence the irmax points on the last IR with data + 1 orbit
+    if (isCRUDetector()) {
+      irmax.orbit -= 1;
+    }
     for (auto& lnk : mSSpec2Link) {
       lnk.second.close(irmax);
       lnk.second.print();
@@ -72,7 +76,7 @@ void RawFileWriter::fillFromCache()
     for (const auto& entry : cache.second) {
       auto& link = getLinkWithSubSpec(entry.first);
       link.cacheTree->GetEntry(entry.second);
-      link.addData(cache.first, link.cacheBuffer.payload, link.cacheBuffer.preformatted, link.cacheBuffer.trigger);
+      link.addData(cache.first, link.cacheBuffer.payload, link.cacheBuffer.preformatted, link.cacheBuffer.trigger, link.cacheBuffer.detField);
     }
   }
   mCacheFile->cd();
@@ -156,7 +160,7 @@ RawFileWriter::LinkData& RawFileWriter::registerLink(uint16_t fee, uint16_t cru,
 }
 
 //_____________________________________________________________________
-void RawFileWriter::addData(uint16_t feeid, uint16_t cru, uint8_t lnk, uint8_t endpoint, const IR& ir, const gsl::span<char> data, bool preformatted, uint32_t trigger)
+void RawFileWriter::addData(uint16_t feeid, uint16_t cru, uint8_t lnk, uint8_t endpoint, const IR& ir, const gsl::span<char> data, bool preformatted, uint32_t trigger, uint32_t detField)
 {
   // add payload to relevant links
   if (isCRUDetector() && (data.size() % RDHUtils::GBTWord)) {
@@ -169,10 +173,17 @@ void RawFileWriter::addData(uint16_t feeid, uint16_t cru, uint8_t lnk, uint8_t e
     LOG(WARNING) << "provided " << ir << " precedes first TF " << mHBFUtils.getFirstIR() << " | discarding data for " << link.describe();
     return;
   }
+  if (link.discardData || ir.orbit - mHBFUtils.orbitFirst >= mHBFUtils.maxNOrbits) {
+    if (!link.discardData) {
+      link.discardData = true;
+      LOG(INFO) << "Orbit " << ir.orbit << ": max. allowed orbit " << mHBFUtils.orbitFirst + mHBFUtils.maxNOrbits - 1 << " exceeded, " << link.describe() << " will discard further data";
+    }
+    return;
+  }
   if (ir < mFirstIRAdded) {
     mFirstIRAdded = ir;
   }
-  link.addData(ir, data, preformatted, trigger);
+  link.addData(ir, data, preformatted, trigger, detField);
 }
 
 //_____________________________________________________________________
@@ -247,7 +258,7 @@ void RawFileWriter::useCaching()
 //===================================================================================
 
 //___________________________________________________________________________________
-void RawFileWriter::LinkData::cacheData(const IR& ir, const gsl::span<char> data, bool preformatted, uint32_t trigger)
+void RawFileWriter::LinkData::cacheData(const IR& ir, const gsl::span<char> data, bool preformatted, uint32_t trigger, uint32_t detField)
 {
   // cache data to temporary tree
   std::lock_guard<std::mutex> lock(writer->mCacheFileMtx);
@@ -258,6 +269,7 @@ void RawFileWriter::LinkData::cacheData(const IR& ir, const gsl::span<char> data
   }
   cacheBuffer.preformatted = preformatted;
   cacheBuffer.trigger = trigger;
+  cacheBuffer.detField = detField;
   cacheBuffer.payload.resize(data.size());
   if (!data.empty()) {
     memcpy(cacheBuffer.payload.data(), data.data(), data.size());
@@ -268,14 +280,14 @@ void RawFileWriter::LinkData::cacheData(const IR& ir, const gsl::span<char> data
 }
 
 //___________________________________________________________________________________
-void RawFileWriter::LinkData::addData(const IR& ir, const gsl::span<char> data, bool preformatted, uint32_t trigger)
+void RawFileWriter::LinkData::addData(const IR& ir, const gsl::span<char> data, bool preformatted, uint32_t trigger, uint32_t detField)
 {
   // add payload corresponding to IR
   LOG(DEBUG) << "Adding " << data.size() << " bytes in IR " << ir << " to " << describe();
   std::lock_guard<std::mutex> lock(mtx);
 
   if (writer->mCachingStage) {
-    cacheData(ir, data, preformatted, trigger);
+    cacheData(ir, data, preformatted, trigger, detField);
     return;
   }
 
@@ -295,6 +307,10 @@ void RawFileWriter::LinkData::addData(const IR& ir, const gsl::span<char> data, 
   if (trigger) {
     auto& rdh = *getLastRDH();
     RDHUtils::setTriggerType(rdh, RDHUtils::getTriggerType(rdh) | trigger);
+  }
+  if (detField) {
+    auto& rdh = *getLastRDH();
+    RDHUtils::setDetectorField(rdh, detField);
   }
 
   if (!dataSize) {
@@ -489,14 +505,9 @@ void RawFileWriter::LinkData::openHBFPage(const RDHAny& rdhn, uint32_t trigger)
 {
   /// create 1st page of the new HBF
   bool forceNewPage = false;
-
   // for RORC detectors the TF flag is absent, instead the 1st trigger after the start of TF will define the 1st be interpreted as 1st TF
-  auto newTF_RORC = [this, &rdhn]() -> bool {
-    auto tfhbPrev = writer->mHBFUtils.getTFandHBinTF(this->updateIR.bc ? this->updateIR - 1 : this->updateIR); // updateIR was advanced by 1 BC wrt IR of the previous update
-    return this->writer->mHBFUtils.getTFandHBinTF(RDHUtils::getTriggerIR(rdhn)).first > tfhbPrev.first;        // new TF_ID exceeds old one
-  };
-
-  if ((RDHUtils::getTriggerType(rdhn) & o2::trigger::TF) || (writer->isRORCDetector() && newTF_RORC())) {
+  if ((RDHUtils::getTriggerType(rdhn) & o2::trigger::TF) ||
+      (writer->isRORCDetector() && writer->mHBFUtils.getTF(updateIR - 1) < writer->mHBFUtils.getTF(RDHUtils::getTriggerIR(rdhn)))) {
     if (writer->mVerbosity > -10) {
       LOGF(INFO, "Starting new TF for link FEEId 0x%04x", RDHUtils::getFEEID(rdhn));
     }
@@ -557,11 +568,7 @@ void RawFileWriter::LinkData::close(const IR& irf)
     return; // already closed
   }
   if (writer->isCRUDetector()) { // finalize last TF
-    auto irfin = irf;
-    if (irfin < updateIR) {
-      irfin = updateIR;
-    }
-    int tf = writer->mHBFUtils.getTF(irfin);
+    int tf = writer->mHBFUtils.getTF(irf);
     auto finalIR = writer->mHBFUtils.getIRTF(tf + 1) - 1; // last IR of the current TF
     fillEmptyHBHs(finalIR, false);
   }
@@ -613,8 +620,7 @@ void RawFileWriter::LinkData::fillEmptyHBHs(const IR& ir, bool dataAdded)
 std::string RawFileWriter::LinkData::describe() const
 {
   std::stringstream ss;
-  ss << "Link SubSpec=0x" << std::hex << std::setw(8) << std::setfill('0')
-     << RDHUtils::getSubSpec(rdhCopy) << std::dec
+  ss << "Link SubSpec=0x" << std::hex << std::setw(8) << std::setfill('0') << subspec << std::dec
      << '(' << std::setw(3) << int(RDHUtils::getCRUID(rdhCopy)) << ':' << std::setw(2) << int(RDHUtils::getLinkID(rdhCopy)) << ':'
      << int(RDHUtils::getEndPointID(rdhCopy)) << ") feeID=0x" << std::hex << std::setw(4) << std::setfill('0') << RDHUtils::getFEEID(rdhCopy);
   return ss.str();

@@ -21,8 +21,6 @@
 #include "DataFormatsFV0/LookUpTable.h"
 #include <CommonDataFormat/InteractionRecord.h>
 #include <Framework/Logger.h>
-#include <iostream>
-#include <iomanip>
 #include <cstring>
 #include "Rtypes.h"
 
@@ -31,7 +29,7 @@ namespace o2
 namespace fv0
 {
 struct EventHeader {
-  static constexpr int PayloadSize = 16;
+  static constexpr size_t PayloadSize = 16;
   union {
     uint64_t word[2] = {};
     struct {
@@ -44,7 +42,9 @@ struct EventHeader {
       uint64_t reservedField3 : 48;
     };
   };
+  void print() const;
 };
+
 struct EventData {
   union {
     uint64_t word = {0};
@@ -82,7 +82,7 @@ struct EventData {
 };
 
 struct TCMdata {
-  static constexpr int PayloadSize = 16;
+  static constexpr size_t PayloadSize = 16;
   union {
     uint64_t word[2] = {0};
     struct {
@@ -109,9 +109,9 @@ class RawEventData
   RawEventData() = default;
   EventHeader* getEventHeaderPtr() { return &mEventHeader; }
   EventData* getEventDataPtr() { return mEventData; }
-  void print();
-  void printHexEventHeader();
-  void printHexEventData(uint64_t i);
+  void print() const;
+  void printHexEventHeader() const;
+  void printHexEventData(uint64_t i) const;
   enum EEventDataBit { kNumberADC,
                        kIsDoubleEvent,
                        kIs1TimeLostEvent,

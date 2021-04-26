@@ -39,6 +39,8 @@
 #include "GPUTPCConvertKernel.h"
 #include "GPUTPCCompressionKernels.h"
 #include "GPUTPCClusterFinderKernels.h"
+#include "GPUTrackingRefitKernel.h"
+#include "GPUTPCGMO2Output.h"
 #endif
 
 namespace GPUCA_NAMESPACE
@@ -56,6 +58,7 @@ class GPUReconstructionCPUBackend : public GPUReconstruction
   int runKernelBackend(krnlSetup& _xyz, const Args&... args);
   template <class T, int I>
   krnlProperties getKernelPropertiesBackend();
+  unsigned int mNestedLoopOmpFactor = 1;
 };
 
 template <class T>
@@ -134,7 +137,7 @@ class GPUReconstructionCPU : public GPUReconstructionKernels<GPUReconstructionCP
   template <class T, int I>
   constexpr static const char* GetKernelName();
 
-  virtual int GPUDebug(const char* state = "UNKNOWN", int stream = -1);
+  virtual int GPUDebug(const char* state = "UNKNOWN", int stream = -1, bool force = false);
   int registerMemoryForGPU(const void* ptr, size_t size) override { return 0; }
   int unregisterMemoryForGPU(const void* ptr) override { return 0; }
   int GPUStuck() { return mGPUStuck; }
@@ -146,6 +149,9 @@ class GPUReconstructionCPU : public GPUReconstructionKernels<GPUReconstructionCP
 
   HighResTimer& getRecoStepTimer(RecoStep step) { return mTimersRecoSteps[getRecoStepNum(step)].timerTotal; }
   HighResTimer& getGeneralStepTimer(GeneralStep step) { return mTimersGeneralSteps[getGeneralStepNum(step)]; }
+
+  void SetNestedLoopOmpFactor(unsigned int f) { mNestedLoopOmpFactor = f; }
+  unsigned int SetAndGetNestedLoopOmpFactor(bool condition, unsigned int max);
 
  protected:
   struct GPUProcessorProcessors : public GPUProcessor {
@@ -275,7 +281,7 @@ inline int GPUReconstructionCPU::runKernel(const krnlExec& x, const krnlRunRange
   }
   if (mProcessingSettings.debugLevel >= 1) {
     t = &getKernelTimer<S, I, J>(myStep, !IsGPU() || cpuFallback ? getOMPThreadNum() : x.stream);
-    if (!mProcessingSettings.deviceTimers || !IsGPU() || cpuFallback) {
+    if ((!mProcessingSettings.deviceTimers || !IsGPU() || cpuFallback) && (mNestedLoopOmpFactor < 2 || getOMPThreadNum() == 0)) {
       t->Start();
     }
   }
@@ -294,10 +300,10 @@ inline int GPUReconstructionCPU::runKernel(const krnlExec& x, const krnlRunRange
   }
   if (mProcessingSettings.debugLevel >= 1) {
     if (t) {
-      if (!mProcessingSettings.deviceTimers || !IsGPU() || cpuFallback) {
-        t->Stop();
-      } else {
+      if (!(!mProcessingSettings.deviceTimers || !IsGPU() || cpuFallback)) {
         t->AddTime(setup.t);
+      } else if (mNestedLoopOmpFactor < 2 || getOMPThreadNum() == 0) {
+        t->Stop();
       }
     }
     if (CheckErrorCodes(cpuFallback)) {
@@ -346,7 +352,7 @@ HighResTimer& GPUReconstructionCPU::getTimer(const char* name, int num)
   static int id = getNextTimerId();
   timerMeta* timer = getTimerById(id);
   if (timer == nullptr) {
-    int max = std::max({getOMPMaxThreads(), mProcessingSettings.nDeviceHelperThreads + 1, mProcessingSettings.nStreams});
+    int max = std::max<int>({getOMPMaxThreads(), mProcessingSettings.nDeviceHelperThreads + 1, mProcessingSettings.nStreams});
     timer = insertTimer(id, name, J, max, 1, RecoStep::NoRecoStep);
   }
   if (num == -1) {

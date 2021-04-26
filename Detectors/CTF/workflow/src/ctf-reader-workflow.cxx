@@ -22,11 +22,18 @@
 // Specific detectors specs
 #include "ITSMFTWorkflow/EntropyDecoderSpec.h"
 #include "TPCWorkflow/EntropyDecoderSpec.h"
+#include "TRDWorkflow/EntropyDecoderSpec.h"
+#include "HMPIDWorkflow/EntropyDecoderSpec.h"
 #include "FT0Workflow/EntropyDecoderSpec.h"
 #include "FV0Workflow/EntropyDecoderSpec.h"
+#include "FDDWorkflow/EntropyDecoderSpec.h"
 #include "TOFWorkflowUtils/EntropyDecoderSpec.h"
 #include "MIDWorkflow/EntropyDecoderSpec.h"
+#include "MCHWorkflow/EntropyDecoderSpec.h"
 #include "EMCALWorkflow/EntropyDecoderSpec.h"
+#include "PHOSWorkflow/EntropyDecoderSpec.h"
+#include "CPVWorkflow/EntropyDecoderSpec.h"
+#include "ZDCWorkflow/EntropyDecoderSpec.h"
 
 using namespace o2::framework;
 using DetID = o2::detectors::DetID;
@@ -38,7 +45,7 @@ void customize(std::vector<o2::framework::ConfigParamSpec>& workflowOptions)
   std::vector<o2::framework::ConfigParamSpec> options;
   options.push_back(ConfigParamSpec{"onlyDet", VariantType::String, std::string{DetID::NONE}, {"comma-separated list of detectors to accept. Overrides skipDet"}});
   options.push_back(ConfigParamSpec{"skipDet", VariantType::String, std::string{DetID::NONE}, {"comma-separate list of detectors to skip"}});
-  options.push_back(ConfigParamSpec{"ctf-input", VariantType::String, "", {"comma-separated list CTF input files"}});
+  options.push_back(ConfigParamSpec{"ctf-input", VariantType::String, "none", {"comma-separated list CTF input files"}});
 
   std::swap(workflowOptions, options);
 }
@@ -49,24 +56,26 @@ void customize(std::vector<o2::framework::ConfigParamSpec>& workflowOptions)
 WorkflowSpec defineDataProcessing(ConfigContext const& configcontext)
 {
   DetID::mask_t dets;
+  dets.set(); // by default read all
   WorkflowSpec specs;
 
-  std::string inpNames;
-  if (!configcontext.helpOnCommandLine()) {
-    dets.set(); // by default read all
-    auto mskOnly = DetID::getMask(configcontext.options().get<std::string>("onlyDet"));
-    auto mskSkip = DetID::getMask(configcontext.options().get<std::string>("skipDet"));
-    if (mskOnly.any()) {
-      dets &= mskOnly;
-    } else {
-      dets ^= mskSkip;
-    }
-    if ((inpNames = configcontext.options().get<std::string>("ctf-input")).empty()) {
-      throw std::runtime_error("--ctf-input <file,...> is not provided");
-    }
+  auto mskOnly = DetID::getMask(configcontext.options().get<std::string>("onlyDet"));
+  auto mskSkip = DetID::getMask(configcontext.options().get<std::string>("skipDet"));
+  if (mskOnly.any()) {
+    dets &= mskOnly;
+  } else {
+    dets ^= mskSkip;
   }
 
+  std::string inpNames = configcontext.options().get<std::string>("ctf-input");
+  if (inpNames.empty() || inpNames == "none") {
+    if (!configcontext.helpOnCommandLine()) {
+      throw std::runtime_error("--ctf-input <file,...> is not provided");
+    }
+    inpNames = "";
+  }
   specs.push_back(o2::ctf::getCTFReaderSpec(dets, inpNames));
+
   // add decodors for all allowed detectors.
   if (dets[DetID::ITS]) {
     specs.push_back(o2::itsmft::getEntropyDecoderSpec(DetID::getDataOrigin(DetID::ITS)));
@@ -77,6 +86,9 @@ WorkflowSpec defineDataProcessing(ConfigContext const& configcontext)
   if (dets[DetID::TPC]) {
     specs.push_back(o2::tpc::getEntropyDecoderSpec());
   }
+  if (dets[DetID::TRD]) {
+    specs.push_back(o2::trd::getEntropyDecoderSpec());
+  }
   if (dets[DetID::TOF]) {
     specs.push_back(o2::tof::getEntropyDecoderSpec());
   }
@@ -86,11 +98,29 @@ WorkflowSpec defineDataProcessing(ConfigContext const& configcontext)
   if (dets[DetID::FV0]) {
     specs.push_back(o2::fv0::getEntropyDecoderSpec());
   }
+  if (dets[DetID::FDD]) {
+    specs.push_back(o2::fdd::getEntropyDecoderSpec());
+  }
   if (dets[DetID::MID]) {
     specs.push_back(o2::mid::getEntropyDecoderSpec());
   }
+  if (dets[DetID::MCH]) {
+    specs.push_back(o2::mch::getEntropyDecoderSpec());
+  }
   if (dets[DetID::EMC]) {
     specs.push_back(o2::emcal::getEntropyDecoderSpec());
+  }
+  if (dets[DetID::PHS]) {
+    specs.push_back(o2::phos::getEntropyDecoderSpec());
+  }
+  if (dets[DetID::CPV]) {
+    specs.push_back(o2::cpv::getEntropyDecoderSpec());
+  }
+  if (dets[DetID::ZDC]) {
+    specs.push_back(o2::zdc::getEntropyDecoderSpec());
+  }
+  if (dets[DetID::HMP]) {
+    specs.push_back(o2::hmpid::getEntropyDecoderSpec());
   }
 
   return std::move(specs);

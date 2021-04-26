@@ -3,6 +3,7 @@
 #include <string>
 #include <chrono>
 #include <iostream>
+#include <fstream>
 
 #include <TChain.h>
 #include <TFile.h>
@@ -34,6 +35,7 @@
 #include "ITStracking/Vertexer.h"
 
 #include "MathUtils/Utils.h"
+#include "DetectorsBase/Propagator.h"
 
 #include "SimulationDataFormat/MCCompLabel.h"
 #include "SimulationDataFormat/MCTruthContainer.h"
@@ -53,23 +55,26 @@ using o2::its::TrackingParameters;
 using Vertex = o2::dataformats::Vertex<o2::dataformats::TimeStamp<int>>;
 using MCLabCont = o2::dataformats::MCTruthContainer<o2::MCCompLabel>;
 
-void run_trac_ca_its(std::string path = "./",
+void run_trac_ca_its(bool cosmics = false,
+                     bool useLUT = true,
+                     std::string path = "./",
                      std::string outputfile = "o2trac_its.root",
                      std::string inputClustersITS = "o2clus_its.root",
                      std::string dictfile = "",
+                     std::string matLUTFile = "matbud.root",
                      std::string inputGRP = "o2sim_grp.root")
 {
 
-  gSystem->Load("libO2ITStracking.so");
+  gSystem->Load("libO2ITStracking");
 
   //std::unique_ptr<GPUReconstruction> rec(GPUReconstruction::CreateInstance());
-  std::unique_ptr<GPUReconstruction> rec(GPUReconstruction::CreateInstance("CUDA", true)); // for GPU with CUDA
-  auto* chainITS = rec->AddChain<GPUChainITS>();
-  rec->Init();
+  // std::unique_ptr<GPUReconstruction> rec(GPUReconstruction::CreateInstance("CUDA", true)); // for GPU with CUDA
+  // auto* chainITS = rec->AddChain<GPUChainITS>();
+  // rec->Init();
 
-  o2::its::Tracker tracker(chainITS->GetITSTrackerTraits());
-  //o2::its::Tracker tracker(new o2::its::TrackerTraitsCPU());
-  o2::its::ROframe event(0);
+  // o2::its::Tracker tracker(chainITS->GetITSTrackerTraits());
+  o2::its::Tracker tracker(new o2::its::TrackerTraitsCPU());
+  o2::its::ROframe event(0, 7);
 
   if (path.back() != '/') {
     path += '/';
@@ -89,9 +94,25 @@ void run_trac_ca_its(std::string path = "./",
   double origD[3] = {0., 0., 0.};
   tracker.setBz(field->getBz(origD));
 
+  //-------- init lookuptable --------//
+  if (useLUT) {
+    auto* lut = o2::base::MatLayerCylSet::loadFromFile(matLUTFile);
+    o2::base::Propagator::Instance()->setMatLUT(lut);
+  } else {
+    tracker.setCorrType(o2::base::PropagatorImpl<float>::MatCorrType::USEMatCorrTGeo);
+  }
+
+  if (tracker.isMatLUT()) {
+    LOG(INFO) << "Loaded material LUT from " << matLUTFile;
+  } else {
+    LOG(INFO) << "Material LUT " << matLUTFile << " file is absent, only TGeo can be used";
+  }
+
+  //
+
   bool isITS = grp->isDetReadOut(o2::detectors::DetID::ITS);
   if (!isITS) {
-    LOG(WARNING) << "ITS is not in the readoute";
+    LOG(WARNING) << "ITS is not in the readout";
     return;
   }
   bool isContITS = grp->isDetContinuousReadOut(o2::detectors::DetID::ITS);
@@ -178,18 +199,80 @@ void run_trac_ca_its(std::string path = "./",
   o2::its::VertexerTraits* traits = o2::its::createVertexerTraits();
   o2::its::Vertexer vertexer(traits);
 
+  o2::its::VertexingParameters parameters;
+  parameters.phiCut = 0.005f;
+  parameters.tanLambdaCut = 0.002f;
+  vertexer.setParameters(parameters);
+
   int roFrameCounter{0};
 
   std::vector<double> ncls;
   std::vector<double> time;
 
-  std::vector<TrackingParameters> trackParams(3);
-  trackParams[0].TrackletMaxDeltaPhi = 0.05f;
-  trackParams[1].TrackletMaxDeltaPhi = 0.1f;
-  trackParams[2].MinTrackLength = 4;
-  trackParams[2].TrackletMaxDeltaPhi = 0.3;
-
-  std::vector<MemoryParameters> memParams(3);
+  std::vector<TrackingParameters> trackParams(1);
+  std::vector<MemoryParameters> memParams(1);
+  if (cosmics) {
+    trackParams[0].MinTrackLength = 3;
+    trackParams[0].TrackletMaxDeltaPhi = o2::its::constants::math::Pi * 0.5f;
+    for (int iLayer = 0; iLayer < o2::its::constants::its2::TrackletsPerRoad; iLayer++) {
+      trackParams[0].TrackletMaxDeltaZ[iLayer] = o2::its::constants::its2::LayersZCoordinate()[iLayer + 1];
+      memParams[0].TrackletsMemoryCoefficients[iLayer] = 0.5f;
+      // trackParams[0].TrackletMaxDeltaZ[iLayer] = 10.f;
+    }
+    for (int iLayer = 0; iLayer < o2::its::constants::its2::CellsPerRoad; iLayer++) {
+      trackParams[0].CellMaxDCA[iLayer] = 10000.f;    //cm
+      trackParams[0].CellMaxDeltaZ[iLayer] = 10000.f; //cm
+      memParams[0].CellsMemoryCoefficients[iLayer] = 0.001f;
+    }
+  } else {
+    // Comment for pp
+    // ----
+    trackParams.resize(3);
+    memParams.resize(3);
+    for (int iParam{0}; iParam < 3; ++iParam) {
+      for (int iLayer = 0; iLayer < o2::its::constants::its2::TrackletsPerRoad; iLayer++) {
+        memParams[iParam].TrackletsMemoryCoefficients[iLayer] = 5.f;
+        memParams[iParam].CellsMemoryCoefficients[iLayer] = 0.1f;
+      }
+    }
+    for (auto i{0}; i < 3; ++i) {
+      trackParams[i].TrackletMaxDeltaPhi = 3.f;
+      trackParams[i].CellMaxDeltaPhi = 3.f;
+      trackParams[i].CellMaxDeltaTanLambda = 1.f;
+      for (auto j{0}; j < 6; ++j) {
+        trackParams[i].TrackletMaxDeltaZ[j] = 10.f;
+      }
+      for (auto j{0}; j < 5; ++j) {
+        trackParams[i].CellMaxDeltaZ[j] = 10.f;
+      }
+    }
+    trackParams[2].MinTrackLength = 4;
+    // ---
+    // Uncomment for pp
+    // trackParams.resize(2);
+    // std::array<const float, 5> kmaxDCAxy1 = {1.f * 2.0, 0.4f * 2.0, 0.4f * 2.0, 2.0f * 2.0, 3.f * 2.0};
+    // std::array<const float, 5> kmaxDCAz1 = {1.f * 2.0, 0.4f * 2.0, 0.4f * 2.0, 2.0f * 2.0, 3.f * 2.0};
+    // std::array<const float, 4> kmaxDN1 = {0.005f * 2.0, 0.0035f * 2.0, 0.009f * 2.0, 0.03f * 2.0};
+    // std::array<const float, 4> kmaxDP1 = {0.02f * 2.0, 0.005f * 2.0, 0.006f * 2.0, 0.007f * 2.0};
+    // std::array<const float, 6> kmaxDZ1 = {1.f * 2.0, 1.f * 2.0, 2.0f * 2.0, 2.0f * 2.0, 2.0f * 2.0, 2.0f * 2.0};
+    // const float kDoublTanL1 = 0.05f * 5.;
+    // const float kDoublPhi1 = 0.2f * 5.;
+    // trackParams[1].MinTrackLength = 7;
+    // trackParams[1].TrackletMaxDeltaPhi = 0.3;
+    // trackParams[1].CellMaxDeltaPhi = 0.2 * 2;
+    // trackParams[1].CellMaxDeltaTanLambda = 0.05 * 2;
+    // std::copy(kmaxDZ1.begin(), kmaxDZ1.end(), trackParams[1].TrackletMaxDeltaZ.begin());
+    // std::copy(kmaxDCAxy1.begin(), kmaxDCAxy1.end(), trackParams[1].CellMaxDCA.begin());
+    // std::copy(kmaxDCAz1.begin(), kmaxDCAz1.end(), trackParams[1].CellMaxDeltaZ.begin());
+    // std::copy(kmaxDP1.begin(), kmaxDP1.end(), trackParams[1].NeighbourMaxDeltaCurvature.begin());
+    // std::copy(kmaxDN1.begin(), kmaxDN1.end(), trackParams[1].NeighbourMaxDeltaN.begin());
+    // memParams.resize(2);
+    // for (auto& coef : memParams[1].CellsMemoryCoefficients)
+    //   coef *= 40;
+    // for (auto& coef : memParams[1].TrackletsMemoryCoefficients)
+    //   coef *= 40;
+    // ---
+  }
 
   tracker.setParameters(memParams, trackParams);
 
@@ -219,7 +302,7 @@ void run_trac_ca_its(std::string path = "./",
 
     if (!vertITS.empty()) {
       // Using only the first vertex in the list
-      std::cout << " - Reconstructed vertexer: x = " << vertITS[0].getX() << " y = " << vertITS[0].getY() << " x = " << vertITS[0].getZ() << std::endl;
+      std::cout << " - Reconstructed vertex: x = " << vertITS[0].getX() << " y = " << vertITS[0].getY() << " x = " << vertITS[0].getZ() << std::endl;
       event.addPrimaryVertex(vertITS[0].getX(), vertITS[0].getY(), vertITS[0].getZ());
     } else {
       std::cout << " - Vertex not reconstructed, tracking skipped" << std::endl;
@@ -235,6 +318,9 @@ void run_trac_ca_its(std::string path = "./",
     time.push_back(diff_t.count());
 
     tracks.swap(tracker.getTracks());
+    if (tracks.size()) {
+      std::cout << "\t\tFound " << tracks.size() << " tracks" << std::endl;
+    }
     for (auto& trc : tracks) {
       trc.setFirstClusterEntry(trackClIdx.size()); // before adding tracks, create final cluster indices
       int ncl = trc.getNumberOfClusters();

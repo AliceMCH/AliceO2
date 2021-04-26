@@ -14,7 +14,8 @@
 #include "Debug.h"
 #include "MCHRawCommon/DataFormats.h"
 #include "MCHRawCommon/SampaHeader.h"
-#include "MCHRawDecoder/SampaChannelHandler.h"
+#include "MCHRawDecoder/DecodedDataHandlers.h"
+#include "MCHRawDecoder/ErrorCodes.h"
 #include "MCHRawElecMap/DsElecId.h"
 #include <bitset>
 #include <fmt/format.h>
@@ -32,10 +33,10 @@ template <typename CHARGESUM>
 class UserLogicElinkDecoder
 {
  public:
-  UserLogicElinkDecoder(DsElecId dsId, SampaChannelHandler sampaChannelHandler);
+  UserLogicElinkDecoder(DsElecId dsId, DecodedDataHandlers decodedDataHandlers);
 
   /// Append 50 bits-worth of data
-  void append(uint64_t data50, uint8_t error);
+  void append(uint64_t data50, uint8_t error, bool incomplete);
 
   /// Reset our internal state
   /// i.e. assume the sync has to be found again
@@ -57,6 +58,8 @@ class UserLogicElinkDecoder
   template <typename T>
   friend std::ostream& operator<<(std::ostream& os, const o2::mch::raw::UserLogicElinkDecoder<T>& e);
 
+  const DsElecId& dsId() const { return mDsId; }
+
   void clear();
   bool hasError() const;
   bool isHeaderComplete() const { return mHeaderParts.size() == 5; }
@@ -69,6 +72,8 @@ class UserLogicElinkDecoder
   void oneLess10BitWord();
   void prepareAndSendCluster();
   void sendCluster(const SampaCluster& sc) const;
+  void sendHBPacket();
+  void sendError(int8_t chip, uint32_t error) const;
   void setClusterSize(uint10_t value);
   void setClusterTime(uint10_t value);
   void setHeaderPart(uint10_t data10);
@@ -77,7 +82,7 @@ class UserLogicElinkDecoder
 
  private:
   DsElecId mDsId;
-  SampaChannelHandler mSampaChannelHandler;
+  DecodedDataHandlers mDecodedDataHandlers;
   State mState;
   std::vector<uint10_t> mSamples{};
   std::vector<uint10_t> mHeaderParts{};
@@ -95,23 +100,18 @@ constexpr bool isSync(uint64_t data)
   return data == sampaSyncWord;
 };
 
-constexpr bool isIncomplete(uint8_t error)
-{
-  return (error & 0x4) > 0;
-}
-
 template <typename CHARGESUM>
 UserLogicElinkDecoder<CHARGESUM>::UserLogicElinkDecoder(DsElecId dsId,
-                                                        SampaChannelHandler sampaChannelHandler)
-  : mDsId{dsId}, mSampaChannelHandler{sampaChannelHandler}, mState{State::WaitingSync}
+                                                        DecodedDataHandlers decodedDataHandlers)
+  : mDsId{dsId}, mDecodedDataHandlers{decodedDataHandlers}, mState{State::WaitingSync}
 {
 }
 
 template <typename CHARGESUM>
-void UserLogicElinkDecoder<CHARGESUM>::append(uint64_t data50, uint8_t error)
+void UserLogicElinkDecoder<CHARGESUM>::append(uint64_t data50, uint8_t error, bool incomplete)
 {
 #ifdef ULDEBUG
-  debugHeader() << (*this) << fmt::format(" --> append50 {:013x} error {} incomplete {} data10={:d} {:d} {:d} {:d} {:d}\n", data50, error, (int)isIncomplete(error), static_cast<uint10_t>(data50 & 0x3FF), static_cast<uint10_t>((data50 & 0xFFC00) >> 10), static_cast<uint10_t>((data50 & 0x3FF00000) >> 20), static_cast<uint10_t>((data50 & 0xFFC0000000) >> 30), static_cast<uint10_t>((data50 & 0x3FF0000000000) >> 40));
+  debugHeader() << (*this) << fmt::format(" --> append50 {:013x} error {} incomplete {} data10={:d} {:d} {:d} {:d} {:d}\n", data50, error, incomplete, static_cast<uint10_t>(data50 & 0x3FF), static_cast<uint10_t>((data50 & 0xFFC00) >> 10), static_cast<uint10_t>((data50 & 0x3FF00000) >> 20), static_cast<uint10_t>((data50 & 0xFFC0000000) >> 30), static_cast<uint10_t>((data50 & 0x3FF0000000000) >> 40));
 #endif
 
   if (isSync(data50)) {
@@ -130,8 +130,8 @@ void UserLogicElinkDecoder<CHARGESUM>::append(uint64_t data50, uint8_t error)
     bool packetEnd = append10(static_cast<uint10_t>(data & 0x3FF));
     data >>= 10;
 #ifdef ULDEBUG
-    if (isIncomplete(error)) {
-      debugHeader() << (*this) << fmt::format(" --> incomplete {} packetEnd @i={}\n", (int)isIncomplete(error), packetEnd, i);
+    if (incomplete) {
+      debugHeader() << (*this) << fmt::format(" --> incomplete {} packetEnd @i={}\n", incomplete, packetEnd, i);
     }
 #endif
     if (hasError()) {
@@ -141,7 +141,7 @@ void UserLogicElinkDecoder<CHARGESUM>::append(uint64_t data50, uint8_t error)
       reset();
       break;
     }
-    if (isIncomplete(error) && packetEnd) {
+    if (incomplete && packetEnd) {
 #ifdef ULDEBUG
       debugHeader() << (*this) << " stop due to isIncomplete\n";
 #endif
@@ -149,10 +149,11 @@ void UserLogicElinkDecoder<CHARGESUM>::append(uint64_t data50, uint8_t error)
     }
   }
 
-  if (isIncomplete(error) && (i == 5)) {
+  if (incomplete && (i == 5) && (mState != State::WaitingSync)) {
 #ifdef ULDEBUG
     debugHeader() << (*this) << " data packet end not found when isIncomplete --> resetting\n";
 #endif
+    sendError(static_cast<int8_t>(mSampaHeader.chipAddress()), static_cast<uint32_t>(ErrorBadIncompleteWord));
     reset();
   }
 } // namespace o2::mch::raw
@@ -185,6 +186,7 @@ bool UserLogicElinkDecoder<CHARGESUM>::append10(uint10_t data10)
         if (isSync(mSampaHeader.uint64())) {
           reset();
         } else if (mSampaHeader.packetType() == SampaPacketType::HeartBeat) {
+          sendHBPacket();
           transition(State::WaitingHeader);
           result = true;
         } else {
@@ -331,7 +333,21 @@ void UserLogicElinkDecoder<CHARGESUM>::sendCluster(const SampaCluster& sc) const
                                channelNumber64(mSampaHeader),
                                o2::mch::raw::asString(sc));
 #endif
-  mSampaChannelHandler(mDsId, channelNumber64(mSampaHeader), sc);
+  mDecodedDataHandlers.sampaChannelHandler(mDsId, channelNumber64(mSampaHeader), sc);
+}
+
+template <typename CHARGESUM>
+void UserLogicElinkDecoder<CHARGESUM>::sendError(int8_t chip, uint32_t error) const
+{
+#ifdef ULDEBUG
+  debugHeader() << (*this) << " --> "
+                << fmt::format(" calling errorHandler for {} chip {} = {}\n",
+                               o2::mch::raw::asString(mDsId), chip, error);
+#endif
+  SampaErrorHandler handler = mDecodedDataHandlers.sampaErrorHandler;
+  if (handler) {
+    handler(mDsId, chip, error);
+  }
 }
 
 template <typename CHARGESUM>
@@ -354,9 +370,11 @@ void UserLogicElinkDecoder<CHARGESUM>::setClusterSize(uint10_t value)
   mErrorMessage = std::nullopt;
   if (mClusterSize == 0) {
     mErrorMessage = "cluster size is zero";
+    sendError(static_cast<int8_t>(mSampaHeader.chipAddress()), static_cast<uint32_t>(ErrorBadClusterSize));
   }
   if (checkSize > 0) {
     mErrorMessage = "number of samples bigger than nof10BitWords";
+    sendError(static_cast<int8_t>(mSampaHeader.chipAddress()), static_cast<uint32_t>(ErrorBadClusterSize));
   }
 #ifdef ULDEBUG
   debugHeader() << (*this) << " --> size=" << mClusterSize << "  samples=" << mSamplesToRead << "\n";
@@ -398,10 +416,19 @@ void UserLogicElinkDecoder<CHARGESUM>::setSample(uint10_t sample)
   }
 }
 
+template <typename CHARGESUM>
+void UserLogicElinkDecoder<CHARGESUM>::sendHBPacket()
+{
+  SampaHeartBeatHandler handler = mDecodedDataHandlers.sampaHeartBeatHandler;
+  if (handler) {
+    handler(mDsId, mSampaHeader.chipAddress() % 2, mSampaHeader.bunchCrossingCounter());
+  }
+}
+
 template <>
 void UserLogicElinkDecoder<SampleMode>::prepareAndSendCluster()
 {
-  if (mSampaChannelHandler) {
+  if (mDecodedDataHandlers.sampaChannelHandler) {
     SampaCluster sc(mClusterTime, mSampaHeader.bunchCrossingCounter(), mSamples);
     sendCluster(sc);
   }
@@ -414,9 +441,11 @@ void UserLogicElinkDecoder<ChargeSumMode>::prepareAndSendCluster()
   if (mSamples.size() != 2) {
     throw std::invalid_argument(fmt::format("expected sample size to be 2 but it is {}", mSamples.size()));
   }
-  uint32_t q = (((static_cast<uint32_t>(mSamples[1]) & 0x3FF) << 10) | (static_cast<uint32_t>(mSamples[0]) & 0x3FF));
-  SampaCluster sc(mClusterTime, mSampaHeader.bunchCrossingCounter(), q, mClusterSize);
-  sendCluster(sc);
+  if (mDecodedDataHandlers.sampaChannelHandler) {
+    uint32_t q = (((static_cast<uint32_t>(mSamples[1]) & 0x3FF) << 10) | (static_cast<uint32_t>(mSamples[0]) & 0x3FF));
+    SampaCluster sc(mClusterTime, mSampaHeader.bunchCrossingCounter(), q, mClusterSize);
+    sendCluster(sc);
+  }
   mSamples.clear();
 }
 
@@ -441,7 +470,7 @@ std::ostream& operator<<(std::ostream& os, const o2::mch::raw::UserLogicElinkDec
   for (auto s : e.mSamples) {
     os << fmt::format("{:4d} ", s);
   }
-  if (!e.mSampaChannelHandler) {
+  if (!e.mDecodedDataHandlers.sampaChannelHandler) {
     os << " empty handler ";
   }
 

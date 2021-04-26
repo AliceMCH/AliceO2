@@ -24,6 +24,7 @@
 #include "DetectorsCommonDataFormats/NameConf.h"
 #include "DetectorsRaw/HBFUtils.h"
 #include "FV0Simulation/Digits2Raw.h"
+#include "DataFormatsParameters/GRPObject.h"
 
 /// MC->raw conversion for FV0
 
@@ -51,6 +52,7 @@ int main(int argc, char** argv)
     uint32_t defRDH = o2::raw::RDHUtils::getVersion<o2::header::RAWDataHeader>();
     add_option("rdh-version,r", bpo::value<uint32_t>()->default_value(defRDH), "RDH version to use");
     add_option("no-empty-hbf,e", bpo::value<bool>()->default_value(false)->implicit_value(true), "do not create empty HBF pages (except for HBF starting TF)");
+    add_option("hbfutils-config,u", bpo::value<std::string>()->default_value(std::string(o2::base::NameConf::DIGITIZATIONCONFIGFILE)), "config file for HBFUtils (or none)");
     add_option("configKeyValues", bpo::value<std::string>()->default_value(""), "comma-separated configKeyValues");
 
     opt_all.add(opt_general).add(opt_hidden);
@@ -71,12 +73,19 @@ int main(int argc, char** argv)
     std::cerr << e.what() << ", application will now exit" << std::endl;
     exit(2);
   }
+
+  std::string confDig = vm["hbfutils-config"].as<std::string>();
+  if (!confDig.empty() && confDig != "none") {
+    o2::conf::ConfigurableParam::updateFromFile(confDig, "HBFUtils");
+  }
   o2::conf::ConfigurableParam::updateFromString(vm["configKeyValues"].as<std::string>());
   digi2raw(vm["input-file"].as<std::string>(),
            vm["output-dir"].as<std::string>(),
            vm["file-per-link"].as<bool>(),
            vm["rdh-version"].as<uint32_t>(),
            vm["no-empty-hbf"].as<bool>());
+
+  o2::raw::HBFUtils::Instance().print();
 
   return 0;
 }
@@ -88,6 +97,9 @@ void digi2raw(const std::string& inpName, const std::string& outDir, bool filePe
   o2::fv0::Digits2Raw m2r;
   m2r.setFilePerLink(filePerLink);
   auto& wr = m2r.getWriter();
+  std::string inputGRP = o2::base::NameConf::getGRPFileName();
+  const auto grp = o2::parameters::GRPObject::loadFrom(inputGRP);
+  wr.setContinuousReadout(grp->isDetContinuousReadOut(o2::detectors::DetID::FV0)); // must be set explicitly
   wr.setSuperPageSize(superPageSizeInB);
   wr.useRDHVersion(rdhV);
   wr.setDontFillEmptyHBF(noEmptyHBF);

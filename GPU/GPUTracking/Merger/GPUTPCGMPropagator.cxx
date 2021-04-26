@@ -121,7 +121,7 @@ GPUd() int GPUTPCGMPropagator::RotateToAlpha(float newAlpha)
   CAMath::SinCos(newAlpha, newSinAlpha, newCosAlpha);
 
   float cc = newCosAlpha * mCosAlpha + newSinAlpha * mSinAlpha; // cos(newAlpha - mAlpha);
-  float ss = newSinAlpha * mCosAlpha - newCosAlpha * mSinAlpha; //sin(newAlpha - mAlpha);
+  float ss = newSinAlpha * mCosAlpha - newCosAlpha * mSinAlpha; // sin(newAlpha - mAlpha);
 
   GPUTPCGMPhysicalTrackModel t0 = mT0;
 
@@ -337,11 +337,13 @@ GPUd() int GPUTPCGMPropagator::PropagateToXAlphaBz(float posX, float posAlpha, b
 
   GPUTPCGMPhysicalTrackModel t0e(mT0);
   float dLp = 0;
-  if (t0e.PropagateToXBzLight(posX, Bz, dLp))
+  if (t0e.PropagateToXBzLight(posX, Bz, dLp)) {
     return 1;
+  }
 
-  if (CAMath::Abs(t0e.SinPhi()) >= mMaxSinPhi)
+  if (CAMath::Abs(t0e.SinPhi()) >= mMaxSinPhi) {
     return -3;
+  }
 
   return FollowLinearization(t0e, Bz, dLp, inFlyDirection);
 }
@@ -938,12 +940,12 @@ GPUd() void GPUTPCGMPropagator::Rotate180()
   mT->QPt() = -mT->QPt();
   mT->DzDs() = -mT->DzDs();
 
-  mAlpha = mAlpha + M_PI;
-  while (mAlpha >= M_PI) {
-    mAlpha -= 2 * M_PI;
+  mAlpha = mAlpha + CAMath::Pi();
+  while (mAlpha >= CAMath::Pi()) {
+    mAlpha -= CAMath::TwoPi();
   }
-  while (mAlpha < -M_PI) {
-    mAlpha += 2 * M_PI;
+  while (mAlpha < -CAMath::Pi()) {
+    mAlpha += CAMath::TwoPi();
   }
   mCosAlpha = -mCosAlpha;
   mSinAlpha = -mSinAlpha;

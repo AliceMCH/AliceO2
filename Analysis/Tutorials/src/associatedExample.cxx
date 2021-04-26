@@ -30,6 +30,14 @@ DECLARE_SOA_COLUMN(Mult, mult, int32_t);
 
 DECLARE_SOA_TABLE(CollisionsExtra, "AOD", "COLEXTRA",
                   collision::Mult);
+
+namespace indices
+{
+DECLARE_SOA_INDEX_COLUMN(Track, track);
+DECLARE_SOA_INDEX_COLUMN(HMPID, hmpid);
+} // namespace indices
+
+DECLARE_SOA_INDEX_TABLE_USER(HMPIDTracksIndex, Tracks, "HMPIDTRKIDX", indices::TrackId, indices::HMPIDId);
 } // namespace o2::aod
 
 using namespace o2;
@@ -75,7 +83,7 @@ struct BTask {
 struct TTask {
   using myCol = soa::Join<aod::Collisions, aod::CollisionsExtra>;
   expressions::Filter multfilter = aod::collision::mult > 10;
-  void process(soa::Filtered<soa::Join<aod::Collisions, aod::CollisionsExtra>>::iterator const& col, aod::Tracks const& tracks)
+  void process(soa::Filtered<myCol>::iterator const& col, aod::Tracks const& tracks)
   {
     LOGF(INFO, "[direct] ID: %d; %d == %d", col.globalIndex(), col.mult(), tracks.size());
     if (tracks.size() > 0) {
@@ -85,11 +93,65 @@ struct TTask {
   }
 };
 
-WorkflowSpec defineDataProcessing(ConfigContext const&)
+struct ZTask {
+  using myCol = soa::Join<aod::Collisions, aod::CollisionsExtra>;
+
+  void process(myCol const& collisions, aod::Tracks const& tracks)
+  {
+    auto multbin0_10 = collisions.select(aod::collision::mult >= 0 && aod::collision::mult < 10);
+    auto multbin10_30 = collisions.select(aod::collision::mult >= 10 && aod::collision::mult < 30);
+    auto multbin30_100 = collisions.select(aod::collision::mult >= 30 && aod::collision::mult < 100);
+
+    LOGF(INFO, "Bin 0-10");
+    for (auto& col : multbin0_10) {
+      auto groupedTracks = tracks.sliceBy(aod::track::collisionId, col.globalIndex());
+      LOGF(INFO, "Collision %d; Ntrk = %d vs %d", col.globalIndex(), col.mult(), groupedTracks.size());
+      if (groupedTracks.size() > 0) {
+        auto track = groupedTracks.begin();
+        LOGF(INFO, "Track 0 belongs to collision %d at Z = %f", track.collisionId(), track.collision_as<myCol>().posZ());
+      }
+    }
+
+    LOGF(INFO, "Bin 10-30");
+    for (auto& col : multbin10_30) {
+      auto groupedTracks = tracks.sliceBy(aod::track::collisionId, col.globalIndex());
+      LOGF(INFO, "Collision %d; Ntrk = %d vs %d", col.globalIndex(), col.mult(), groupedTracks.size());
+    }
+
+    LOGF(INFO, "Bin 30-100");
+    for (auto& col : multbin30_100) {
+      auto groupedTracks = tracks.sliceBy(aod::track::collisionId, col.globalIndex());
+      LOGF(INFO, "Collision %d; Ntrk = %d vs %d", col.globalIndex(), col.mult(), groupedTracks.size());
+    }
+  }
+};
+
+struct BuildHmpidIndex {
+  Builds<aod::HMPIDTracksIndex> idx;
+  void init(InitContext const&){};
+};
+
+struct ConsumeHmpidIndex {
+  using exTracks = soa::Join<aod::Tracks, aod::HMPIDTracksIndex>;
+  void process(aod::Collision const& collision, exTracks const& tracks, aod::HMPIDs const&)
+  {
+    LOGF(INFO, "Collision [%d]", collision.globalIndex());
+    for (auto& track : tracks) {
+      if (track.has_hmpid()) {
+        LOGF(INFO, "Track %d has HMPID info: %.2f", track.globalIndex(), track.hmpid().hmpidSignal());
+      }
+    }
+  }
+};
+
+WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
 {
   return WorkflowSpec{
-    adaptAnalysisTask<ATask>("produce-etaphi"),
-    adaptAnalysisTask<BTask>("consume-etaphi"),
-    adaptAnalysisTask<MTask>("produce-mult"),
-    adaptAnalysisTask<TTask>("consume-mult")};
+    adaptAnalysisTask<ATask>(cfgc, TaskName{"produce-etaphi"}),
+    adaptAnalysisTask<BTask>(cfgc, TaskName{"consume-etaphi"}),
+    adaptAnalysisTask<MTask>(cfgc, TaskName{"produce-mult"}),
+    adaptAnalysisTask<TTask>(cfgc, TaskName{"consume-mult"}),
+    adaptAnalysisTask<ZTask>(cfgc, TaskName{"partition-mult"}),
+    adaptAnalysisTask<BuildHmpidIndex>(cfgc),
+    adaptAnalysisTask<ConsumeHmpidIndex>(cfgc)};
 }

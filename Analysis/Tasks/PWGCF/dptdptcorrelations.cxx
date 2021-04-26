@@ -11,15 +11,16 @@
 #include "Framework/AnalysisTask.h"
 #include "Framework/AnalysisDataModel.h"
 #include "Framework/ASoAHelpers.h"
-#include "Analysis/EventSelection.h"
-#include "Analysis/Centrality.h"
-#include "Analysis/TrackSelection.h"
+#include "AnalysisDataModel/EventSelection.h"
+#include "AnalysisDataModel/Centrality.h"
+#include "AnalysisCore/TrackSelection.h"
 #include "AnalysisConfigurableCuts.h"
-#include "Analysis/TrackSelectionTables.h"
+#include "AnalysisDataModel/TrackSelectionTables.h"
 #include <TROOT.h>
 #include <TParameter.h>
 #include <TList.h>
 #include <TDirectory.h>
+#include <TFolder.h>
 #include <TH1.h>
 #include <TH2.h>
 #include <TH3.h>
@@ -76,7 +77,7 @@ int zvtxbins = 40;
 float zvtxlow = -10.0, zvtxup = 10.0;
 int phibins = 72;
 float philow = 0.0;
-float phiup = TMath::TwoPi();
+float phiup = M_PI * 2;
 float phibinshift = 0.5;
 float etabinwidth = (etaup - etalow) / float(etabins);
 float phibinwidth = (phiup - philow) / float(phibins);
@@ -85,10 +86,6 @@ int trackonecharge = 1;
 int tracktwocharge = -1;
 bool processpairs = false;
 std::string fTaskConfigurationString = "PendingToConfigure";
-
-/* while we don't have proper bool columnst */
-uint8_t DPTDPT_TRUE = 1;
-uint8_t DPTDPT_FALSE = 0;
 
 /// \enum SystemType
 /// \brief The type of the system under analysis
@@ -229,20 +226,20 @@ bool matchTrackType(aod::TrackData const& track)
   }
 }
 
-inline void AcceptTrack(aod::TrackData const& track, uint8_t& asone, uint8_t& astwo)
+inline void AcceptTrack(aod::TrackData const& track, bool& asone, bool& astwo)
 {
 
-  asone = DPTDPT_FALSE;
-  astwo = DPTDPT_FALSE;
+  asone = false;
+  astwo = false;
 
   /* TODO: incorporate a mask in the scanned tracks table for the rejecting track reason */
   if (matchTrackType(track)) {
     if (ptlow < track.pt() and track.pt() < ptup and etalow < track.eta() and track.eta() < etaup) {
-      if (((track.charge() > 0) and (trackonecharge > 0)) or ((track.charge() < 0) and (trackonecharge < 0))) {
-        asone = DPTDPT_TRUE;
+      if (((track.sign() > 0) and (trackonecharge > 0)) or ((track.sign() < 0) and (trackonecharge < 0))) {
+        asone = true;
       }
-      if (((track.charge() > 0) and (tracktwocharge > 0)) or ((track.charge() < 0) and (tracktwocharge < 0))) {
-        astwo = DPTDPT_TRUE;
+      if (((track.sign() > 0) and (tracktwocharge > 0)) or ((track.sign() < 0) and (tracktwocharge < 0))) {
+        astwo = true;
       }
     }
   }
@@ -254,7 +251,7 @@ inline void AcceptTrack(aod::TrackData const& track, uint8_t& asone, uint8_t& as
 inline float GetShiftedPhi(float phi)
 {
   if (not(phi < phiup)) {
-    return phi - TMath::TwoPi();
+    return phi - M_PI * 2;
   } else {
     return phi;
   }
@@ -400,10 +397,10 @@ struct DptDptCorrelationsFilterAnalysisTask {
     //    LOGF(INFO,"New collision with %d filtered tracks", ftracks.size());
     fhCentMultB->Fill(collision.centV0M());
     fhVertexZB->Fill(collision.posZ());
-    int acceptedevent = DPTDPT_FALSE;
+    bool acceptedevent = false;
     float centormult = -100.0;
     if (IsEvtSelected(collision, centormult)) {
-      acceptedevent = DPTDPT_TRUE;
+      acceptedevent = true;
       fhCentMultA->Fill(collision.centV0M());
       fhVertexZA->Fill(collision.posZ());
       //      LOGF(INFO,"New accepted collision with %d filtered tracks", ftracks.size());
@@ -415,7 +412,7 @@ struct DptDptCorrelationsFilterAnalysisTask {
         fhPhiB->Fill(track.phi());
         fhEtaVsPhiB->Fill(track.phi(), track.eta());
         fhPtVsEtaB->Fill(track.eta(), track.pt());
-        if (track.charge() > 0) {
+        if (track.sign() > 0) {
           fhPtPosB->Fill(track.pt());
         } else {
           fhPtNegB->Fill(track.pt());
@@ -423,29 +420,29 @@ struct DptDptCorrelationsFilterAnalysisTask {
 
         /* track selection */
         /* tricky because the boolean columns issue */
-        uint8_t asone, astwo;
+        bool asone, astwo;
         AcceptTrack(track, asone, astwo);
-        if ((asone == DPTDPT_TRUE) or (astwo == DPTDPT_TRUE)) {
+        if (asone or astwo) {
           /* the track has been accepted */
           fhPtA->Fill(track.pt());
           fhEtaA->Fill(track.eta());
           fhPhiA->Fill(track.phi());
           fhEtaVsPhiA->Fill(track.phi(), track.eta());
           fhPtVsEtaA->Fill(track.eta(), track.pt());
-          if (track.charge() > 0) {
+          if (track.sign() > 0) {
             fhPtPosA->Fill(track.pt());
           } else {
             fhPtNegA->Fill(track.pt());
           }
         }
-        scannedtracks(asone, astwo);
+        scannedtracks((uint8_t)asone, (uint8_t)astwo);
       }
     } else {
       for (auto& track : ftracks) {
-        scannedtracks(DPTDPT_FALSE, DPTDPT_FALSE);
+        scannedtracks((uint8_t) false, (uint8_t) false);
       }
     }
-    acceptedevents(acceptedevent, centormult);
+    acceptedevents((uint8_t)acceptedevent, centormult);
   }
 };
 
@@ -464,11 +461,11 @@ struct DptDptCorrelationsTask {
 
   OutputObj<TList> fOutput{"DptDptCorrelationsData", OutputObjHandlingPolicy::AnalysisObject};
 
-  Filter onlyacceptedevents = (aod::dptdptcorrelations::eventaccepted == DPTDPT_TRUE);
-  Filter onlyacceptedtracks = ((aod::dptdptcorrelations::trackacceptedasone == DPTDPT_TRUE) or (aod::dptdptcorrelations::trackacceptedastwo == DPTDPT_TRUE));
+  Filter onlyacceptedevents = (aod::dptdptcorrelations::eventaccepted == (uint8_t) true);
+  Filter onlyacceptedtracks = ((aod::dptdptcorrelations::trackacceptedasone == (uint8_t) true) or (aod::dptdptcorrelations::trackacceptedastwo == (uint8_t) true));
 
-  Partition<aod::FilteredTracks> Tracks1 = aod::dptdptcorrelations::trackacceptedasone == DPTDPT_TRUE;
-  Partition<aod::FilteredTracks> Tracks2 = aod::dptdptcorrelations::trackacceptedastwo == DPTDPT_TRUE;
+  Partition<aod::FilteredTracks> Tracks1 = aod::dptdptcorrelations::trackacceptedasone == (uint8_t) true;
+  Partition<aod::FilteredTracks> Tracks2 = aod::dptdptcorrelations::trackacceptedastwo == (uint8_t) true;
 
   DptDptCorrelationsTask(float cmmin,
                          float cmmax,
@@ -477,19 +474,19 @@ struct DptDptCorrelationsTask {
                                                                                       {28, -7.0, 7.0, 18, 0.2, 2.0, 16, -0.8, 0.8, 72, 0.5},
                                                                                       "triplets - nbins, min, max - for z_vtx, pT, eta and phi, binning plus bin fraction of phi origin shift"},
                          OutputObj<TList> _fOutput = {"DptDptCorrelationsData", OutputObjHandlingPolicy::AnalysisObject},
-                         Filter _onlyacceptedevents = (aod::dptdptcorrelations::eventaccepted == DPTDPT_TRUE),
-                         Filter _onlyacceptedtracks = ((aod::dptdptcorrelations::trackacceptedasone == DPTDPT_TRUE) or (aod::dptdptcorrelations::trackacceptedastwo == DPTDPT_TRUE)),
-                         Partition<aod::FilteredTracks> _Tracks1 = aod::dptdptcorrelations::trackacceptedasone == DPTDPT_TRUE,
-                         Partition<aod::FilteredTracks> _Tracks2 = aod::dptdptcorrelations::trackacceptedastwo == DPTDPT_TRUE)
+                         Filter _onlyacceptedevents = (aod::dptdptcorrelations::eventaccepted == (uint8_t) true),
+                         Filter _onlyacceptedtracks = ((aod::dptdptcorrelations::trackacceptedasone == (uint8_t) true) or (aod::dptdptcorrelations::trackacceptedastwo == (uint8_t) true)),
+                         Partition<aod::FilteredTracks> _Tracks1 = aod::dptdptcorrelations::trackacceptedasone == (uint8_t) true,
+                         Partition<aod::FilteredTracks> _Tracks2 = aod::dptdptcorrelations::trackacceptedastwo == (uint8_t) true)
     : fCentMultMin(cmmin),
       fCentMultMax(cmmax),
       cfgProcessPairs(_cfgProcessPairs),
       cfgBinning(_cfgBinning),
       fOutput(_fOutput),
-      onlyacceptedevents((aod::dptdptcorrelations::eventaccepted == DPTDPT_TRUE) and (aod::dptdptcorrelations::centmult > fCentMultMin) and (aod::dptdptcorrelations::centmult < fCentMultMax)),
-      onlyacceptedtracks((aod::dptdptcorrelations::trackacceptedasone == DPTDPT_TRUE) or (aod::dptdptcorrelations::trackacceptedastwo == DPTDPT_TRUE)),
-      Tracks1(aod::dptdptcorrelations::trackacceptedasone == DPTDPT_TRUE),
-      Tracks2(aod::dptdptcorrelations::trackacceptedastwo == DPTDPT_TRUE)
+      onlyacceptedevents((aod::dptdptcorrelations::eventaccepted == (uint8_t) true) and (aod::dptdptcorrelations::centmult > fCentMultMin) and (aod::dptdptcorrelations::centmult < fCentMultMax)),
+      onlyacceptedtracks((aod::dptdptcorrelations::trackacceptedasone == (uint8_t) true) or (aod::dptdptcorrelations::trackacceptedastwo == (uint8_t) true)),
+      Tracks1(aod::dptdptcorrelations::trackacceptedasone == (uint8_t) true),
+      Tracks2(aod::dptdptcorrelations::trackacceptedastwo == (uint8_t) true)
   {
   }
 
@@ -509,14 +506,14 @@ struct DptDptCorrelationsTask {
     zvtxup = cfgBinning->mZVtxmax;
     phibins = cfgBinning->mPhibins;
     philow = 0.0f;
-    phiup = TMath::TwoPi();
+    phiup = M_PI * 2;
     phibinshift = cfgBinning->mPhibinshift;
     processpairs = cfgProcessPairs.value;
     /* update the potential binning change */
     etabinwidth = (etaup - etalow) / float(etabins);
     phibinwidth = (phiup - philow) / float(phibins);
 
-    /* create the output list which will own the task histograms */
+    /* create the output list which will own the task output */
     TList* fOutputList = new TList();
     fOutputList->SetOwner(true);
     fOutput.setObject(fOutputList);
@@ -792,13 +789,13 @@ struct TracksAndEventClassificationQA {
     fSelectedEvents->GetXaxis()->SetBinLabel(2, "Selected events");
   }
 
-  Filter onlyacceptedevents = (aod::dptdptcorrelations::eventaccepted == DPTDPT_TRUE);
-  Filter onlyacceptedtracks = ((aod::dptdptcorrelations::trackacceptedasone == DPTDPT_TRUE) or (aod::dptdptcorrelations::trackacceptedastwo == DPTDPT_TRUE));
+  Filter onlyacceptedevents = (aod::dptdptcorrelations::eventaccepted == (uint8_t) true);
+  Filter onlyacceptedtracks = ((aod::dptdptcorrelations::trackacceptedasone == (uint8_t) true) or (aod::dptdptcorrelations::trackacceptedastwo == (uint8_t) true));
 
   void process(soa::Filtered<soa::Join<aod::Collisions, aod::EvSels, aod::Cents, aod::AcceptedEvents>>::iterator const& collision,
                soa::Filtered<soa::Join<aod::Tracks, aod::ScannedTracks>> const& tracks)
   {
-    if (collision.eventaccepted() != DPTDPT_TRUE) {
+    if (collision.eventaccepted() != (uint8_t) true) {
       fSelectedEvents->Fill(0.5);
     } else {
       fSelectedEvents->Fill(1.5);
@@ -809,20 +806,20 @@ struct TracksAndEventClassificationQA {
     int ntracks_one_and_two = 0;
     int ntracks_none = 0;
     for (auto& track : tracks) {
-      if ((track.trackacceptedasone() != DPTDPT_TRUE) and (track.trackacceptedastwo() != DPTDPT_TRUE)) {
+      if ((track.trackacceptedasone() != (uint8_t) true) and (track.trackacceptedastwo() != (uint8_t) true)) {
         ntracks_none++;
       }
-      if ((track.trackacceptedasone() == DPTDPT_TRUE) and (track.trackacceptedastwo() == DPTDPT_TRUE)) {
+      if ((track.trackacceptedasone() == (uint8_t) true) and (track.trackacceptedastwo() == (uint8_t) true)) {
         ntracks_one_and_two++;
       }
-      if (track.trackacceptedasone() == DPTDPT_TRUE) {
+      if (track.trackacceptedasone() == (uint8_t) true) {
         ntracks_one++;
       }
-      if (track.trackacceptedastwo() == DPTDPT_TRUE) {
+      if (track.trackacceptedastwo() == (uint8_t) true) {
         ntracks_two++;
       }
     }
-    if (collision.eventaccepted() != DPTDPT_TRUE) {
+    if (collision.eventaccepted() != (uint8_t) true) {
       /* control for non selected events */
       fTracksOneUnsel->Fill(ntracks_one);
       fTracksTwoUnsel->Fill(ntracks_two);
@@ -844,13 +841,13 @@ WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
   int nranges = tokens->GetEntries();
 
   WorkflowSpec workflow{
-    adaptAnalysisTask<DptDptCorrelationsFilterAnalysisTask>("DptDptCorrelationsFilterAnalysisTask"),
-    adaptAnalysisTask<TracksAndEventClassificationQA>("TracksAndEventClassificationQA")};
+    adaptAnalysisTask<DptDptCorrelationsFilterAnalysisTask>(cfgc),
+    adaptAnalysisTask<TracksAndEventClassificationQA>(cfgc)};
   for (int i = 0; i < nranges; ++i) {
     float cmmin = 0.0f;
     float cmmax = 0.0f;
     sscanf(tokens->At(i)->GetName(), "%f-%f", &cmmin, &cmmax);
-    workflow.push_back(adaptAnalysisTask<DptDptCorrelationsTask>(Form("DptDptCorrelationsTask-%s", tokens->At(i)->GetName()), cmmin, cmmax));
+    workflow.push_back(adaptAnalysisTask<DptDptCorrelationsTask>(cfgc, TaskName{Form("DptDptCorrelationsTask-%s", tokens->At(i)->GetName())}, cmmin, cmmax));
   }
   delete tokens;
   return workflow;

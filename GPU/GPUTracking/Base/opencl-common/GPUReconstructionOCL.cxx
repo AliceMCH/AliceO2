@@ -392,7 +392,7 @@ size_t GPUReconstructionOCL::TransferMemoryInternal(GPUMemoryResource* res, int 
     }
     return 0;
   }
-  if (mProcessingSettings.debugLevel >= 3) {
+  if (mProcessingSettings.debugLevel >= 3 && (strcmp(res->Name(), "ErrorCodes") || mProcessingSettings.debugLevel >= 4)) {
     GPUInfo("Copying to %s: %s - %lld bytes", toGPU ? "GPU" : "Host", res->Name(), (long long int)res->Size());
   }
   return GPUMemCpy(dst, src, res->Size(), stream, toGPU, ev, evList, nEvents);
@@ -462,10 +462,10 @@ bool GPUReconstructionOCL::IsEventDone(deviceEvent* evList, int nEvents)
   return true;
 }
 
-int GPUReconstructionOCL::GPUDebug(const char* state, int stream)
+int GPUReconstructionOCL::GPUDebug(const char* state, int stream, bool force)
 {
   // Wait for OPENCL-Kernel to finish and check for OPENCL errors afterwards, in case of debugmode
-  if (mProcessingSettings.debugLevel <= 0) {
+  if (!force && mProcessingSettings.debugLevel <= 0) {
     return (0);
   }
   for (int i = 0; i < mNStreams; i++) {

@@ -21,12 +21,21 @@
 #include "GPUTPCGeometry.h"
 #include "GPUTPCGMPolynomialField.h"
 
+#ifndef GPUCA_GPUCODE
+namespace o2::base
+{
+template <typename>
+class PropagatorImpl;
+using Propagator = PropagatorImpl<float>;
+} // namespace o2::base
+#endif
+
 namespace GPUCA_NAMESPACE
 {
 namespace gpu
 {
 struct GPUSettingsRec;
-struct GPUSettingsEvent;
+struct GPUSettingsGTP;
 struct GPURecoStepConfiguration;
 
 struct GPUParamSlice {
@@ -54,14 +63,16 @@ struct GPUParam_t {
 };
 } // namespace internal
 
+#if !(defined(__CINT__) || defined(__ROOTCINT__)) || defined(__CLING__) // Hide from ROOT 5 CINT since it triggers a CINT but
 MEM_CLASS_PRE()
 struct GPUParam : public internal::GPUParam_t<GPUSettingsRec, GPUSettingsParam> {
 
 #ifndef GPUCA_GPUCODE
   void SetDefaults(float solenoidBz);
-  void SetDefaults(const GPUSettingsEvent* e, const GPUSettingsRec* r = nullptr, const GPUSettingsProcessing* p = nullptr, const GPURecoStepConfiguration* w = nullptr);
-  void UpdateEventSettings(const GPUSettingsEvent* e, const GPUSettingsProcessing* p = nullptr);
+  void SetDefaults(const GPUSettingsGRP* g, const GPUSettingsRec* r = nullptr, const GPUSettingsProcessing* p = nullptr, const GPURecoStepConfiguration* w = nullptr);
+  void UpdateGRPSettings(const GPUSettingsGRP* g, const GPUSettingsProcessing* p = nullptr);
   void LoadClusterErrors(bool Print = 0);
+  o2::base::Propagator* GetDefaultO2Propagator(bool useGPUField = false) const;
 #endif
 
   GPUd() float Alpha(int iSlice) const
@@ -84,6 +95,7 @@ struct GPUParam : public internal::GPUParam_t<GPUSettingsRec, GPUSettingsParam> 
   GPUd() void Slice2Global(int iSlice, float x, float y, float z, float* X, float* Y, float* Z) const;
   GPUd() void Global2Slice(int iSlice, float x, float y, float z, float* X, float* Y, float* Z) const;
 };
+#endif
 
 } // namespace gpu
 } // namespace GPUCA_NAMESPACE

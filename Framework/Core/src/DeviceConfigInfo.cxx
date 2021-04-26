@@ -10,15 +10,9 @@
 
 #include "Framework/DeviceConfigInfo.h"
 #include "Framework/DeviceInfo.h"
-#include <cassert>
-#include <cinttypes>
 #include <cstdlib>
-
-#include <algorithm>
-#include <regex>
 #include <string_view>
-#include <tuple>
-#include <iostream>
+#include <boost/property_tree/json_parser.hpp>
 
 namespace o2::framework
 {
@@ -30,7 +24,7 @@ bool DeviceConfigHelper::parseConfig(std::string_view s, ParsedConfigMatch& matc
 {
   const char* begin = s.begin();
   const char* end = s.end();
-  if (s.size() > 17 && (strncmp("[CONFIG] ", begin + 17, 9) != 0)) {
+  if (s.size() > 17 && (strncmp("[CONFIG];", begin + 17, 9) != 0)) {
     return false;
   }
   if (s.size() < 17 + 9) {
@@ -42,14 +36,15 @@ bool DeviceConfigHelper::parseConfig(std::string_view s, ParsedConfigMatch& matc
     return false;
   }
   match.beginValue = match.endKey + 1;
-  match.endValue = (char const*)memchr(match.beginValue, ' ', end - match.beginValue);
+  match.endValue = (char const*)memchr(match.beginValue, ';', end - match.beginValue);
   if (match.endValue == nullptr) {
     return false;
   }
-  char* next = nullptr;
-  match.timestamp = strtoll(match.endValue, &next, 10);
 
-  if (!next || *next != ' ') {
+  char* next = nullptr;
+  match.timestamp = strtoll(match.endValue + 1, &next, 10);
+
+  if (!next || *next != ';') {
     return false;
   }
 
@@ -67,10 +62,20 @@ bool DeviceConfigHelper::processConfig(ParsedConfigMatch& match,
       match.beginProvenance == nullptr || match.endProvenance == nullptr) {
     return false;
   }
-  info.currentConfig.put(std::string(match.beginKey, match.endKey - match.beginKey),
-                         std::string(match.beginValue, match.endValue - match.beginValue));
-  info.currentProvenance.put(std::string(match.beginKey, match.endKey - match.beginKey),
-                             std::string(match.beginProvenance, match.endProvenance - match.beginProvenance));
+  auto keyString = std::string(match.beginKey, match.endKey - match.beginKey);
+  auto valueString = std::string(match.beginValue, match.endValue - match.beginValue);
+  auto provenanceString = std::string(match.beginProvenance, match.endProvenance - match.beginProvenance);
+  boost::property_tree::ptree branch;
+  std::stringstream ss{valueString};
+  try {
+    boost::property_tree::json_parser::read_json(ss, branch);
+    info.currentConfig.put_child(keyString, branch);
+  } catch (boost::exception&) {
+    // in case it is not a tree but a single value
+    info.currentConfig.put(keyString, valueString);
+  }
+
+  info.currentProvenance.put(keyString, provenanceString);
   return true;
 }
 

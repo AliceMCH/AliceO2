@@ -43,13 +43,17 @@
 #include "FT0DigitizerSpec.h"
 #include "FT0DigitWriterSpec.h"
 
+// for CTP
+#include "CTPDigitizerSpec.h"
+#include "CTPWorkflow/CTPDigitWriterSpec.h"
+
 // for FV0
 #include "FV0DigitizerSpec.h"
 #include "FV0DigitWriterSpec.h"
 
 // for FDD
 #include "FDDDigitizerSpec.h"
-#include "FDDDigitWriterSpec.h"
+#include "FDDWorkflow/DigitWriterSpec.h"
 
 // for EMCal
 #include "EMCALDigitizerSpec.h"
@@ -83,7 +87,7 @@
 
 // for ZDC
 #include "ZDCDigitizerSpec.h"
-#include "ZDCDigitWriterSpec.h"
+#include "ZDCWorkflow/ZDCDigitWriterDPLSpec.h"
 
 // GRP
 #include "DataFormatsParameters/GRPObject.h"
@@ -140,10 +144,17 @@ void customize(std::vector<o2::framework::ConfigParamSpec>& workflowOptions)
   workflowOptions.push_back(
     ConfigParamSpec{"skipDet", VariantType::String, "none", {skiphelp}});
 
+  std::string onlyctxhelp("Produce only the digitization context; Don't actually digitize");
+  workflowOptions.push_back(ConfigParamSpec{"only-context", o2::framework::VariantType::Bool, false, {onlyctxhelp}});
+
   // we support only output type 'tracks' for the moment
   std::string tpcrthelp("deprecated option, please connect workflows on the command line by pipe");
   workflowOptions.push_back(
     ConfigParamSpec{"tpc-reco-type", VariantType::String, "", {tpcrthelp}});
+
+  // Option to write TPC digits internaly, without forwarding to a special writer instance.
+  // This is useful in GRID productions with small available memory.
+  workflowOptions.push_back(ConfigParamSpec{"tpc-chunked-writer", o2::framework::VariantType::Bool, false, {"Write independent TPC digit chunks as soon as they can be flushed."}});
 
   std::string simhelp("Comma separated list of simulation prefixes (for background, signal productions)");
   workflowOptions.push_back(
@@ -163,7 +174,7 @@ void customize(std::vector<o2::framework::ConfigParamSpec>& workflowOptions)
   workflowOptions.push_back(ConfigParamSpec{"use-ccdb-tof", o2::framework::VariantType::Bool, false, {"enable access to ccdb tof calibration objects"}});
 
   // option to use or not use the Trap Simulator after digitisation (debate of digitization or reconstruction is for others)
-  workflowOptions.push_back(ConfigParamSpec{"enable-trd-trapsim", VariantType::Bool, false, {"enable the trap simulation of the TRD"}});
+  workflowOptions.push_back(ConfigParamSpec{"disable-trd-trapsim", VariantType::Bool, false, {"disable the trap simulation of the TRD"}});
 }
 
 void customize(std::vector<o2::framework::DispatchPolicy>& policies)
@@ -407,6 +418,10 @@ WorkflowSpec defineDataProcessing(ConfigContext const& configcontext)
     if (helpasked) {
       return true;
     }
+    if (configcontext.options().get<bool>("only-context")) {
+      // no detector necessary if we are asked to produce only the digitization context
+      return false;
+    }
     auto accepted = accept(id);
     bool is_ingrp = grp->isDetReadOut(id);
     if (gIsMaster) {
@@ -419,29 +434,30 @@ WorkflowSpec defineDataProcessing(ConfigContext const& configcontext)
 
   std::vector<o2::detectors::DetID> detList; // list of participating detectors
 
-  // the TPC part
-  // we need to init this anyway since TPC is treated a bit special (for the moment)
-  if (!helpasked && ismaster) {
-    initTPC();
-  }
-
   // keeps track of which tpc sectors to process
   std::vector<int> tpcsectors;
 
   if (isEnabled(o2::detectors::DetID::TPC)) {
+    if (!helpasked && ismaster) {
+      initTPC();
+    }
+
     tpcsectors = o2::RangeTokenizer::tokenize<int>(configcontext.options().get<std::string>("tpc-sectors"));
     // only one lane for the help printout
     auto lanes = helpasked ? 1 : getNumTPCLanes(tpcsectors, configcontext);
     detList.emplace_back(o2::detectors::DetID::TPC);
 
-    WorkflowSpec tpcPipelines = o2::tpc::getTPCDigitizerSpec(lanes, tpcsectors, mctruth);
+    auto internalwrite = configcontext.options().get<bool>("tpc-chunked-writer");
+    WorkflowSpec tpcPipelines = o2::tpc::getTPCDigitizerSpec(lanes, tpcsectors, mctruth, internalwrite);
     specs.insert(specs.end(), tpcPipelines.begin(), tpcPipelines.end());
 
     if (configcontext.options().get<std::string>("tpc-reco-type").empty() == false) {
       throw std::runtime_error("option 'tpc-reco-type' is deprecated, please connect workflows on the command line by pipe");
     }
-    // for writing digits to disc
-    specs.emplace_back(o2::tpc::getTPCDigitRootWriterSpec(tpcsectors, mctruth));
+    if (!internalwrite) {
+      // for writing digits to disc
+      specs.emplace_back(o2::tpc::getTPCDigitRootWriterSpec(tpcsectors, mctruth));
+    }
   }
 
   // first 36 channels are reserved for the TPC
@@ -518,7 +534,7 @@ WorkflowSpec defineDataProcessing(ConfigContext const& configcontext)
     // connect the ZDC digitization
     specs.emplace_back(o2::zdc::getZDCDigitizerSpec(fanoutsize++, mctruth));
     // connect the ZDC digit writer
-    specs.emplace_back(o2::zdc::getZDCDigitWriterSpec(mctruth));
+    specs.emplace_back(o2::zdc::getZDCDigitWriterDPLSpec(mctruth, true));
   }
 
   // add TRD
@@ -528,12 +544,12 @@ WorkflowSpec defineDataProcessing(ConfigContext const& configcontext)
     specs.emplace_back(o2::trd::getTRDDigitizerSpec(fanoutsize++, mctruth));
     // connect the TRD digit writer
     specs.emplace_back(o2::trd::getTRDDigitWriterSpec(mctruth));
-    auto enableTrapSim = configcontext.options().get<bool>("enable-trd-trapsim");
-    if (enableTrapSim) {
+    auto disableTrapSim = configcontext.options().get<bool>("disable-trd-trapsim");
+    if (!disableTrapSim) {
       // connect the TRD Trap SimulatorA
-      specs.emplace_back(o2::trd::getTRDTrapSimulatorSpec());
+      specs.emplace_back(o2::trd::getTRDTrapSimulatorSpec(mctruth));
       // connect to the device to write out the tracklets.
-      specs.emplace_back(o2::trd::getTRDTrackletWriterSpec());
+      specs.emplace_back(o2::trd::getTRDTrackletWriterSpec(mctruth));
     }
   }
 
@@ -576,12 +592,19 @@ WorkflowSpec defineDataProcessing(ConfigContext const& configcontext)
   // the CPV part
   if (isEnabled(o2::detectors::DetID::CPV)) {
     detList.emplace_back(o2::detectors::DetID::CPV);
-    // connect the PHOS digitization
+    // connect the CPV digitization
     specs.emplace_back(o2::cpv::getCPVDigitizerSpec(fanoutsize++, mctruth));
     // add PHOS writer
     specs.emplace_back(o2::cpv::getCPVDigitWriterSpec(mctruth));
   }
-
+  // the CTP part
+  if (isEnabled(o2::detectors::DetID::CTP)) {
+    detList.emplace_back(o2::detectors::DetID::CTP);
+    // connect the CTP digitization
+    specs.emplace_back(o2::ctp::getCTPDigitizerSpec(fanoutsize++, detList));
+    // connect the CTP digit writer
+    specs.emplace_back(o2::ctp::getCTPDigitWriterSpec(false));
+  }
   // GRP updater: must come after all detectors since requires their list
   specs.emplace_back(o2::parameters::getGRPUpdaterSpec(grpfile, detList));
 

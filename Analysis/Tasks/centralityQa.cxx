@@ -10,8 +10,8 @@
 #include "Framework/runDataProcessing.h"
 #include "Framework/AnalysisTask.h"
 #include "Framework/AnalysisDataModel.h"
-#include "Analysis/EventSelection.h"
-#include "Analysis/Centrality.h"
+#include "AnalysisDataModel/EventSelection.h"
+#include "AnalysisDataModel/Centrality.h"
 #include "TH1F.h"
 
 using namespace o2;
@@ -34,8 +34,8 @@ struct CentralityQaTask {
   }
 };
 
-WorkflowSpec defineDataProcessing(ConfigContext const&)
+WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
 {
   return WorkflowSpec{
-    adaptAnalysisTask<CentralityQaTask>("centrality-qa")};
+    adaptAnalysisTask<CentralityQaTask>(cfgc, TaskName{"centrality-qa"})};
 }

@@ -44,8 +44,9 @@ namespace its
 {
 using Vertex = o2::dataformats::Vertex<o2::dataformats::TimeStamp<int>>;
 
-TrackerDPL::TrackerDPL(bool isMC, bool async, o2::gpu::GPUDataTypes::DeviceType dType) : mIsMC{isMC}, mAsyncMode{async}, mRecChain{o2::gpu::GPUReconstruction::CreateInstance(dType, true)}
+TrackerDPL::TrackerDPL(bool isMC, const std::string& trModeS, o2::gpu::GPUDataTypes::DeviceType dType) : mIsMC{isMC}, mMode{trModeS}, mRecChain{o2::gpu::GPUReconstruction::CreateInstance(dType, true)}
 {
+  std::transform(mMode.begin(), mMode.end(), mMode.begin(), [](unsigned char c) { return std::tolower(c); });
 }
 
 void TrackerDPL::init(InitContext& ic)
@@ -64,22 +65,69 @@ void TrackerDPL::init(InitContext& ic)
     geom->fillMatrixCache(o2::math_utils::bit2Mask(o2::math_utils::TransformType::T2L, o2::math_utils::TransformType::T2GRot,
                                                    o2::math_utils::TransformType::T2G));
 
+    std::string matLUTPath = ic.options().get<std::string>("material-lut-path");
+    std::string matLUTFile = o2::base::NameConf::getMatLUTFileName(matLUTPath);
+    if (o2::base::NameConf::pathExists(matLUTFile)) {
+      auto* lut = o2::base::MatLayerCylSet::loadFromFile(matLUTFile);
+      o2::base::Propagator::Instance()->setMatLUT(lut);
+      LOG(INFO) << "Loaded material LUT from " << matLUTFile;
+    } else {
+      LOG(INFO) << "Material LUT " << matLUTFile << " file is absent, only TGeo can be used";
+    }
+
     auto* chainITS = mRecChain->AddChain<o2::gpu::GPUChainITS>();
     mRecChain->Init();
     mVertexer = std::make_unique<Vertexer>(chainITS->GetITSVertexerTraits());
     mTracker = std::make_unique<Tracker>(chainITS->GetITSTrackerTraits());
-    if (mAsyncMode) {
-      std::vector<TrackingParameters> trackParams(3);
+
+    std::vector<TrackingParameters> trackParams;
+    std::vector<MemoryParameters> memParams;
+
+    mRunVertexer = true;
+    if (mMode == "async") {
+
+      trackParams.resize(3);
+      memParams.resize(3);
       trackParams[0].TrackletMaxDeltaPhi = 0.05f;
       trackParams[1].TrackletMaxDeltaPhi = 0.1f;
       trackParams[2].MinTrackLength = 4;
       trackParams[2].TrackletMaxDeltaPhi = 0.3;
-      std::vector<MemoryParameters> memParams(3);
-      mTracker->setParameters(memParams, trackParams);
       LOG(INFO) << "Initializing tracker in async. phase reconstruction with " << trackParams.size() << " passes";
+
+    } else if (mMode == "sync") {
+
+      trackParams.resize(1);
+      memParams.resize(1);
+      LOG(INFO) << "Initializing tracker in sync. phase reconstruction with " << trackParams.size() << " passes";
+
+    } else if (mMode == "cosmics") {
+
+      mRunVertexer = false;
+      trackParams.resize(1);
+      memParams.resize(1);
+      trackParams[0].MinTrackLength = 4;
+      trackParams[0].TrackletMaxDeltaPhi = o2::its::constants::math::Pi * 0.5f;
+      for (int iLayer = 0; iLayer < o2::its::constants::its2::TrackletsPerRoad; iLayer++) {
+        trackParams[0].TrackletMaxDeltaZ[iLayer] = o2::its::constants::its2::LayersZCoordinate()[iLayer + 1];
+        memParams[0].TrackletsMemoryCoefficients[iLayer] = 0.5f;
+        // trackParams[0].TrackletMaxDeltaZ[iLayer] = 10.f;
+      }
+      for (int iLayer = 0; iLayer < o2::its::constants::its2::CellsPerRoad; iLayer++) {
+        trackParams[0].CellMaxDCA[iLayer] = 10000.f;    //cm
+        trackParams[0].CellMaxDeltaZ[iLayer] = 10000.f; //cm
+        memParams[0].CellsMemoryCoefficients[iLayer] = 0.001f;
+      }
+      LOG(INFO) << "Initializing tracker in reconstruction for cosmics with " << trackParams.size() << " passes";
+
+    } else {
+      throw std::runtime_error(fmt::format("Unsupported ITS tracking mode {:s} ", mMode));
     }
+    mTracker->setParameters(memParams, trackParams);
+
     mVertexer->getGlobalConfiguration();
-    // mVertexer->dumpTraits();
+    mTracker->getGlobalConfiguration();
+    LOG(INFO) << Form("Using %s for material budget approximation", (mTracker->isMatLUT() ? "lookup table" : "TGeometry"));
+
     double origD[3] = {0., 0., 0.};
     mTracker->setBz(field->getBz(origD));
   } else {
@@ -130,7 +178,7 @@ void TrackerDPL::run(ProcessingContext& pc)
   auto& vertices = pc.outputs().make<std::vector<Vertex>>(Output{"ITS", "VERTICES", 0, Lifetime::Timeframe});
 
   std::uint32_t roFrame = 0;
-  ROframe event(0);
+  ROframe event(0, 7);
 
   bool continuous = mGRP->isDetContinuousReadOut("ITS");
   LOG(INFO) << "ITSTracker RO: continuous=" << continuous;
@@ -184,10 +232,13 @@ void TrackerDPL::run(ProcessingContext& pc)
           }
         }
 
-        mVertexer->clustersToVertices(event);
-        auto vtxVecLoc = mVertexer->exportVertices();
+        std::vector<Vertex> vtxVecLoc;
+        if (mRunVertexer) {
+          mVertexer->clustersToVertices(event);
+          vtxVecLoc = mVertexer->exportVertices();
+        }
 
-        if (multEstConf.cutMultVtxLow > 0 || multEstConf.cutMultVtxHigh > 0) { // cut was requested
+        if (mRunVertexer && (multEstConf.cutMultVtxLow > 0 || multEstConf.cutMultVtxHigh > 0)) { // cut was requested
           std::vector<o2::dataformats::Vertex<o2::dataformats::TimeStamp<int>>> vtxVecSel;
           vtxVecSel.swap(vtxVecLoc);
           for (const auto& vtx : vtxVecSel) {
@@ -205,7 +256,11 @@ void TrackerDPL::run(ProcessingContext& pc)
           }
         }
 
-        event.addPrimaryVertices(vtxVecLoc);
+        if (mRunVertexer) {
+          event.addPrimaryVertices(vtxVecLoc);
+        } else {
+          event.addPrimaryVertex(0.f, 0.f, 0.f);
+        }
         mTracker->setROFrame(roFrame);
         mTracker->clustersToTracks(event);
         tracks.swap(mTracker->getTracks());
@@ -249,7 +304,7 @@ void TrackerDPL::endOfStream(EndOfStreamContext& ec)
        mTimer.CpuTime(), mTimer.RealTime(), mTimer.Counter() - 1);
 }
 
-DataProcessorSpec getTrackerSpec(bool useMC, bool async, o2::gpu::GPUDataTypes::DeviceType dType)
+DataProcessorSpec getTrackerSpec(bool useMC, const std::string& trModeS, o2::gpu::GPUDataTypes::DeviceType dType)
 {
   std::vector<InputSpec> inputs;
   inputs.emplace_back("compClusters", "ITS", "COMPCLUSTERS", 0, Lifetime::Timeframe);
@@ -275,10 +330,11 @@ DataProcessorSpec getTrackerSpec(bool useMC, bool async, o2::gpu::GPUDataTypes::
     "its-tracker",
     inputs,
     outputs,
-    AlgorithmSpec{adaptFromTask<TrackerDPL>(useMC, async, dType)},
+    AlgorithmSpec{adaptFromTask<TrackerDPL>(useMC, trModeS, dType)},
     Options{
       {"grp-file", VariantType::String, "o2sim_grp.root", {"Name of the grp file"}},
-      {"its-dictionary-path", VariantType::String, "", {"Path of the cluster-topology dictionary file"}}}};
+      {"its-dictionary-path", VariantType::String, "", {"Path of the cluster-topology dictionary file"}},
+      {"material-lut-path", VariantType::String, "", {"Path of the material LUT file"}}}};
 }
 
 } // namespace its

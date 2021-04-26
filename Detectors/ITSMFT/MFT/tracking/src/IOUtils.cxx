@@ -35,7 +35,7 @@ namespace mft
 {
 
 int ioutils::loadROFrameData(const o2::itsmft::ROFRecord& rof, ROframe& event, gsl::span<const itsmft::CompClusterExt> clusters, gsl::span<const unsigned char>::iterator& pattIt, const itsmft::TopologyDictionary& dict,
-                             const dataformats::MCTruthContainer<MCCompLabel>* mcLabels)
+                             const dataformats::MCTruthContainer<MCCompLabel>* mcLabels, const o2::mft::Tracker* tracker)
 {
   event.clear();
   GeometryTGeo* geom = GeometryTGeo::Instance();
@@ -58,7 +58,7 @@ int ioutils::loadROFrameData(const o2::itsmft::ROFRecord& rof, ROframe& event, g
         locXYZ = dict.getClusterCoordinates(c);
       } else {
         o2::itsmft::ClusterPattern patt(pattIt);
-        locXYZ = dict.getClusterCoordinates(c, patt);
+        locXYZ = dict.getClusterCoordinates(c, patt, false);
       }
     } else {
       o2::itsmft::ClusterPattern patt(pattIt);
@@ -72,9 +72,9 @@ int ioutils::loadROFrameData(const o2::itsmft::ROFRecord& rof, ROframe& event, g
     Float_t rCoord = clsPoint2D.R();
     Float_t phiCoord = clsPoint2D.Phi();
     o2::math_utils::bringTo02PiGen(phiCoord);
-    int rBinIndex = constants::index_table::getRBinIndex(rCoord);
-    int phiBinIndex = constants::index_table::getPhiBinIndex(phiCoord);
-    int binIndex = constants::index_table::getBinIndex(rBinIndex, phiBinIndex);
+    int rBinIndex = tracker->getRBinIndex(rCoord);
+    int phiBinIndex = tracker->getPhiBinIndex(phiCoord);
+    int binIndex = tracker->getBinIndex(rBinIndex, phiBinIndex);
     // TODO: Check consistency of sigmaX2 and sigmaY2
     event.addClusterToLayer(layer, gloXYZ.x(), gloXYZ.y(), gloXYZ.z(), phiCoord, rCoord, event.getClustersInLayer(layer).size(), binIndex, sigmaX2, sigmaY2, sensorID);
     if (mcLabels) {

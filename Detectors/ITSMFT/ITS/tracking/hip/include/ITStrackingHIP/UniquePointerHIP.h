@@ -22,7 +22,7 @@ namespace o2
 {
 namespace its
 {
-namespace GPU
+namespace gpu
 {
 
 namespace
@@ -82,8 +82,8 @@ UniquePointer<T>::UniquePointer(const T& ref)
 {
   try {
 
-    Utils::HostHIP::gpuMalloc(reinterpret_cast<void**>(&mDevicePointer), sizeof(T));
-    Utils::HostHIP::gpuMemcpyHostToDevice(mDevicePointer, &ref, sizeof(T));
+    utils::host_hip::gpuMalloc(reinterpret_cast<void**>(&mDevicePointer), sizeof(T));
+    utils::host_hip::gpuMemcpyHostToDevice(mDevicePointer, &ref, sizeof(T));
 
   } catch (...) {
 
@@ -119,7 +119,7 @@ void UniquePointer<T>::destroy()
 {
   if (mDevicePointer != nullptr) {
 
-    Utils::HostHIP::gpuFree(mDevicePointer);
+    utils::host_hip::gpuFree(mDevicePointer);
   }
 }
 
@@ -146,7 +146,7 @@ GPUhd() const T& UniquePointer<T>::operator*() const noexcept
 {
   return PointerTraits::getReference(mDevicePointer);
 }
-} // namespace GPU
+} // namespace gpu
 } // namespace its
 } // namespace o2
 

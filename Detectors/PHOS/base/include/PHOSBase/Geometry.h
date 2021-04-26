@@ -12,10 +12,14 @@
 #define ALICEO2_PHOS_GEOMETRY_H_
 
 #include <string>
+#include <array>
 
 #include <Rtypes.h>
 #include <RStringView.h>
+#include <TGeoMatrix.h>
+#include <TVector3.h>
 #include <TMath.h>
+#include <array>
 
 namespace o2
 {
@@ -101,7 +105,18 @@ class Geometry
   static char absIdToModule(short absId);
   static void absIdToRelPosInModule(short absId, float& x, float& z);
   static bool relToAbsNumbering(const char* RelId, short& AbsId);
-  // converts the absolute PHOS numbering to a relative
+
+  //Converters for TRU digits
+  static bool truAbsToRelNumbering(short truId, char* relid);
+  static short truRelToAbsNumbering(const char* relId);
+  static bool truRelId2RelId(const char* truRelId, char* relId);
+  static short relPosToTruId(char mod, float x, float z, short& ddl);
+
+  //local position to absId
+  static void relPosToAbsId(char module, float x, float z, short& absId);
+
+  // convert local position in module to global position in ALICE
+  void local2Global(char module, float x, float z, TVector3& globaPos) const;
 
   static int getTotalNCells() { return 56 * 64 * 4; } // TODO: evaluate from real geometry
   static bool isCellExists(short absId)
@@ -111,8 +126,11 @@ class Geometry
 
   const std::string& GetName() const { return mGeoName; }
 
+  const TGeoHMatrix* getAlignmentMatrix(int mod) const { return &(mPHOS[mod]); }
+
  private:
-  static Geometry* sGeom; // Pointer to the unique instance of the singleton
+  static Geometry* sGeom;           // Pointer to the unique instance of the singleton
+  std::array<TGeoHMatrix, 5> mPHOS; //Rotation/shift matrices
 
   std::string mGeoName; ///< Geometry name string
 

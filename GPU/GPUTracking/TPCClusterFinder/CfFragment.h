@@ -51,6 +51,11 @@ struct CfFragment {
     return CfFragment{index + 1, hasFuture, tpccf::TPCTime(start + length - (hasFuture ? 2 * OverlapTimebins : 0)), totalSliceLength, maxSubSliceLength};
   }
 
+  GPUdi() unsigned int count() const
+  {
+    return (totalSliceLength + maxSubSliceLength - 4 * OverlapTimebins - 1) / (maxSubSliceLength - 2 * OverlapTimebins);
+  }
+
   GPUdi() tpccf::TPCTime first() const
   {
     return start;
@@ -70,6 +75,21 @@ struct CfFragment {
   GPUdi() bool isOverlap(tpccf::TPCFragmentTime t) const
   {
     return (hasBacklog ? t < OverlapTimebins : false) || (hasFuture ? t >= (length - OverlapTimebins) : false);
+  }
+
+  GPUdi() tpccf::TPCFragmentTime lengthWithoutOverlap() const
+  {
+    return length - (hasBacklog ? OverlapTimebins : 0) - (hasFuture ? OverlapTimebins : 0);
+  }
+
+  GPUdi() tpccf::TPCFragmentTime firstNonOverlapTimeBin() const
+  {
+    return (hasBacklog ? OverlapTimebins : 0);
+  }
+
+  GPUdi() tpccf::TPCFragmentTime lastNonOverlapTimeBin() const
+  {
+    return length - (hasFuture ? OverlapTimebins : 0);
   }
 
   GPUdi() tpccf::TPCFragmentTime toLocal(tpccf::TPCTime t) const

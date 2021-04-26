@@ -18,13 +18,9 @@ set(HDRS_INSTALL
     GPUCommonLogger.h
     GPUCommonMath.h
     GPUCommonRtypes.h
+    GPUCommonArray.h
     GPUCommonTransform3D.h
-    GPUDef.h
-    GPUDefConstantsAndSettings.h
-    GPUDefGPUParameters.h
-    GPUDefOpenCL12Templates.h
-    GPULogging.h
-    GPUDefMacros.h
+    GPUROOTSMatrixFwd.h
     GPUROOTCartesianFwd.h)
 
 if(ALIGPU_BUILD_TYPE STREQUAL "O2")

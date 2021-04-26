@@ -23,6 +23,18 @@ if(NOT EXISTS "${CMAKE_BINARY_DIR}/config.cmake")
   file(COPY "${CMAKE_SOURCE_DIR}/cmake/config.cmake" DESTINATION "${CMAKE_BINARY_DIR}")
 endif()
 include("${CMAKE_BINARY_DIR}/config.cmake")
+if(DEFINED CONFIG_COMPILER)
+  if(CONFIG_COMPILER STREQUAL "clang")
+    set(CMAKE_C_COMPILER "clang")
+    set(CMAKE_CXX_COMPILER "clang++")
+  elseif(CONFIG_COMPILER STREQUAL "gcc")
+    set(CMAKE_C_COMPILER "gcc")
+    set(CMAKE_CXX_COMPILER "c++")
+  else()
+    set(CMAKE_C_COMPILER "${CONFIG_COMPILER}")
+    set(CMAKE_CXX_COMPILER "${CONFIG_COMPILER}")
+  endif()
+endif()
 
 # Set Build and Compiler settings
 set(ALIGPU_BUILD_TYPE "Standalone")
@@ -35,7 +47,10 @@ if(BUILD_DEBUG)
   set(CMAKE_CXX_FLAGS "-O0 -ggdb")
   set(CMAKE_BUILD_TYPE DEBUG)
 else()
-  set(CMAKE_CXX_FLAGS "-O3 -march=native -ggdb -minline-all-stringops -ftracer -funroll-loops -fprefetch-loop-arrays -ffast-math -fno-stack-protector")
+  set(CMAKE_CXX_FLAGS "-O3 -march=native -ggdb -minline-all-stringops -funroll-loops -ffast-math -fno-stack-protector")
+  if (NOT CMAKE_CXX_COMPILER STREQUAL "clang++")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftracer -fprefetch-loop-arrays")
+  endif()
   set(CMAKE_RELEASE_TYPE RELEASE)
   add_definitions(-DNDEBUG)
 endif()
@@ -73,6 +88,8 @@ endif()
 
 if(CONFIG_ROOT)
   find_package(ROOT CONFIG REQUIRED)
+else()
+  add_definitions(-DGPUCA_NO_ROOT)
 endif()
 if(CONFIG_O2_EXTENSIONS)
   add_definitions(-DHAVE_O2HEADERS)
@@ -91,7 +108,7 @@ if(CONFIG_O2_EXTENSIONS)
 endif()
 
 if(CONFIG_FMT)
-  find_package(fmt REQUIRED)
+  find_package(fmt REQUIRED HINTS $ENV{FMT_ROOT})
 else()
   add_definitions(-DGPUCA_NO_FMT)
 endif()
@@ -101,6 +118,9 @@ find_package(O2GPU)
 
 # Global include directories
 include_directories(${CMAKE_SOURCE_DIR}
+                    ${CMAKE_SOURCE_DIR}/Debug
+                    ${CMAKE_SOURCE_DIR}/Definitions
+                    ${CMAKE_SOURCE_DIR}/DataTypes
                     ${CMAKE_SOURCE_DIR}/Base
                     ${CMAKE_SOURCE_DIR}/Base/opencl-common
                     ${CMAKE_SOURCE_DIR}/Common
@@ -132,6 +152,7 @@ include_directories(${CMAKE_SOURCE_DIR}/TPCClusterFinder
                     ${CMAKE_SOURCE_DIR}/../../../DataFormats/Headers/include
                     ${CMAKE_SOURCE_DIR}/../../../DataFormats/MemoryResources/include
                     ${CMAKE_SOURCE_DIR}/../../../DataFormats/Reconstruction/include
+                    ${CMAKE_SOURCE_DIR}/../../../DataFormats/Reconstruction/src
                     ${CMAKE_SOURCE_DIR}/../../../DataFormats/simulation/include
                     ${CMAKE_SOURCE_DIR}/../../../Detectors/Base/include
                     ${CMAKE_SOURCE_DIR}/../../../Detectors/Base/src
@@ -147,10 +168,8 @@ include_directories(${CMAKE_SOURCE_DIR}/TPCClusterFinder
 endif()
 
 # Create main targets
-add_executable(ca standalone.cxx
-                  Base/GPUReconstructionTimeframe.cxx)
 add_subdirectory(../../ GPU)
-add_library(standalone_support SHARED utils/qconfig.cxx)
+add_library(standalone_support SHARED dummy.cxx)
 
 target_link_libraries(GPUTracking PUBLIC TPCFastTransformation standalone_support dl)
 target_link_libraries(ca PUBLIC GPUTracking)
@@ -168,6 +187,8 @@ if(CONFIG_O2_EXTENSIONS)
                ../../../DataFormats/Reconstruction/src/TrackParametrizationWithError.cxx
                ../../../DataFormats/Reconstruction/src/Vertex.cxx
                ../../../DataFormats/Reconstruction/src/TrackLTIntegral.cxx
+               ../../../DataFormats/Reconstruction/src/TrackParametrization.cxx
+               ../../../DataFormats/Reconstruction/src/TrackParametrizationWithError.cxx
                ../../../Detectors/TRD/base/src/GeometryBase.cxx
                ../../../Detectors/Base/src/MatLayerCylSet.cxx
                ../../../Detectors/Base/src/MatLayerCyl.cxx
@@ -185,9 +206,6 @@ if(CONFIG_O2_EXTENSIONS)
     target_link_libraries(standalone_support PUBLIC Boost::boost)
   endif()
 endif()
-if(CONFIG_ROOT)
-  target_sources(ca PRIVATE qa/genEvents.cxx)
-endif()
 
 if(CONFIG_FMT)
   target_link_libraries(standalone_support PUBLIC fmt::fmt)
@@ -198,17 +216,12 @@ if(CONFIG_VC)
 endif()
 
 if(BUILD_EVENT_DISPLAY)
-  target_link_libraries(standalone_support PUBLIC
-                             X11::X11
-                             glfw
-                             glut)
-  target_sources(GPUTracking PRIVATE display/GPUDisplayBackendX11.cxx
-                             display/GPUDisplayBackendGlut.cxx)
+  target_link_libraries(standalone_support PUBLIC glfw)
   if(CONFIG_GL3W)
     target_sources(GPUTracking PRIVATE display/3rdparty/gl3w.c)
     target_compile_definitions(GPUTracking PUBLIC GPUCA_DISPLAY_GL3W)
   endif()
-  target_sources(GPUTracking PRIVATE display/3rdparty/HandMadeMathImpl.cxx)
+  target_sources(GPUTracking PRIVATE display/3rdparty/HandMadeMath/HandMadeMathImpl.cxx)
   target_include_directories(GPUTracking SYSTEM PUBLIC display/3rdparty)
 endif()
 
@@ -217,7 +230,8 @@ if(CONFIG_ROOT)
                              ROOT::Core
                              ROOT::RIO
                              ROOT::Hist
-                             ROOT::Gui)
+                             ROOT::Gui
+                             ROOT::Tree)
 endif()
 if(CONFIG_O2_EXTENSIONS)
   target_link_libraries(standalone_support PUBLIC ms_gsl::ms_gsl)
@@ -229,6 +243,10 @@ endif()
 
 if(OpenMP_CXX_FOUND)
   target_link_libraries(ca PUBLIC OpenMP::OpenMP_CXX)
+  if (CMAKE_CXX_COMPILER STREQUAL "clang++")
+    target_link_libraries(ca PUBLIC -fopenmp)
+    target_link_libraries(GPUTracking PUBLIC -fopenmp)
+  endif()
 endif()
 
 # Installation

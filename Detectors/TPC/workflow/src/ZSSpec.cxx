@@ -44,6 +44,7 @@
 #include "DPLUtils/DPLRawParser.h"
 #include "DataFormatsParameters/GRPObject.h"
 #include "DetectorsCommonDataFormats/NameConf.h"
+#include "DataFormatsTPC/WorkflowHelper.h"
 
 using namespace o2::framework;
 using namespace o2::header;
@@ -55,7 +56,7 @@ namespace o2
 namespace tpc
 {
 
-DataProcessorSpec getZSEncoderSpec(std::vector<int> const& inputIds, bool zs10bit, float threshold = 2.f, bool outRaw = false)
+DataProcessorSpec getZSEncoderSpec(std::vector<int> const& tpcSectors, bool zs10bit, float threshold = 2.f, bool outRaw = false, unsigned long tpcSectorMask = 0xFFFFFFFFF)
 {
   std::string processorName = "tpc-zsEncoder";
   constexpr static size_t NSectors = o2::tpc::Sector::MAXSECTOR;
@@ -65,21 +66,21 @@ DataProcessorSpec getZSEncoderSpec(std::vector<int> const& inputIds, bool zs10bi
   struct ProcessAttributes {
     std::unique_ptr<unsigned long long int[]> zsoutput;
     std::vector<unsigned int> sizes;
-    std::vector<int> inputIds;
+    std::vector<int> tpcSectors;
     bool verify = false;
     int verbosity = 1;
     bool finished = false;
   };
 
-  auto initFunction = [inputIds, zs10bit, threshold, outRaw](InitContext& ic) {
+  auto initFunction = [tpcSectors, zs10bit, threshold, outRaw, tpcSectorMask](InitContext& ic) {
     auto processAttributes = std::make_shared<ProcessAttributes>();
     auto& zsoutput = processAttributes->zsoutput;
-    processAttributes->inputIds = inputIds;
+    processAttributes->tpcSectors = tpcSectors;
     auto& verify = processAttributes->verify;
     auto& sizes = processAttributes->sizes;
     auto& verbosity = processAttributes->verbosity;
 
-    auto processingFct = [processAttributes, zs10bit, threshold, outRaw](
+    auto processingFct = [processAttributes, zs10bit, threshold, outRaw, tpcSectorMask](
                            ProcessingContext& pc) {
       if (processAttributes->finished) {
         return;
@@ -91,43 +92,18 @@ DataProcessorSpec getZSEncoderSpec(std::vector<int> const& inputIds, bool zs10bi
       auto& verbosity = processAttributes->verbosity;
 
       std::array<gsl::span<const o2::tpc::Digit>, NSectors> inputDigits;
-      GPUTrackingInOutDigits inDigitsGPU;
 
       GPUParam _GPUParam;
       GPUO2InterfaceConfiguration config;
-      config.configEvent.solenoidBz = 5.00668;
+      config.configGRP.solenoidBz = 5.00668;
       config.ReadConfigurableParam();
-      _GPUParam.SetDefaults(&config.configEvent, &config.configReconstruction, &config.configProcessing, nullptr);
+      _GPUParam.SetDefaults(&config.configGRP, &config.configReconstruction, &config.configProcessing, nullptr);
 
-      int operation = 0;
-      std::vector<InputSpec> filter = {{"check", ConcreteDataTypeMatcher{gDataOriginTPC, "DIGITS"}, Lifetime::Timeframe}};
-      for (auto const& ref : InputRecordWalker(pc.inputs(), filter)) {
-        auto const* sectorHeader = DataRefUtils::getHeader<o2::tpc::TPCSectorHeader*>(ref);
-        if (sectorHeader == nullptr) {
-          // FIXME: think about error policy
-          LOG(ERROR) << "sector header missing on header stack";
-          return;
-        }
-        const int& sector = sectorHeader->sector();
-        // the TPCSectorHeader now allows to transport information for more than one sector,
-        // e.g. for transporting clusters in one single data block. Digits are however grouped
-        // on sector level
-        if (sectorHeader->sector() >= TPCSectorHeader::NSectors) {
-          throw std::runtime_error("Expecting data for single sectors");
-        }
-
-        inputDigits[sector] = pc.inputs().get<gsl::span<o2::tpc::Digit>>(ref);
-        LOG(INFO) << "GOT SPAN FOR SECTOR " << sector << " -> "
-                  << inputDigits[sector].size();
-      }
-      for (int i = 0; i < NSectors; i++) {
-        inDigitsGPU.tpcDigits[i] = inputDigits[i].data();
-        inDigitsGPU.nTPCDigits[i] = inputDigits[i].size();
-      }
+      const auto& inputs = getWorkflowTPCInput(pc, 0, false, false, tpcSectorMask, true);
       sizes.resize(NSectors * NEndpoints);
       bool zs12bit = !zs10bit;
       o2::InteractionRecord ir = o2::raw::HBFUtils::Instance().getFirstIR();
-      o2::gpu::GPUReconstructionConvert::RunZSEncoder<o2::tpc::Digit, DigitArray>(inputDigits, &zsoutput, sizes.data(), nullptr, &ir, _GPUParam, zs12bit, verify, threshold);
+      o2::gpu::GPUReconstructionConvert::RunZSEncoder<o2::tpc::Digit, DigitArray>(inputs->inputDigits, &zsoutput, sizes.data(), nullptr, &ir, _GPUParam, zs12bit, verify, threshold);
       ZeroSuppressedContainer8kb* page = reinterpret_cast<ZeroSuppressedContainer8kb*>(zsoutput.get());
       unsigned int offset = 0;
       for (unsigned int i = 0; i < NSectors; i++) {
@@ -188,16 +164,16 @@ DataProcessorSpec getZSEncoderSpec(std::vector<int> const& inputIds, bool zs10bi
     return processingFct;
   };
 
-  auto createInputSpecs = [inputIds]() {
+  auto createInputSpecs = [tpcSectors]() {
     Inputs inputs;
     //    inputs.emplace_back(InputSpec{"input", ConcreteDataTypeMatcher{gDataOriginTPC, "DIGITS"}, Lifetime::Timeframe});
     inputs.emplace_back(InputSpec{"input", gDataOriginTPC, "DIGITS", 0, Lifetime::Timeframe});
-    return std::move(mergeInputs(inputs, inputIds.size(),
-                                 [inputIds](InputSpec& input, size_t index) {
+    return std::move(mergeInputs(inputs, tpcSectors.size(),
+                                 [tpcSectors](InputSpec& input, size_t index) {
                                    // using unique input names for the moment but want to find
                                    // an input-multiplicity-agnostic way of processing
-                                   input.binding += std::to_string(inputIds[index]);
-                                   DataSpecUtils::updateMatchingSubspec(input, inputIds[index]);
+                                   input.binding += std::to_string(tpcSectors[index]);
+                                   DataSpecUtils::updateMatchingSubspec(input, tpcSectors[index]);
                                  }));
     return inputs;
   };
@@ -219,7 +195,7 @@ DataProcessorSpec getZSEncoderSpec(std::vector<int> const& inputIds, bool zs10bi
                            AlgorithmSpec(initFunction)};
 } //spec end
 
-DataProcessorSpec getZStoDigitsSpec(std::vector<int> const& inputIds)
+DataProcessorSpec getZStoDigitsSpec(std::vector<int> const& tpcSectors)
 {
   std::string processorName = "tpc-zs-to-Digits";
   constexpr static size_t NSectors = o2::tpc::Sector::MAXSECTOR;
@@ -230,7 +206,7 @@ DataProcessorSpec getZStoDigitsSpec(std::vector<int> const& inputIds)
     std::unique_ptr<unsigned long long int[]> zsinput;
     std::vector<unsigned int> sizes;
     std::unique_ptr<o2::tpc::ZeroSuppress> decoder;
-    std::vector<int> inputIds;
+    std::vector<int> tpcSectors;
     bool verify = false;
     int verbosity = 1;
     bool finished = false;
@@ -253,9 +229,9 @@ DataProcessorSpec getZStoDigitsSpec(std::vector<int> const& inputIds)
     }
   };
 
-  auto initFunction = [inputIds](InitContext& ic) {
+  auto initFunction = [tpcSectors](InitContext& ic) {
     auto processAttributes = std::make_shared<ProcessAttributes>();
-    processAttributes->inputIds = inputIds;
+    processAttributes->tpcSectors = tpcSectors;
     auto& outDigits = processAttributes->outDigits;
     auto& decoder = processAttributes->decoder;
     decoder = std::make_unique<o2::tpc::ZeroSuppress>();

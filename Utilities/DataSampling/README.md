@@ -1,3 +1,7 @@
+<!-- doxy
+\page refUtilitiesDataSampling Data Sampling
+/doxy -->
+
 ## Data Sampling
 
 Data Sampling provides a possibility to sample data in DPL workflows based on certain conditions ( 5% randomly, when a payload is greater than 4234 bytes, etc.). The job of passing the right data is done by a data processor called `Dispatcher`. A desired data stream is specified in form of Data Sampling Policies, configured by JSON structures (example below) or by using dedicated interface methods (for advanced use).
@@ -61,6 +65,7 @@ std::vector<DataProcessorSpec> defineDataProcessing(ConfigContext &ctx)
 ```
 
 Sampled data can be subscribed to by adding `InputSpecs` provided by `std::vector<InputSpec> DataSampling::InputSpecsForPolicy(const std::string& policiesSource, const std::string& policyName)` to a chosen data processor. Then, they can be accessed by the bindings specified in the configuration file. Dispatcher adds a `DataSamplingHeader` to the header stack, which contains statistics like total number of evaluated/accepted messages for a given Policy or the sampling time since epoch.
+If no sampling policies are specified, Dispatcher will not be spawned.
 
 The [o2-datasampling-pod-and-root](https://github.com/AliceO2Group/AliceO2/blob/dev/Utilities/DataSampling/test/dataSamplingPodAndRoot.cxx) workflow can serve as a usage example.
 

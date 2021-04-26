@@ -17,9 +17,7 @@
 #include <vector>
 #include <functional>
 
-namespace o2
-{
-namespace framework
+namespace o2::framework
 {
 
 /// A callback function to retrieve the FairMQChannel name to be used for sending
@@ -68,7 +66,7 @@ static auto gDefaultConverter = incrementalConverter(OutputSpec{"TST", "TEST", 0
 
 /// Create a DataProcessorSpec which can be used to inject
 /// messages in the DPL.
-/// @param label is the label of the DataProcessorSpec associated.
+/// @param label is the label of the DataProcessorSpec associated and name of the input channel.
 /// @param outputs is the type of messages which this source produces.
 /// @param channelConfig is string to be passed to fairmq to create the device.
 ///        notice that the name of the device will be added as the name of the channel if the
@@ -82,6 +80,9 @@ DataProcessorSpec specifyExternalFairMQDeviceProxy(char const* label,
                                                    const char* defaultChannelConfig,
                                                    InjectorFunction converter);
 
+DataProcessorSpec specifyFairMQDeviceOutputProxy(char const* label,
+                                                 Inputs const& inputSpecs,
+                                                 const char* defaultChannelConfig);
 /// Create a DataProcessorSpec for a DPL processor with an out-of-band channel to relay DPL
 /// workflow data to an external FairMQDevice channel.
 ///
@@ -100,11 +101,10 @@ DataProcessorSpec specifyExternalFairMQDeviceProxy(char const* label,
 ///        by command line option '--channel-config'
 ///        notice that the name of the device will be added as the name of the channel if the
 ///        name tag is not yet in the configuration
-DataProcessorSpec specifyFairMQDeviceOutputProxy(char const* label,
-                                                 Inputs const& inputSpecs,
-                                                 const char* defaultChannelConfig);
+DataProcessorSpec specifyFairMQDeviceMultiOutputProxy(char const* label,
+                                                      Inputs const& inputSpecs,
+                                                      const char* defaultChannelConfig);
 
-} // namespace framework
 } // namespace o2
 
 #endif // FRAMEWORK_RAWDEVICESOURCE_H

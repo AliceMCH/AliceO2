@@ -50,7 +50,7 @@ using namespace o2::gpu;
 #undef AddHelp
 #undef AddShortcut
 
-GPUSettingsO2 GPUO2InterfaceConfiguration::ReadConfigurableParam()
+GPUSettingsO2 GPUO2InterfaceConfiguration::ReadConfigurableParam_internal()
 {
 #define BeginNamespace(name)
 #define EndNamespace()
@@ -98,13 +98,13 @@ GPUSettingsO2 GPUO2InterfaceConfiguration::ReadConfigurableParam()
   configDisplay = GL;
   configQA = QA;
   if (global.continuousMaxTimeBin) {
-    configEvent.continuousMaxTimeBin = global.continuousMaxTimeBin;
+    configGRP.continuousMaxTimeBin = global.continuousMaxTimeBin;
   }
-  if (global.solenoidBz > -1000.f) {
-    configEvent.solenoidBz = global.solenoidBz;
+  if (global.solenoidBz > -1e6f) {
+    configGRP.solenoidBz = global.solenoidBz;
   }
   if (global.constBz) {
-    configEvent.constBz = global.constBz;
+    configGRP.constBz = global.constBz;
   }
   if (configReconstruction.TrackReferenceX == 1000.f) {
     configReconstruction.TrackReferenceX = 83.f;

@@ -10,6 +10,7 @@
 #ifndef O2_FRAMEWORK_DATAPROCESSINGSTATS_H_
 #define O2_FRAMEWORK_DATAPROCESSINGSTATS_H_
 
+#include <atomic>
 #include <cstdint>
 
 namespace o2::framework
@@ -25,6 +26,8 @@ struct DataProcessingStats {
     int minLatency = 0;
     int maxLatency = 0;
   };
+  std::atomic<int> errorCount = 0;
+  std::atomic<int> exceptionCount = 0;
   std::atomic<int> pendingInputs = 0;
   std::atomic<int> incomplete = 0;
   std::atomic<int> inputParts = 0;

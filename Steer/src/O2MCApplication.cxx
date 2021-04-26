@@ -54,14 +54,27 @@ void O2MCApplicationBase::Stepping()
     // we can kill tracks here based on our
     // custom detector specificities
 
+    // Note that this is done in addition to the generic
+    // R + Z-cut mechanism at VMC level.
+
     float x, y, z;
     fMC->TrackPosition(x, y, z);
 
-    if (z > mCutParams.ZmaxA) {
-      fMC->StopTrack();
-      return;
-    }
-    if (-z > mCutParams.ZmaxC) {
+    // this function is implementing a basic z-dependent R cut
+    // can be generalized later on
+    auto outOfR = [x, y, this](float z) {
+      // for the moment for cases when we have ZDC enabled
+      if (std::abs(z) > mCutParams.tunnelZ) {
+        if ((x * x + y * y) > mCutParams.maxRTrackingZDC * mCutParams.maxRTrackingZDC) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    if (z > mCutParams.ZmaxA ||
+        -z > mCutParams.ZmaxC ||
+        outOfR(z)) {
       fMC->StopTrack();
       return;
     }
@@ -183,8 +196,9 @@ void O2MCApplicationBase::AddParticles()
   LOG(INFO) << param;
 
   // check if there are PDG codes requested for user decay
-  if (param.pdglist.empty())
+  if (param.pdglist.empty()) {
     return;
+  }
 
   // loop over PDG codes in the string
   std::stringstream ss(param.pdglist);
@@ -247,7 +261,6 @@ void O2MCApplication::SendData()
   attachSubEventInfo(simdataparts, *mSubEventInfo);
   auto tracks = attachBranch<std::vector<o2::MCTrack>>("MCTrack", *mSimDataChannel, simdataparts);
   attachBranch<std::vector<o2::TrackReference>>("TrackRefs", *mSimDataChannel, simdataparts);
-  attachBranch<o2::dataformats::MCTruthContainer<o2::TrackReference>>("IndexedTrackRefs", *mSimDataChannel, simdataparts);
   assert(tracks->size() == mSubEventInfo->npersistenttracks);
 
   for (auto det : listActiveDetectors) {

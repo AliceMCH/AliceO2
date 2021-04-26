@@ -14,7 +14,7 @@
 #define ALICEO2_INTERACTIONRECORD_H
 
 #include "GPUCommonRtypes.h"
-#ifndef ALIGPU_GPUCODE
+#ifndef GPUCA_ALIGPUCODE
 #include <iosfwd>
 #include <cstdint>
 #endif
@@ -107,7 +107,7 @@ struct InteractionRecord {
   float differenceInBCMS(const InteractionRecord& other) const
   {
     // return difference in bunch-crossings in ms
-    return differenceInBC(other) * o2::constants::lhc::LHCBunchSpacingMS;
+    return differenceInBC(other) * o2::constants::lhc::LHCBunchSpacingMUS;
   }
 
   int64_t toLong() const
@@ -246,7 +246,7 @@ struct InteractionRecord {
     return InteractionRecord(l % o2::constants::lhc::LHCMaxBunches, l / o2::constants::lhc::LHCMaxBunches);
   }
 
-#ifndef ALIGPU_GPUCODE
+#ifndef GPUCA_ALIGPUCODE
   void print() const;
   std::string asString() const;
   friend std::ostream& operator<<(std::ostream& stream, InteractionRecord const& ir);
@@ -324,7 +324,7 @@ struct InteractionTimeRecord : public InteractionRecord {
     return !((*this) > other);
   }
 
-#ifndef ALIGPU_GPUCODE
+#ifndef GPUCA_ALIGPUCODE
   void print() const;
   std::string asString() const;
   friend std::ostream& operator<<(std::ostream& stream, InteractionTimeRecord const& ir);
@@ -333,5 +333,18 @@ struct InteractionTimeRecord : public InteractionRecord {
   ClassDefNV(InteractionTimeRecord, 1);
 };
 } // namespace o2
+
+namespace std
+{
+// defining std::hash for InteractionRecord to be used with std containers
+template <>
+struct hash<o2::InteractionRecord> {
+ public:
+  size_t operator()(const o2::InteractionRecord& ir) const
+  {
+    return ir.toLong();
+  }
+};
+} // namespace std
 
 #endif

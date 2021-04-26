@@ -12,6 +12,8 @@
 
 #include "Framework/ParamRetriever.h"
 #include "Framework/ConfigParamStore.h"
+#include "Framework/Traits.h"
+#include "Framework/VariantPropertyTreeHelpers.h"
 
 #include <boost/property_tree/ptree.hpp>
 #include <memory>
@@ -20,7 +22,6 @@
 
 namespace o2::framework
 {
-
 class ConfigParamStore;
 
 /// This provides unified access to the parameters specified in the workflow
@@ -63,6 +64,12 @@ class ConfigParamRegistry
         return mStore->store().get<std::string>(key);
       } else if constexpr (std::is_same_v<T, std::string_view>) {
         return std::string_view{mStore->store().get<std::string>(key)};
+      } else if constexpr (is_base_of_template<std::vector, T>::value) {
+        return vectorFromBranch<typename T::value_type>(mStore->store().get_child(key));
+      } else if constexpr (is_base_of_template<o2::framework::Array2D, T>::value) {
+        return array2DFromBranch<typename T::element_t>(mStore->store().get_child(key));
+      } else if constexpr (is_base_of_template<o2::framework::LabeledArray, T>::value) {
+        return labeledArrayFromBranch<typename T::element_t>(mStore->store().get_child(key));
       } else if constexpr (std::is_same_v<T, boost::property_tree::ptree>) {
         return mStore->store().get_child(key);
       } else if constexpr (std::is_constructible_v<T, boost::property_tree::ptree>) {
@@ -76,6 +83,7 @@ class ConfigParamRegistry
     } catch (...) {
       throw std::invalid_argument(std::string("error parsing option: ") + key);
     }
+    throw std::invalid_argument(std::string("bad type for option: ") + key);
   }
 
  private:

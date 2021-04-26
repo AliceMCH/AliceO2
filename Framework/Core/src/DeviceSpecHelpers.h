@@ -7,8 +7,8 @@
 // In applying this license CERN does not waive the privileges and immunities
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
-#ifndef FRAMEWORK_DEVICESPECHELPERS_H
-#define FRAMEWORK_DEVICESPECHELPERS_H
+#ifndef O2_FRAMEWORK_DEVICESPECHELPERS_H_
+#define O2_FRAMEWORK_DEVICESPECHELPERS_H_
 
 #include "Framework/WorkflowSpec.h"
 #include "Framework/ChannelConfigurationPolicy.h"
@@ -22,18 +22,17 @@
 #include "Framework/AlgorithmSpec.h"
 #include "Framework/ConfigParamSpec.h"
 #include "Framework/OutputRoute.h"
+#include "Framework/DataProcessorInfo.h"
 #include "ResourceManager.h"
-#include "DataProcessorInfo.h"
 #include "WorkflowHelpers.h"
 #include <boost/program_options.hpp>
 
 #include <vector>
 #include <string>
 #include <map>
+#include <functional>
 
-namespace o2
-{
-namespace framework
+namespace o2::framework
 {
 struct InputChannelSpec;
 struct OutputChannelSpec;
@@ -50,7 +49,8 @@ struct DeviceSpecHelpers {
     ResourceManager& resourceManager,
     std::string const& uniqueWorkflowId,
     bool optimizeTopology = false,
-    unsigned short resourcesMonitoringInterval = 0);
+    unsigned short resourcesMonitoringInterval = 0,
+    std::string const& channelPrefix = "");
 
   static void dataProcessorSpecs2DeviceSpecs(
     const WorkflowSpec& workflow,
@@ -60,11 +60,12 @@ struct DeviceSpecHelpers {
     ResourceManager& resourceManager,
     std::string const& uniqueWorkflowId,
     bool optimizeTopology = false,
-    unsigned short resourcesMonitoringInterval = 0)
+    unsigned short resourcesMonitoringInterval = 0,
+    std::string const& channelPrefix = "")
   {
     std::vector<DispatchPolicy> dispatchPolicies = DispatchPolicy::createDefaultPolicies();
     dataProcessorSpecs2DeviceSpecs(workflow, channelPolicies, completionPolicies,
-                                   dispatchPolicies, devices, resourceManager, uniqueWorkflowId, optimizeTopology, resourcesMonitoringInterval);
+                                   dispatchPolicies, devices, resourceManager, uniqueWorkflowId, optimizeTopology, resourcesMonitoringInterval, channelPrefix);
   }
 
   /// Helper to provide the channel configuration string for an input channel
@@ -73,7 +74,26 @@ struct DeviceSpecHelpers {
   /// Helper to provide the channel configuration string for an output channel
   static std::string outputChannel2String(const OutputChannelSpec& channel);
 
-  /// Rework the infos so that they have a consisten --shm-section-size
+  /// Rework a given command line option so that all the sub workflows
+  /// either have the same value, or they leave it unspecified.
+  /// @a infos the DataProcessorInfos to modify
+  /// @a name of the option to modify, including --
+  /// @a defaultValue the default value for the option. If default is nullptr, not finding the
+  ///    option will not not add a default value.
+  static void reworkHomogeneousOption(std::vector<DataProcessorInfo>& infos,
+                                      char const* name, char const* defaultValue);
+
+  /// Rework a given command line option so that we pick the largest value
+  /// which has been specified or a default one.
+  /// @a defaultValueCallback a callback which returns the default value, if nullptr, the option
+  ///    will not be added.
+  /// @a bestValue given to possible values of the option, return the one which should be used.
+  static void reworkIntegerOption(std::vector<DataProcessorInfo>& infos,
+                                  char const* name,
+                                  std::function<long long()> defaultValueCallback,
+                                  long long startValue,
+                                  std::function<long long(long long, long long)> bestValue);
+  /// Rework the infos so that they have a consistent --shm-section-size
   /// which is the maximum of the specified value.
   static void reworkShmSegmentSize(std::vector<DataProcessorInfo>& infos);
   /// Helper to prepare the arguments which will be used to
@@ -81,6 +101,7 @@ struct DeviceSpecHelpers {
   static void prepareArguments(
     bool defaultQuiet,
     bool defaultStopped,
+    unsigned short driverPort,
     std::vector<DataProcessorInfo> const& processorInfos,
     std::vector<DeviceSpec> const& deviceSpecs,
     std::vector<DeviceExecution>& deviceExecutions,
@@ -102,6 +123,7 @@ struct DeviceSpecHelpers {
     const WorkflowSpec& workflow,
     const std::vector<OutputSpec>& outputs,
     std::vector<ChannelConfigurationPolicy> const& channelPolicies,
+    std::string const& channelPrefix,
     ComputingOffer const& defaultOffer);
 
   /// This takes the list of preprocessed edges of a graph
@@ -119,6 +141,7 @@ struct DeviceSpecHelpers {
     const WorkflowSpec& workflow,
     const std::vector<LogicalForwardInfo>& availableForwardsInfo,
     std::vector<ChannelConfigurationPolicy> const& channelPolicies,
+    std::string const& channelPrefix,
     ComputingOffer const& defaultOffer);
 
   /// return a description of all options to be forwarded to the device
@@ -126,6 +149,5 @@ struct DeviceSpecHelpers {
   static boost::program_options::options_description getForwardedDeviceOptions();
 };
 
-} // namespace framework
-} // namespace o2
-#endif // FRAMEWORK_DEVICESPECHELPERS_H
+} // namespace o2::framework
+#endif // O2_FRAMEWORK_DEVICESPECHELPERS_H_

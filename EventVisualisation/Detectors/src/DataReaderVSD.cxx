@@ -27,8 +27,8 @@ namespace o2
 namespace event_visualisation
 {
 
-DataReaderVSD::DataReaderVSD()
-  : DataReader(),
+DataReaderVSD::DataReaderVSD(DataInterpreter* interpreter)
+  : DataReader(interpreter),
     mFile(nullptr),
     mMaxEv(-1),
     mCurEv(-1)
@@ -38,8 +38,9 @@ DataReaderVSD::DataReaderVSD()
 DataReaderVSD::~DataReaderVSD()
 {
   if (mEvDirKeys.size() > 0) {
-    for (auto obj : mEvDirKeys)
+    for (auto obj : mEvDirKeys) {
       delete obj;
+    }
     mEvDirKeys.clear();
   }
 

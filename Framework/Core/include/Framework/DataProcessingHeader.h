@@ -7,20 +7,17 @@
 // In applying this license CERN does not waive the privileges and immunities
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
-#ifndef FRAMEWORK_DATAPROCESSINGHEADER_H
-#define FRAMEWORK_DATAPROCESSINGHEADER_H
+#ifndef O2_FRAMEWORK_DATAPROCESSINGHEADER_H_
+#define O2_FRAMEWORK_DATAPROCESSINGHEADER_H_
 
 #include "Headers/DataHeader.h"
 
 #include <cstdint>
-#include <cstdio>
 #include <memory>
 #include <cassert>
 #include <chrono>
 
-namespace o2
-{
-namespace framework
+namespace o2::framework
 {
 
 //__________________________________________________________________________________________________
@@ -99,7 +96,6 @@ struct DataProcessingHeader : public header::BaseHeader {
   }
 };
 
-} // namespace framework
-} // namespace o2
+} // namespace o2::framework
 
-#endif // FRAMEWORK_DATAPROCESSINGHEADER_H
+#endif // O2_FRAMEWORK_DATAPROCESSINGHEADER_H_

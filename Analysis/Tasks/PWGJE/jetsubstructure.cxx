@@ -21,8 +21,8 @@
 #include "Framework/AnalysisDataModel.h"
 #include "Framework/ASoA.h"
 
-#include "Analysis/Jet.h"
-#include "Analysis/JetFinder.h"
+#include "AnalysisDataModel/Jet.h"
+#include "AnalysisCore/JetFinder.h"
 
 using namespace o2;
 using namespace o2::framework;
@@ -118,8 +118,8 @@ struct JetSubstructure {
     jetSubstructure(zg, rg, nsd);
   }
 };
-WorkflowSpec defineDataProcessing(ConfigContext const&)
+WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
 {
   return WorkflowSpec{
-    adaptAnalysisTask<JetSubstructure>("jet-substructure")};
+    adaptAnalysisTask<JetSubstructure>(cfgc, TaskName{"jet-substructure"})};
 }

@@ -13,12 +13,11 @@
 /// \author ruben.shahoyan@cern.ch
 
 #include "DetectorsVertexing/PVertexer.h"
-#include "ReconstructionDataFormats/DCA.h"
 #include "DetectorsBase/Propagator.h"
 #include "Math/SMatrix.h"
 #include "Math/SVector.h"
-#include <numeric>
 #include <unordered_map>
+#include <TStopwatch.h>
 
 using namespace o2::vertexing;
 
@@ -27,25 +26,24 @@ constexpr double PVertexer::kAlmost0D;
 constexpr float PVertexer::kHugeF;
 
 //___________________________________________________________________
-int PVertexer::process(gsl::span<const o2d::TrackTPCITS> tracksITSTPC, gsl::span<const o2::ft0::RecPoints> ft0Data,
-                       std::vector<PVertex>& vertices, std::vector<GIndex>& vertexTrackIDs, std::vector<V2TRef>& v2tRefs)
+int PVertexer::runVertexing(const gsl::span<o2d::GlobalTrackID> gids, const gsl::span<o2::InteractionRecord> bcData,
+                            std::vector<PVertex>& vertices, std::vector<o2d::VtxTrackIndex>& vertexTrackIDs, std::vector<V2TRef>& v2tRefs,
+                            gsl::span<const o2::MCCompLabel> lblTracks, std::vector<o2::MCEventLabel>& lblVtx)
 {
-  createTracksPool(tracksITSTPC);
-
-  //clusterizeTimeBruteForce();
-  clusterizeTime();
-
+  dbscan_clusterize();
   std::vector<PVertex> verticesLoc;
-  std::vector<int> vertexTrackIDsLoc;
+  std::vector<uint32_t> trackIDs;
   std::vector<V2TRef> v2tRefsLoc;
   std::vector<float> validationTimes;
+  std::vector<o2::MCEventLabel> lblVtxLoc;
 
-  for (auto tc : mTimesClusters) {
+  for (auto tc : mTimeZClusters) {
     VertexingInput inp;
-    inp.idRange = gsl::span<int>((int*)&mSortedTrackID[tc.first], tc.count);
+    //    inp.idRange = gsl::span<int>((int*)&mSortedTrackID[tc.first], tc.count);
+    inp.idRange = gsl::span<int>((int*)&mClusterTrackIDs[tc.first], tc.count);
     inp.scaleSigma2 = 3. * estimateScale2();
     inp.timeEst = tc.timeEst;
-    findVertices(inp, verticesLoc, vertexTrackIDsLoc, v2tRefsLoc);
+    findVertices(inp, verticesLoc, trackIDs, v2tRefsLoc);
   }
 
   // sort in time
@@ -60,7 +58,11 @@ int PVertexer::process(gsl::span<const o2d::TrackTPCITS> tracksITSTPC, gsl::span
   vertexTrackIDs.clear();
   vertices.reserve(verticesLoc.size());
   v2tRefs.reserve(v2tRefsLoc.size());
-  vertexTrackIDs.reserve(vertexTrackIDsLoc.size());
+  vertexTrackIDs.reserve(trackIDs.size());
+
+  if (lblTracks.size()) {
+    createMCLabels(lblTracks, vertices, trackIDs, v2tRefsLoc, lblVtxLoc);
+  }
 
   int trCopied = 0, count = 0, vtimeID = 0;
   for (auto i : vtTimeSortID) {
@@ -70,24 +72,27 @@ int PVertexer::process(gsl::span<const o2d::TrackTPCITS> tracksITSTPC, gsl::span
     if (!irSet) {
       continue;
     }
-    // do we need to validate by FT0 ?
-    if (mValidateWithFT0) {
-      auto bestMatch = getBestFT0Trigger(vtx, ft0Data, vtimeID);
+    // do we need to validate by Int. records ?
+    if (mValidateWithIR) {
+      auto bestMatch = getBestIR(vtx, bcData, vtimeID);
       if (bestMatch.first >= 0) {
         vtx.setFlags(PVertex::TimeValidated);
         if (bestMatch.second == 1) {
-          vtx.setIR(ft0Data[bestMatch.first].getInteractionRecord());
+          vtx.setIR(bcData[bestMatch.first]);
         }
         LOG(DEBUG) << "Validated with t0 " << bestMatch.first << " with " << bestMatch.second << " candidates";
-      } else if (vtx.getNContributors() >= mPVParams->minNContributorsForFT0cut) {
+      } else if (vtx.getNContributors() >= mPVParams->minNContributorsForIRcut) {
         LOG(DEBUG) << "Discarding " << vtx;
         continue; // reject
       }
     }
     vertices.push_back(vtx);
+    if (lblVtxLoc.size()) {
+      lblVtx.push_back(lblVtxLoc[i]);
+    }
     int it = v2tRefsLoc[i].getFirstEntry(), itEnd = it + v2tRefsLoc[i].getEntries(), dest0 = vertexTrackIDs.size();
     for (; it < itEnd; it++) {
-      auto& gid = vertexTrackIDs.emplace_back(vertexTrackIDsLoc[it], GIndex::TPCITS);
+      auto& gid = vertexTrackIDs.emplace_back(gids[trackIDs[it]]); // assign global track ID
       gid.setPVContributor();
     }
     v2tRefs.emplace_back(dest0, v2tRefsLoc[i].getEntries());
@@ -97,20 +102,8 @@ int PVertexer::process(gsl::span<const o2d::TrackTPCITS> tracksITSTPC, gsl::span
   return vertices.size();
 }
 
-//___________________________________________________________________
-int PVertexer::process(gsl::span<const o2d::TrackTPCITS> tracksITSTPC, gsl::span<const o2::ft0::RecPoints> ft0Data,
-                       std::vector<PVertex>& vertices, std::vector<GIndex>& vertexTrackIDs, std::vector<V2TRef>& v2tRefs,
-                       gsl::span<const o2::MCCompLabel> lblITS, gsl::span<const o2::MCCompLabel> lblTPC, std::vector<o2::MCEventLabel>& lblVtx)
-{
-  auto nv = process(tracksITSTPC, ft0Data, vertices, vertexTrackIDs, v2tRefs);
-  if (lblITS.size() && lblTPC.size()) {
-    createMCLabels(lblITS, lblTPC, vertices, vertexTrackIDs, v2tRefs, lblVtx);
-  }
-  return nv;
-}
-
 //______________________________________________
-int PVertexer::findVertices(const VertexingInput& input, std::vector<PVertex>& vertices, std::vector<int>& vertexTrackIDs, std::vector<V2TRef>& v2tRefs)
+int PVertexer::findVertices(const VertexingInput& input, std::vector<PVertex>& vertices, std::vector<uint32_t>& trackIDs, std::vector<V2TRef>& v2tRefs)
 {
   // find vertices using tracks with indices (sorted in time) from idRange from "tracks" pool. The pool may containt arbitrary number of tracks,
   // only those which are in the idRange and have canUse()==true, will be used.
@@ -131,20 +124,22 @@ int PVertexer::findVertices(const VertexingInput& input, std::vector<PVertex>& v
   if (seedHisto.nFilled < mPVParams->minTracksPerVtx) {
     return nfound;
   }
-
-  while (1) {
+  LOG(DEBUG) << "New cluster: times: " << mTracksPool[input.idRange[0]].timeEst.getTimeStamp() << " : " << mTracksPool[input.idRange[ntr - 1]].timeEst.getTimeStamp() << " nfound " << nfound << " of " << ntr; // RSTMP
+  int nTrials = 0;
+  while (nfound < mPVParams->maxVerticesPerCluster && nTrials < mPVParams->maxTrialsPerCluster) {
     int peakBin = seedHisto.findHighestPeakBin(); // find next seed
     if (!seedHisto.isValidBin(peakBin)) {
       break;
     }
     float zv = seedHisto.getBinCenter(peakBin);
-    LOG(DEBUG) << "Seeding with Z=" << zv << " bin " << peakBin;
+    LOG(DEBUG) << "Seeding with Z=" << zv << " bin " << peakBin << " on trial " << nTrials << " for vertex " << nfound;
     PVertex vtx;
     vtx.setXYZ(mMeanVertex.getX(), mMeanVertex.getY(), zv);
     vtx.setTimeStamp(input.timeEst);
     if (findVertex(input, vtx)) {
-      finalizeVertex(input, vtx, vertices, v2tRefs, vertexTrackIDs, seedHisto);
+      finalizeVertex(input, vtx, vertices, v2tRefs, trackIDs, seedHisto);
       nfound++;
+      nTrials = 0;
     } else {                                                                    // suppress failed seeding bin and its proximities
       auto delta = std::sqrt(vtx.getChi2()) * mStatZErr.getMean() * getTukey(); // largest scale used will be transferred as chi2
       int proximity = delta * seedHisto.binSizeInv;
@@ -154,6 +149,7 @@ int PVertexer::findVertices(const VertexingInput& input, std::vector<PVertex>& v
       for (int i = bmin; i < bmax; i++) {
         seedHisto.discardBin(i);
       }
+      nTrials++;
     }
   }
   return nfound;
@@ -324,7 +320,6 @@ bool PVertexer::solveVertex(VertexSeed& vtxSeed) const
   vtxSeed.setChi2((vtxSeed.getNContributors() - vtxSeed.wghSum) / vtxSeed.scaleSig2ITuk2I); // calculate chi^2
   auto newScale = vtxSeed.wghChi2 / vtxSeed.wghSum;
   LOG(DEBUG) << "Solve: wghChi2=" << vtxSeed.wghChi2 << " wghSum=" << vtxSeed.wghSum << " -> scale= " << newScale << " old scale " << vtxSeed.scaleSigma2 << " prevScale: " << vtxSeed.scaleSigma2Prev;
-  //vtxSeed.print();
   vtxSeed.setScale(newScale < mPVParams->minScale2 ? mPVParams->minScale2 : newScale, mTukey2I);
   return true;
 }
@@ -427,7 +422,6 @@ TimeEst PVertexer::timeEstimate(const VertexingInput& input) const
 void PVertexer::init()
 {
   mPVParams = &PVertexerParams::Instance();
-  mFT0Params = &o2::ft0::InteractionTag::Instance();
   setTukey(mPVParams->tukey);
   initMeanVertexConstraint();
 
@@ -437,190 +431,36 @@ void PVertexer::init()
 
 //___________________________________________________________________
 void PVertexer::finalizeVertex(const VertexingInput& input, const PVertex& vtx,
-                               std::vector<PVertex>& vertices, std::vector<V2TRef>& v2tRefs, std::vector<int>& vertexTrackIDs,
+                               std::vector<PVertex>& vertices, std::vector<V2TRef>& v2tRefs, std::vector<uint32_t>& trackIDs,
                                SeedHisto& histo)
 {
   int lastID = vertices.size();
   vertices.emplace_back(vtx);
-  auto& ref = v2tRefs.emplace_back(vertexTrackIDs.size(), 0);
+  auto& ref = v2tRefs.emplace_back(trackIDs.size(), 0);
   for (int i : input.idRange) {
     if (mTracksPool[i].canAssign()) {
-      vertexTrackIDs.push_back(mTracksPool[i].entry);
+      trackIDs.push_back(mTracksPool[i].entry);
       mTracksPool[i].vtxID = lastID;
 
       // remove track from ZSeeds histo
       histo.decrementBin(mTracksPool[i].bin);
     }
   }
-  ref.setEntries(vertexTrackIDs.size() - ref.getFirstEntry());
+  ref.setEntries(trackIDs.size() - ref.getFirstEntry());
 }
 
 //___________________________________________________________________
-void PVertexer::createTracksPool(gsl::span<const o2d::TrackTPCITS> tracksITSTPC)
-{
-  // create pull of all candidate tracks in a global array ordered in time
-  mTracksPool.clear();
-  mSortedTrackID.clear();
-
-  auto ntGlo = tracksITSTPC.size();
-  mTracksPool.reserve(ntGlo);
-  // check all containers
-  float vtxErr2 = 0.5 * (mMeanVertex.getSigmaX2() + mMeanVertex.getSigmaY2());
-  float dcaToler = 1.0 + 3. * std::sqrt(vtxErr2); // RS FIXME  tolerance should be a parameter
-  float pullIniCut = 9.;                          // RS FIXME  pullIniCut should be a parameter
-  o2d::DCA dca;
-
-  for (uint32_t i = 0; i < ntGlo; i++) {
-    o2::track::TrackParCov trc = tracksITSTPC[i];
-    if (!trc.propagateToDCA(mMeanVertex, mBz, &dca, dcaToler) ||
-        dca.getY() * dca.getY() / (dca.getSigmaY2() + vtxErr2) > pullIniCut) {
-      continue;
-    }
-    auto& tvf = mTracksPool.emplace_back(trc, tracksITSTPC[i].getTimeMUS(), i, 0);
-    mStatZErr.add(std::sqrt(trc.getSigmaZ2()));
-    mStatTErr.add(tvf.timeEst.getTimeStampError());
-  }
-  // TODO: try to narrow timestamps using tof times
-  auto [zerrMean, zerrRMS] = mStatZErr.getMeanRMS2<float>();
-
-  auto [terrMean, terrRMS] = mStatTErr.getMeanRMS2<float>();
-
-  if (mTracksPool.empty()) {
-    return;
-  }
-  //
-  mSortedTrackID.resize(mTracksPool.size());
-  std::iota(mSortedTrackID.begin(), mSortedTrackID.end(), 0);
-
-  std::sort(mSortedTrackID.begin(), mSortedTrackID.end(), [this](int i, int j) {
-    return this->mTracksPool[i].timeEst.getTimeStamp() < this->mTracksPool[j].timeEst.getTimeStamp();
-  });
-
-  auto tMin = mTracksPool[mSortedTrackID.front()].timeEst.getTimeStamp();
-  auto tMax = mTracksPool[mSortedTrackID.back()].timeEst.getTimeStamp();
-}
-
-//___________________________________________________________________
-void PVertexer::clusterizeTimeBruteForce(float margin, float cut)
-{
-  std::vector<TimeCluster> tclist;
-  mTimesClusters.clear();
-  auto* vtxT = &tclist.emplace_back();
-  int ntr = mSortedTrackID.size();
-  for (int i = 0; i < ntr; i++) {
-    int icur = mSortedTrackID[i];
-    const auto& trc = mTracksPool[icur];
-    if (!vtxT->isCompatible(trc.timeEst, margin, cut)) {
-      if (vtxT->count < mPVParams->minTracksPerVtx) {
-        vtxT->clear();
-      } else {
-        vtxT = &tclist.emplace_back();
-      }
-    }
-    vtxT->addTrack(i, trc.timeEst);
-  }
-  if (tclist.back().count < mPVParams->minTracksPerVtx) {
-    tclist.pop_back();
-  }
-  // final sort in decreasing multiplicity
-  std::vector<int> tcselSort(tclist.size());
-  std::iota(tcselSort.begin(), tcselSort.end(), 0);
-
-  std::sort(tcselSort.begin(), tcselSort.end(), [&tclist](int i, int j) { return tclist[i].count > tclist[j].count; });
-  mTimesClusters.reserve(tcselSort.size());
-  for (auto i : tcselSort) {
-    if (tclist[i].count >= mPVParams->minTracksPerVtx) {
-      mTimesClusters.push_back(tclist[i]);
-      auto& tc = mTimesClusters.back();
-      //      tc.print();
-    }
-  }
-}
-
-//___________________________________________________________________
-void PVertexer::clusterizeTime(float binSize, float maxTDist)
-{
-  // moving average density
-  std::vector<int> tclistIdx, tcselSort;
-  std::vector<TimeCluster> tclist;
-  mTimesClusters.clear();
-
-  int ntr = mTracksPool.size(), first = 0, last = 0, count = 1;
-  float tfirst = mTracksPool[mSortedTrackID[first]].timeEst.getTimeStamp(), tlast = tfirst, tMean = tfirst;
-  for (int i = 1; i < ntr; i++) {
-    if (mTracksPool[mSortedTrackID[i]].timeEst.getTimeStamp() - tfirst < binSize) {
-      last = i;
-      tlast = mTracksPool[mSortedTrackID[last]].timeEst.getTimeStamp();
-      tMean += tlast;
-      count++;
-    } else {
-      tclist.emplace_back(TimeCluster{{tMean / count, 0.}, first, last, count});
-      first = last = i;
-      tMean = tfirst = mTracksPool[mSortedTrackID[last]].timeEst.getTimeStamp();
-      count = 1;
-    }
-  }
-  tMean += mTracksPool[mSortedTrackID[last]].timeEst.getTimeStamp();
-  tclist.emplace_back(TimeCluster{{tMean / count, 0.}, first, last, count});
-
-  int ncl = tclist.size();
-  tclistIdx.resize(ncl);
-  tcselSort.reserve(ncl);
-  std::iota(tclistIdx.begin(), tclistIdx.end(), 0);
-  std::sort(tclistIdx.begin(), tclistIdx.end(), [&tclist](int i, int j) { return tclist[i].count > tclist[j].count; });
-
-  for (auto it : tclistIdx) {
-    auto& best = tclist[it];
-    if (!best.count) {
-      continue; // already merged
-    }
-    // check if it can absorm neighbours
-    int iBef = it, iAft = it;
-    bool merged;
-    do {
-      merged = false;
-      if (--iBef >= 0) {
-        if (tclist[iBef].count && best.isCompatible(tclist[iBef].timeEst, 0, maxTDist)) {
-          best.merge(tclist[iBef]);
-          merged = true;
-        } else {
-          iBef = -1; // don't check those before
-        }
-      }
-      if (++iAft < ncl) {
-        if (tclist[iAft].count && best.isCompatible(tclist[iAft].timeEst, 0, maxTDist)) {
-          best.merge(tclist[iAft]);
-          merged = true;
-        } else {
-          iAft = ncl; // don't check those after
-        }
-      }
-    } while (merged);
-    if (best.count > 1) { // RS FIXME
-      tcselSort.push_back(it);
-    }
-  }
-  // final sort in decreasing multiplicity
-  std::sort(tcselSort.begin(), tcselSort.end(), [&tclist](int i, int j) { return tclist[i].count > tclist[j].count; });
-  mTimesClusters.reserve(tcselSort.size());
-  for (auto i : tcselSort) {
-    mTimesClusters.push_back(tclist[i]);
-    // mTimesClusters.back().print();
-  }
-}
-
-//___________________________________________________________________
-void PVertexer::createMCLabels(gsl::span<const o2::MCCompLabel> lblITS, gsl::span<const o2::MCCompLabel> lblTPC,
-                               const std::vector<PVertex> vertices, const std::vector<o2::dataformats::VtxTrackIndex> vertexTrackIDs, const std::vector<V2TRef> v2tRefs,
+void PVertexer::createMCLabels(gsl::span<const o2::MCCompLabel> lblTracks, const std::vector<PVertex> vertices,
+                               const std::vector<uint32_t> trackIDs, const std::vector<V2TRef> v2tRefs,
                                std::vector<o2::MCEventLabel>& lblVtx)
 {
   lblVtx.clear();
   int nv = vertices.size();
-  if (lblITS.size() != lblITS.size() || !lblITS.size()) {
-    LOG(ERROR) << "labels are not provided or incorrect";
+  if (!lblTracks.size()) {
+    LOG(ERROR) << "Track labels are not provided";
     return;
   }
-  std::unordered_map<o2::MCEventLabel, int> labelOccurenceCorr, labelOccurenceITS;
+  std::unordered_map<o2::MCEventLabel, int> labelOccurence;
 
   auto bestLbl = [](std::unordered_map<o2::MCEventLabel, int> mp, int norm) -> o2::MCEventLabel {
     o2::MCEventLabel best;
@@ -639,58 +479,24 @@ void PVertexer::createMCLabels(gsl::span<const o2::MCCompLabel> lblITS, gsl::spa
 
   for (const auto& v2t : v2tRefs) {
     int tref = v2t.getFirstEntry(), last = tref + v2t.getEntries();
-    labelOccurenceCorr.clear();
-    labelOccurenceITS.clear();
+    labelOccurence.clear();
     o2::MCEventLabel winner; // unset at the moment
     for (; tref < last; tref++) {
-      int tid = vertexTrackIDs[tref].getIndex();
-      const auto& lITS = lblITS[tid];
-      const auto& lTPC = lblTPC[tid];
-      if (!lITS.isSet() || !lTPC.isSet()) {
+      const auto& lbl = lblTracks[trackIDs[tref]];
+      if (!lbl.isSet()) {
         break;
       }
-      if (lITS.getTrackID() == lITS.getTrackID() && lITS.getEventID() == lTPC.getEventID() && lITS.getSourceID() == lTPC.getSourceID()) {
-        labelOccurenceCorr[{lITS.getEventID(), lITS.getSourceID(), 0.}]++;
-      } else {
-        labelOccurenceITS[{lITS.getEventID(), lITS.getSourceID(), 0.}]++;
-      }
+      // if (!lbl.isFake()) { // RS account all labels, not only correct ones
+      labelOccurence[{lbl.getEventID(), lbl.getSourceID(), 0.}]++;
+      // }
     }
-    if (labelOccurenceCorr.size()) {
-      winner = bestLbl(labelOccurenceCorr, v2t.getEntries());
-    } else if (labelOccurenceITS.size()) {
-      winner = bestLbl(labelOccurenceITS, 0); // in absence of correct matches, set the ITS only label but set its weight to 0
+    if (labelOccurence.size()) {
+      winner = bestLbl(labelOccurence, v2t.getEntries());
     }
     lblVtx.push_back(winner);
   }
 }
 
-//___________________________________________________________________
-std::pair<int, int> PVertexer::getBestFT0Trigger(const PVertex& vtx, gsl::span<const o2::ft0::RecPoints> ft0Data, int& currEntry) const
-{
-  // select best matching FT0 recpoint
-  int best = -1, n = ft0Data.size();
-  while (currEntry < n && ft0Data[currEntry].getInteractionRecord() < vtx.getIRMin()) {
-    currEntry++; // skip all times which have no chance to be matched
-  }
-  int i = currEntry, nCompatible = 0;
-  float bestDf = 1e12;
-  auto tVtxNS = (vtx.getTimeStamp().getTimeStamp() + mPVParams->timeBiasMS) * 1e3; // time in ns
-  while (i < n) {
-    if (ft0Data[i].getInteractionRecord() > vtx.getIRMax()) {
-      break;
-    }
-    if (mFT0Params->isSelected(ft0Data[i])) {
-      nCompatible++;
-      auto dfa = std::abs(mFT0Params->getInteractionTimeNS(ft0Data[i], mStartIR) - tVtxNS);
-      if (dfa <= bestDf) {
-        bestDf = dfa;
-        best = i;
-      }
-    }
-    i++;
-  }
-  return {best, nCompatible};
-}
 
 //___________________________________________________________________
 void PVertexer::setBunchFilling(const o2::BunchFilling& bf)
@@ -747,4 +553,150 @@ bool PVertexer::setCompatibleIR(PVertex& vtx)
   vtx.setIRMin(irMin);
   vtx.setIRMax(irMax);
   return irMax >= irMin;
+}
+
+//___________________________________________________________________
+int PVertexer::dbscan_RangeQuery(int id, std::vector<int>& cand, std::vector<int>& status)
+{
+  // find neighbours for dbscan cluster core point candidate
+  // Since we use asymmetric distance definition, is it bit more complex than simple search within chi2 proximity
+  int nFound = 0;
+  const auto& tI = mTracksPool[mSortedTrackID[id]];
+  int ntr = mTracksPool.size();
+
+  auto procPnt = [this, &tI, &status, &cand, &nFound, id](int idN) {
+    const auto& tL = this->mTracksPool[this->mSortedTrackID[idN]];
+    if (std::abs(tI.timeEst.getTimeStamp() - tL.timeEst.getTimeStamp()) > this->mPVParams->dbscanDeltaT) {
+      return -1;
+    }
+    auto statN = status[idN], stat = status[id];
+    if (statN >= 0 && (stat < 0 || (stat >= 0 && statN != stat))) { // do not consider as a neighbour if already added to other cluster
+      return 0;
+    }
+    auto dist2 = tL.getDist2(tI);
+    if (dist2 < this->mPVParams->dbscanMaxDist2) {
+      nFound++;
+      if (statN < 0 && statN > DBS_INCHECK) { // no point in adding for check already assigned point, or which is already in the list (i.e. < INCHECK)
+        cand.push_back(idN);
+        status[idN] += DBS_INCHECK; // flag that the track is in the candidates list (i.e. DBS_UDEF-10 = -12 or DPB_NOISE-10 = -11).
+      }
+    }
+    return 1;
+  };
+  int idL = id;
+  while (--idL >= 0) { // index in time decreasing direction
+    if (procPnt(idL) < 0) {
+      break;
+    }
+  }
+  int idU = id;
+  while (++idU < ntr) { // index in time increasing direction
+    if (procPnt(idU) < 0) {
+      break;
+    }
+  }
+  return nFound;
+}
+
+//_____________________________________________________
+void PVertexer::dbscan_clusterize()
+{
+  int ntr = mSortedTrackID.size();
+  std::vector<std::vector<int>> clusters;
+  std::vector<int> status(ntr, DBS_UNDEF);
+  TStopwatch timer;
+  int clID = -1;
+
+  std::vector<int> nbVec;
+  for (int it = 0; it < ntr; it++) {
+    if (status[it] != DBS_UNDEF) {
+      continue;
+    }
+    nbVec.clear();
+    auto nnb0 = dbscan_RangeQuery(it, nbVec, status);
+    int minNeighbours = mPVParams->minTracksPerVtx - 1;
+    if (nnb0 < minNeighbours) {
+      status[it] = DBS_NOISE; // noise
+      continue;
+    }
+    if (nnb0 > minNeighbours) {
+      minNeighbours = std::max(minNeighbours, int(nnb0 * mPVParams->dbscanAdaptCoef));
+    }
+    status[it] = ++clID;
+    auto& clusVec = clusters.emplace_back(1, it); // new cluster
+
+    for (int j = 0; j < nnb0; j++) {
+      int jt = nbVec[j];
+      auto statjt = status[jt];
+      if (statjt >= 0) {
+        LOG(ERROR) << "assigned track " << jt << " with status " << statjt << " head is " << it << " clID= " << clID;
+        continue;
+      }
+      status[jt] = clID;
+      clusVec.push_back(jt);
+      if (statjt == DBS_NOISE + DBS_INCHECK) { // was border point, no check for being core point is needed
+        continue;
+      }
+      int ncurr = nbVec.size();
+      if (clusVec.size() > minNeighbours) {
+        minNeighbours = std::max(minNeighbours, int(clusVec.size() * mPVParams->dbscanAdaptCoef));
+      }
+      auto nnb1 = dbscan_RangeQuery(jt, nbVec, status);
+      if (nnb1 < minNeighbours) {
+        for (unsigned k = ncurr; k < nbVec.size(); k++) {
+          if (status[nbVec[k]] < DBS_INCHECK) {
+            status[nbVec[k]] -= DBS_INCHECK; // remove from checks
+          }
+        }
+        nbVec.resize(ncurr); // not a core point, reset the seeds pool to the state before RangeQuery
+      } else {
+        nnb0 = nbVec.size(); // core point, its neighbours need to be checked
+      }
+    }
+  }
+
+  mTimeZClusters.clear();
+  mClusterTrackIDs.reserve(ntr);
+  for (const auto& clus : clusters) {
+    if (clus.size() < mPVParams->minTracksPerVtx) {
+      continue;
+    }
+    int first = mClusterTrackIDs.size();
+    float tMean = 0;
+    for (const auto tid : clus) {
+      mClusterTrackIDs.push_back(mSortedTrackID[tid]);
+      tMean += mTracksPool[mClusterTrackIDs.back()].timeEst.getTimeStamp();
+    }
+    int last = int(mClusterTrackIDs.size());
+    int count = last - first;
+    mTimeZClusters.emplace_back(TimeZCluster{{tMean / count, 0.}, first, --last, count});
+  }
+  timer.Stop();
+  LOG(INFO) << "Found " << mTimeZClusters.size() << " clusters from DBSCAN out of " << clusters.size() << " seeds in " << timer.CpuTime() << " CPU s";
+}
+
+//___________________________________________________________________
+std::pair<int, int> PVertexer::getBestIR(const PVertex& vtx, const gsl::span<o2::InteractionRecord> bcData, int& currEntry) const
+{
+  // select best matching interaction record
+  int best = -1, n = bcData.size();
+  while (currEntry < n && bcData[currEntry] < vtx.getIRMin()) {
+    currEntry++; // skip all times which have no chance to be matched
+  }
+  int i = currEntry, nCompatible = 0;
+  float bestDf = 1e12;
+  auto tVtxNS = (vtx.getTimeStamp().getTimeStamp() + mPVParams->timeBiasMS) * 1e3; // time in ns
+  while (i < n) {
+    if (bcData[i] > vtx.getIRMax()) {
+      break;
+    }
+    nCompatible++;
+    auto dfa = std::abs(bcData[i].differenceInBCNS(mStartIR) - tVtxNS);
+    if (dfa <= bestDf) {
+      bestDf = dfa;
+      best = i;
+    }
+    i++;
+  }
+  return {best, nCompatible};
 }

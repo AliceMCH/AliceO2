@@ -81,6 +81,7 @@ class trackInterface<AliExternalTrackParam> : public AliExternalTrackParam
   const My_Float* getPar() const { return GetParameter(); }
   const My_Float* getCov() const { return GetCovariance(); }
   float getTime() const { return -1.f; }
+  GPUd() void resetCovariance(float s) { ResetCovariance(10.); }
   bool CheckNumericalQuality() const { return true; }
 
   // parameter manipulation
@@ -200,7 +201,7 @@ class propagatorInterface<o2::base::Propagator>
   propagatorInterface<o2::base::Propagator>(const propagatorInterface<o2::base::Propagator>&) = delete;
   propagatorInterface<o2::base::Propagator>& operator=(const propagatorInterface<o2::base::Propagator>&) = delete;
 
-  bool propagateToX(float x, float maxSnp, float maxStep) { return mProp->PropagateToXBxByBz(*mParam, x, 0.13957, maxSnp, maxStep); }
+  bool propagateToX(float x, float maxSnp, float maxStep) { return mProp->PropagateToXBxByBz(*mParam, x, maxSnp, maxStep); }
   int getPropagatedYZ(float x, float& projY, float& projZ) { return static_cast<int>(mParam->getYZAt(x, mProp->getNominalBz(), projY, projZ)); }
 
   void setTrack(trackInterface<o2::dataformats::TrackTPCITS>* trk) { mParam = trk; }
@@ -301,7 +302,7 @@ class trackInterface<GPUTPCGMTrackParam> : public GPUTPCGMTrackParam
   GPUd() const float* getPar() const { return GetPar(); }
   GPUd() const float* getCov() const { return GetCov(); }
   GPUd() float getTime() const { return -1.f; }
-
+  GPUd() void resetCovariance(float s) { ResetCovariance(); }
   GPUd() void setAlpha(float alpha) { mAlpha = alpha; }
   GPUd() void set(float x, float alpha, const float param[5], const float cov[15])
   {

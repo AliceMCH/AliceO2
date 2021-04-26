@@ -69,7 +69,9 @@ struct TimeFrame
   void computePayloadSize()
   {
     payloadSize = 0;
-    if (buf == nullptr) return;
+    if (buf == nullptr) {
+      return;
+    }
 
     size_t offset = 0;
     while (offset < totalSize) {
@@ -89,16 +91,37 @@ struct TimeFrame
 
   void print()
   {
-    if (buf == nullptr) return;
+    if (buf == nullptr) {
+      return;
+    }
+
+    int nPrinted = 0;
 
     printf("\n//////////////////////\n");
     size_t offset = 0;
+    size_t nStop = 0;
+    while (offset < totalSize) {
+      char* ptr = buf + offset;
+      RDH* rdh = (RDH*)ptr;
+
+      auto stopBit = o2::raw::RDHUtils::getStop(rdh);
+      auto pageSize = o2::raw::RDHUtils::getOffsetToNext(rdh);
+      if (stopBit > 0) {
+        nStop += 1;
+      }
+
+      offset += pageSize;
+    }
+
+    offset = 0;
+    bool doPrint = false;
+    size_t iStop = 0;
     while (offset < totalSize) {
       char* ptr = buf + offset;
       RDH* rdh = (RDH*)ptr;
 
       auto rdhVersion = o2::raw::RDHUtils::getVersion(rdh);
-      uint16_t cruID = o2::raw::RDHUtils::getCRUID(rdh);
+      uint16_t cruID = o2::raw::RDHUtils::getCRUID(rdh) & 0x3F;
       uint8_t endPointID = o2::raw::RDHUtils::getEndPointID(rdh);
       uint8_t linkID = o2::raw::RDHUtils::getLinkID(rdh);
       uint16_t feeID = cruID * 2 + endPointID;
@@ -106,28 +129,37 @@ struct TimeFrame
       auto triggerType = o2::raw::RDHUtils::getTriggerType(rdh);
       auto pageSize = o2::raw::RDHUtils::getOffsetToNext(rdh);
 
-      //printf("offset: %d\n", offset);
-      printf("%6d:  version %X  offset %4d  packet %3d  srcID %d  cruID %2d  dp %d  link %2d  orbit %u  bc %4d  trig 0x%08X  page %d  stop %d",
-          (int)0, (int)rdhVersion, (int)pageSize,
-          (int)RDHUtils::getPacketCounter(rdh), (int)RDHUtils::getSourceID(rdh),
-          (int)cruID, (int)endPointID, (int)linkID,
-          (uint32_t)RDHUtils::getHeartBeatOrbit(rdh), (int)RDHUtils::getTriggerBC(rdh),
-          (int)triggerType, (int)RDHUtils::getPageCounter(rdh), (int)stopBit);
-      if( (triggerType & 0x800) != 0 ) printf(" <===");
-      printf("\n");
+      if (iStop < 2 || iStop > (nStop - 3)) {
+
+        printf("%6d:  version %X  offset %4d  packet %3d  srcID %d  cruID %2d  dp %d  link %2d  orbit %u  bc %4d  trig 0x%08X  page %d  stop %d",
+               (int)0, (int)rdhVersion, (int)pageSize,
+               (int)RDHUtils::getPacketCounter(rdh), (int)RDHUtils::getSourceID(rdh),
+               (int)cruID, (int)endPointID, (int)linkID,
+               (uint32_t)RDHUtils::getHeartBeatOrbit(rdh), (int)RDHUtils::getTriggerBC(rdh),
+               (int)triggerType, (int)RDHUtils::getPageCounter(rdh), (int)stopBit);
+        if ((triggerType & 0x800) != 0) {
+          printf(" <===");
+        }
+        printf("\n");
+      }
+      if (stopBit > 0 && iStop == 3) {
+        printf("........................\n");
+      }
+
+      if (stopBit > 0) {
+        iStop += 1;
+      }
 
       offset += pageSize;
     }
-    printf("total size: %d\n", totalSize);
+    fmt::printf("total size: {}\n", totalSize);
     printf("//////////////////////\n");
   }
 };
 
-
 using TFQueue = std::queue<TimeFrame>;
 
 TFQueue tfQueues[NFEEID][NLINKS];
-
 
 class FileReaderTask
 {
@@ -157,7 +189,6 @@ class FileReaderTask
     };
     ic.services().get<CallbackService>().set(CallbackService::Id::Stop, stop);
   }
-
 
   bool appendHBF(TimeFrame& tf, char* framePtr, size_t frameSize, bool addHBF)
   {
@@ -197,11 +228,6 @@ class FileReaderTask
 
     static int TFid = 0;
 
-    //if (nSent >= 2) {
-    //  pc.services().get<ControlService>().endOfStream();
-    //  return; // probably reached eof
-    //}
-
     while (true) {
 
       // stop if the required number of frames has been reached
@@ -216,7 +242,6 @@ class FileReaderTask
       if (mFrameMax > 0) {
         mFrameMax -= 1;
       }
-
 
       // read the next RDH, stop if no more data is available
       mInputFile.read((char*)(&rdh), sizeof(RDH));
@@ -238,22 +263,25 @@ class FileReaderTask
         return;
       }
 
-      uint16_t cruID = o2::raw::RDHUtils::getCRUID(rdh);
+      uint16_t cruID = o2::raw::RDHUtils::getCRUID(rdh) & 0x3F;
       uint8_t endPointID = o2::raw::RDHUtils::getEndPointID(rdh);
       uint8_t linkID = o2::raw::RDHUtils::getLinkID(rdh);
       uint16_t feeID = cruID * 2 + endPointID;
       auto stopBit = o2::raw::RDHUtils::getStop(rdh);
       auto triggerType = o2::raw::RDHUtils::getTriggerType(rdh);
       auto pageSize = o2::raw::RDHUtils::getOffsetToNext(rdh);
+      auto pageCounter = RDHUtils::getPageCounter(rdh);
 
       if (mPrint) {
         printf("%6d:  version %X  offset %4d  packet %3d  srcID %d  cruID %2d  dp %d  link %2d  orbit %u  bc %4d  trig 0x%08X  page %d  stop %d",
-            (int)0, (int)rdhVersion, (int)pageSize,
-            (int)RDHUtils::getPacketCounter(rdh), (int)RDHUtils::getSourceID(rdh),
-            (int)cruID, (int)endPointID, (int)linkID,
-            (uint32_t)RDHUtils::getHeartBeatOrbit(rdh), (int)RDHUtils::getTriggerBC(rdh),
-            (int)triggerType, (int)RDHUtils::getPageCounter(rdh), (int)stopBit);
-        if( (triggerType & 0x800) != 0 ) printf(" <===");
+               (int)0, (int)rdhVersion, (int)pageSize,
+               (int)RDHUtils::getPacketCounter(rdh), (int)RDHUtils::getSourceID(rdh),
+               (int)cruID, (int)endPointID, (int)linkID,
+               (uint32_t)RDHUtils::getHeartBeatOrbit(rdh), (int)RDHUtils::getTriggerBC(rdh),
+               (int)triggerType, (int)pageCounter, (int)stopBit);
+        if ((triggerType & 0x800) != 0) {
+          printf(" <===");
+        }
         printf("\n");
       }
 
@@ -298,7 +326,7 @@ class FileReaderTask
       // increment the total buffer size
       frameSize += pageSize;
 
-      if ((triggerType & 0x800) != 0 && stopBit == 0) {
+      if ((triggerType & 0x800) != 0 && stopBit == 0 && pageCounter == 0) {
         // This is the start of a new TimeFrame, so we need to take some actions:
         // - push a new TimeFrame in the queue
         // - append the last N HBFrames of the previous TimeFrame at the beginning of the current one
@@ -306,6 +334,9 @@ class FileReaderTask
         char* prevTFptr{nullptr};
         size_t prevTFsize{0};
 
+        if (mPrint) {
+          std::cout << "tfQueue.size(): " << tfQueue.size() << std::endl;
+        }
         if (!tfQueue.empty()) {
           TimeFrame& prevTF = tfQueue.back();
           size_t nhbf = prevTF.hbframes.size();
@@ -359,36 +390,30 @@ class FileReaderTask
         buf = nullptr;
         frameSize = 0;
 
-
         if (tfQueue.size() == 2 && tfQueue.back().hbframes.size() >= mOverlap) {
           // we collected enough HBFrames after the last fully recorded TimeFrame, so we can send it
-          if(true /*feeID == 18 && linkID == 0*/) {
-            tfQueue.front().computePayloadSize();
-            if (mPrint) {
-              tfQueue.front().print();
-            }
-            if (tfQueue.front().payloadSize > 0) {
-              if (mSaveTF && TFid < 100) {
-                char fname[500];
-                snprintf(fname, 499, "tf-%03d.raw", TFid);
-                FILE* fout = fopen(fname, "wb");
-                if (fout) {
-                  fwrite(tfQueue.front().buf, tfQueue.front().totalSize, 1, fout);
-                  fclose(fout);
-                }
-              }
-
-              auto freefct = [](void* data, void* /*hint*/) { free(data); };
-              pc.outputs().adoptChunk(Output{"ROUT", "RAWDATA"}, tfQueue.front().buf, tfQueue.front().totalSize, freefct, nullptr);
-              nSent += 1;
-              TFid += 1;
-              //usleep(500000);
-            }
-            tfQueue.pop();
-            break;
-          } else {
-            tfQueue.pop();
+          tfQueue.front().computePayloadSize();
+          if (mPrint) {
+            tfQueue.front().print();
+            //sleep(10);
           }
+          if (tfQueue.front().payloadSize > 0) {
+            if (mSaveTF && TFid < 100) {
+              char fname[500];
+              snprintf(fname, 499, "tf-%03d.raw", TFid);
+              FILE* fout = fopen(fname, "wb");
+              if (fout) {
+                fwrite(tfQueue.front().buf, tfQueue.front().totalSize, 1, fout);
+                fclose(fout);
+              }
+            }
+
+            auto freefct = [](void* data, void* /*hint*/) { free(data); };
+            pc.outputs().adoptChunk(Output{"ROUT", "RAWDATA"}, tfQueue.front().buf, tfQueue.front().totalSize, freefct, nullptr);
+            TFid += 1;
+          }
+          tfQueue.pop();
+          break;
         }
       }
     }

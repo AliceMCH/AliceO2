@@ -9,6 +9,7 @@
 # submit itself to any jurisdiction.
 
 o2_add_library(DetectorsVertexing
+               TARGETVARNAME targetName
                SOURCES src/DCAFitterN.cxx
                        src/PVertexer.cxx
                        src/PVertexerHelpers.cxx
@@ -16,28 +17,33 @@ o2_add_library(DetectorsVertexing
                        src/VertexTrackMatcher.cxx
                        src/SVertexer.cxx
                        src/SVertexerParams.cxx
-                       src/V0Hypothesis.cxx
+                       src/SVertexHypothesis.cxx
                PUBLIC_LINK_LIBRARIES ROOT::Core
 	                             O2::CommonUtils
                                      O2::ReconstructionDataFormats
+                                     O2::DataFormatsParameters
                                      O2::DataFormatsTPC
                                      O2::DataFormatsITS
                                      O2::TPCBase
                                      O2::SimulationDataFormat
                                      O2::FT0Reconstruction
                                      O2::DataFormatsFT0
+                                     O2::GlobalTracking
                                      ms_gsl::ms_gsl)
 
 o2_target_root_dictionary(DetectorsVertexing
                           HEADERS include/DetectorsVertexing/HelixHelper.h
-                                  include/DetectorsVertexing/PVertexer.h
                                   include/DetectorsVertexing/PVertexerHelpers.h
                                   include/DetectorsVertexing/PVertexerParams.h
-                                  include/DetectorsVertexing/VertexTrackMatcher.h
                                   include/DetectorsVertexing/DCAFitterN.h
-                                  include/DetectorsVertexing/SVertexer.h
                                   include/DetectorsVertexing/SVertexerParams.h
-                                  include/DetectorsVertexing/V0Hypothesis.h)
+                                  include/DetectorsVertexing/SVertexHypothesis.h)
+
+if (OpenMP_CXX_FOUND)
+    target_compile_definitions(${targetName} PRIVATE WITH_OPENMP)
+    target_link_libraries(${targetName} PRIVATE OpenMP::OpenMP_CXX)
+endif()
+                              
 
 o2_add_test(
   DCAFitterN

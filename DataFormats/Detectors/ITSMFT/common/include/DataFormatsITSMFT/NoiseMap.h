@@ -19,11 +19,16 @@
 #include <vector>
 #include <map>
 
+#include "gsl/span"
+
 namespace o2
 {
 
 namespace itsmft
 {
+
+class CompClusterExt;
+
 /// \class NoiseMap
 /// \brief NoiseMap class for the ITS and MFT
 ///
@@ -87,11 +92,54 @@ class NoiseMap
     }
     return n;
   }
+  int dumpAboveProbThreshold(float p = 1e-7) const
+  {
+    return dumpAboveThreshold(p * mNumOfStrobes);
+  }
+
+  void applyProbThreshold(float t, long int n)
+  {
+    // Remove from the maps all pixels with the firing probability below the threshold
+    mProbThreshold = t;
+    mNumOfStrobes = n;
+    for (auto& map : mNoisyPixels) {
+      for (auto it = map.begin(); it != map.end();) {
+        float prob = float(it->second) / mNumOfStrobes;
+        if (prob < mProbThreshold) {
+          it = map.erase(it);
+        } else {
+          ++it;
+        }
+      }
+    }
+  }
+  float getProbThreshold() const { return mProbThreshold; }
+  long int getNumOfStrobes() const { return mNumOfStrobes; }
+
+  bool isNoisy(int chip, int row, int col) const
+  {
+    if (chip > mNoisyPixels.size()) {
+      return false;
+    }
+    auto key = row * 1024 + col;
+    const auto keyIt = mNoisyPixels[chip].find(key);
+    if (keyIt != mNoisyPixels[chip].end()) {
+      return true;
+    }
+    return false;
+  }
+
+  // Methods required by the calibration framework
+  void print();
+  void fill(const gsl::span<const CompClusterExt> data);
+  void merge(const NoiseMap* prev) {}
 
  private:
   std::vector<std::map<int, int>> mNoisyPixels; ///< Internal noise map representation
+  long int mNumOfStrobes = 0;                   ///< Accumulated number of ALPIDE strobes
+  float mProbThreshold = 0;                     ///< Probability threshold for noisy pixels
 
-  ClassDefNV(NoiseMap, 1);
+  ClassDefNV(NoiseMap, 2);
 };
 } // namespace itsmft
 } // namespace o2

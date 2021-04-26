@@ -13,6 +13,7 @@
 #include "Generators/Generator.h"
 #include "Generators/Trigger.h"
 #include "Generators/PrimaryGenerator.h"
+#include "SimulationDataFormat/MCEventHeader.h"
 #include "FairPrimaryGenerator.h"
 #include "FairLogger.h"
 #include <cmath>
@@ -31,7 +32,6 @@ Generator::Generator() : FairGenerator("ALICEo2", "ALICEo2 Generator"),
                          mBoost(0.)
 {
   /** default constructor **/
-
 }
 
 /*****************************************************************/
@@ -40,7 +40,6 @@ Generator::Generator(const Char_t* name, const Char_t* title) : FairGenerator(na
                                                                 mBoost(0.)
 {
   /** constructor **/
-
 }
 
 /*****************************************************************/
@@ -68,24 +67,34 @@ Bool_t
     mParticles.clear();
 
     /** generate event **/
-    if (!generateEvent())
+    if (!generateEvent()) {
       return kFALSE;
+    }
 
     /** import particles **/
-    if (!importParticles())
+    if (!importParticles()) {
       return kFALSE;
+    }
 
     /** trigger event **/
-    if (triggerEvent())
+    if (triggerEvent()) {
       break;
+    }
   }
 
   /** add tracks **/
-  if (!addTracks(primGen))
+  if (!addTracks(primGen)) {
     return kFALSE;
+  }
 
   /** update header **/
-  updateHeader(primGen->GetEvent());
+  auto header = primGen->GetEvent();
+  auto o2header = dynamic_cast<o2::dataformats::MCEventHeader*>(header);
+  if (!header) {
+    LOG(FATAL) << "MC event header is not a 'o2::dataformats::MCEventHeader' object";
+    return kFALSE;
+  }
+  updateHeader(o2header);
 
   /** success **/
   return kTRUE;
@@ -120,7 +129,8 @@ Bool_t
                         particle.GetStatusCode() == 1,
                         particle.Energy() * mEnergyUnit,
                         particle.T() * mTimeUnit,
-                        particle.GetWeight());
+                        particle.GetWeight(),
+                        (TMCProcess)particle.GetUniqueID());
   }
 
   /** success **/
@@ -146,36 +156,42 @@ Bool_t
   /** trigger event **/
 
   /** check trigger presence **/
-  if (mTriggers.size() == 0 && mDeepTriggers.size() == 0)
+  if (mTriggers.size() == 0 && mDeepTriggers.size() == 0) {
     return kTRUE;
+  }
 
   /** check trigger mode **/
   Bool_t triggered;
-  if (mTriggerMode == kTriggerOFF)
+  if (mTriggerMode == kTriggerOFF) {
     return kTRUE;
-  else if (mTriggerMode == kTriggerOR)
+  } else if (mTriggerMode == kTriggerOR) {
     triggered = kFALSE;
-  else if (mTriggerMode == kTriggerAND)
+  } else if (mTriggerMode == kTriggerAND) {
     triggered = kTRUE;
-  else
+  } else {
     return kTRUE;
+  }
 
   /** loop over triggers **/
   for (const auto& trigger : mTriggers) {
     auto retval = trigger(mParticles);
-    if (mTriggerMode == kTriggerOR)
+    if (mTriggerMode == kTriggerOR) {
       triggered |= retval;
-    if (mTriggerMode == kTriggerAND)
+    }
+    if (mTriggerMode == kTriggerAND) {
       triggered &= retval;
+    }
   }
 
   /** loop over deep triggers **/
   for (const auto& trigger : mDeepTriggers) {
     auto retval = trigger(mInterface, mInterfaceName);
-    if (mTriggerMode == kTriggerOR)
+    if (mTriggerMode == kTriggerOR) {
       triggered |= retval;
-    if (mTriggerMode == kTriggerAND)
+    }
+    if (mTriggerMode == kTriggerAND) {
       triggered &= retval;
+    }
   }
 
   /** return **/

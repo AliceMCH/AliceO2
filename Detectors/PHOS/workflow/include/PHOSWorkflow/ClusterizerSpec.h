@@ -39,7 +39,7 @@ class ClusterizerSpec : public framework::Task
 {
  public:
   /// \brief Constructor
-  ClusterizerSpec(bool propagateMC) : framework::Task(), mPropagateMC(propagateMC) {}
+  ClusterizerSpec(bool propagateMC, bool scanDigits, bool outputFullClu) : framework::Task(), mPropagateMC(propagateMC), mUseDigits(scanDigits), mFullCluOutput(outputFullClu) {}
 
   /// \brief Destructor
   ~ClusterizerSpec() override = default;
@@ -58,8 +58,11 @@ class ClusterizerSpec : public framework::Task
 
  private:
   bool mPropagateMC = false;        ///< Switch whether to process MC true labels
+  bool mUseDigits = false;          ///< Make clusters from digits or cells
+  bool mFullCluOutput = false;      ///< Write full of reduced (no contributed digits) clusters
   o2::phos::Clusterer mClusterizer; ///< Clusterizer object
   std::vector<o2::phos::Cluster> mOutputClusters;
+  std::vector<o2::phos::FullCluster> mOutputFullClusters;
   std::vector<o2::phos::TriggerRecord> mOutputClusterTrigRecs;
   o2::dataformats::MCTruthContainer<o2::phos::MCLabel> mOutputTruthCont;
 };
@@ -67,8 +70,8 @@ class ClusterizerSpec : public framework::Task
 /// \brief Creating DataProcessorSpec for the PHOS Clusterizer Spec
 ///
 /// Refer to ClusterizerSpec::run for input and output specs
-framework::DataProcessorSpec getClusterizerSpec(bool propagateMC);
-framework::DataProcessorSpec getCellClusterizerSpec(bool propagateMC);
+framework::DataProcessorSpec getClusterizerSpec(bool propagateMC, bool fillFullClu);
+framework::DataProcessorSpec getCellClusterizerSpec(bool propagateMC, bool fillFullClu);
 
 } // namespace reco_workflow
 

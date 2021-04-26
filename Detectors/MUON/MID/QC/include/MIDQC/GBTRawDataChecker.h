@@ -23,7 +23,7 @@
 #include <gsl/gsl>
 #include "DataFormatsMID/ROFRecord.h"
 #include "MIDRaw/ElectronicsDelay.h"
-#include "MIDRaw/LocalBoardRO.h"
+#include "DataFormatsMID/ROBoard.h"
 
 namespace o2
 {
@@ -33,7 +33,7 @@ class GBTRawDataChecker
 {
  public:
   void init(uint16_t feeId, uint8_t mask);
-  bool process(gsl::span<const LocalBoardRO> localBoards, gsl::span<const ROFRecord> rofRecords, gsl::span<const ROFRecord> pageRecords);
+  bool process(gsl::span<const ROBoard> localBoards, gsl::span<const ROFRecord> rofRecords, gsl::span<const ROFRecord> pageRecords);
   /// Gets the number of processed events
   unsigned int getNEventsProcessed() const { return mStatistics[0]; }
   /// Gets the number of faulty events
@@ -47,6 +47,9 @@ class GBTRawDataChecker
   /// Sets the delay in the electronics
   void setElectronicsDelay(const ElectronicsDelay& electronicsDelay) { mElectronicsDelay = electronicsDelay; }
 
+  /// Sets the trigger use to verify if all data of an event where received
+  void setSyncTrigger(uint32_t syncTrigger) { mSyncTrigger = syncTrigger; }
+
  private:
   struct Mask {
     std::array<uint16_t, 4> patternsBP{};  /// Bending plane mask
@@ -54,30 +57,31 @@ class GBTRawDataChecker
   };
 
   struct GBT {
-    std::vector<LocalBoardRO> regs{}; /// Regional boards
-    std::vector<LocalBoardRO> locs{}; /// Local boards
-    std::vector<long int> pages{};    /// Pages information
+    std::vector<ROBoard> regs{};   /// Regional boards
+    std::vector<ROBoard> locs{};   /// Local boards
+    std::vector<long int> pages{}; /// Pages information
   };
 
   struct BoardInfo {
-    LocalBoardRO board{};
+    ROBoard board{};
     o2::InteractionRecord interactionRecord{};
     long int page{-1};
   };
 
   void clearChecked(bool isTriggered, bool clearTrigEvents);
-  bool checkEvent(bool isTriggered, const std::vector<LocalBoardRO>& regs, const std::vector<LocalBoardRO>& locs);
+  bool checkEvent(bool isTriggered, const std::vector<ROBoard>& regs, const std::vector<ROBoard>& locs);
   bool checkEvents(bool isTriggered);
-  bool checkConsistency(const LocalBoardRO& board);
-  bool checkConsistency(const std::vector<LocalBoardRO>& boards);
-  bool checkMasks(const std::vector<LocalBoardRO>& locs);
-  bool checkLocalBoardSize(const LocalBoardRO& board);
-  bool checkLocalBoardSize(const std::vector<LocalBoardRO>& boards);
-  bool checkRegLocConsistency(const std::vector<LocalBoardRO>& regs, const std::vector<LocalBoardRO>& locs);
-  uint8_t getElinkId(const LocalBoardRO& board) const;
+  bool checkConsistency(const ROBoard& board);
+  bool checkConsistency(const std::vector<ROBoard>& boards);
+  bool checkMasks(const std::vector<ROBoard>& locs);
+  bool checkLocalBoardSize(const ROBoard& board);
+  bool checkLocalBoardSize(const std::vector<ROBoard>& boards);
+  bool checkRegLocConsistency(const std::vector<ROBoard>& regs, const std::vector<ROBoard>& locs);
+  uint8_t getElinkId(const ROBoard& board) const;
   unsigned int getLastCompleteTrigEvent();
   bool isCompleteSelfTrigEvent(const o2::InteractionRecord& ir) const;
-  std::string printBoards(const std::vector<LocalBoardRO>& boards) const;
+  std::string printBoards(const std::vector<ROBoard>& boards) const;
+  bool runCheckEvents(unsigned int completeMask);
   void sortEvents(bool isTriggered);
 
   std::string mEventDebugMsg{};                   /// Debug message for the event
@@ -88,6 +92,7 @@ class GBTRawDataChecker
   uint16_t mFeeId{0};                             /// FeeId
   uint16_t mResetVal{0};                          /// Reset value
   ElectronicsDelay mElectronicsDelay{};           /// Delays in the electronics
+  uint32_t mSyncTrigger{raw::sORB};               /// Trigger for synchronization
 
   std::map<o2::InteractionRecord, uint16_t> mTrigEvents{}; ///! Index of triggered events
 
@@ -100,8 +105,8 @@ class GBTRawDataChecker
   std::map<o2::InteractionRecord, std::vector<std::pair<uint8_t, size_t>>> mOrderedIndexesTrig{};     ///! Ordered indexes for triggered boards
   std::map<o2::InteractionRecord, std::vector<std::pair<uint8_t, size_t>>> mOrderedIndexesSelfTrig{}; ///! Ordered indexes for self-triggered boards
 
-  std::unordered_map<uint8_t, size_t> mLastIndexTrig{};     ///! Last checked index for triggered boards
-  std::unordered_map<uint8_t, size_t> mLastIndexSelfTrig{}; ///! Last checked index for self-triggered boards
+  std::unordered_map<uint8_t, long int> mLastIndexTrig{};     ///! Last checked index for triggered boards
+  std::unordered_map<uint8_t, long int> mLastIndexSelfTrig{}; ///! Last checked index for self-triggered boards
 
   o2::InteractionRecord mLastCompleteIRTrig{};     ///! Last complete IR for triggered boards
   o2::InteractionRecord mLastCompleteIRSelfTrig{}; ///! Last complete IR for self-triggered boards

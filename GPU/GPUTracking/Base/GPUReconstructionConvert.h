@@ -32,14 +32,14 @@ class RawFileWriter;
 } // namespace raw
 } // namespace o2
 
-class AliHLTTPCRawCluster;
+struct AliHLTTPCRawCluster;
 
 namespace GPUCA_NAMESPACE
 {
 namespace gpu
 {
-class GPUParam;
-class GPUTPCClusterData;
+struct GPUParam;
+struct GPUTPCClusterData;
 class TPCFastTransform;
 struct GPUTrackingInOutDigits;
 struct GPUTrackingInOutZS;
@@ -60,7 +60,7 @@ class GPUReconstructionConvert
 
  private:
   static void ZSstreamOut(unsigned short* bufIn, unsigned int& lenIn, unsigned char* bufOut, unsigned int& lenOut, unsigned int nBits);
-  static void ZSfillEmpty(void* ptr, int shift, unsigned int feeId);
+  static void ZSfillEmpty(void* ptr, int shift, unsigned int feeId, int orbit);
 };
 } // namespace gpu
 } // namespace GPUCA_NAMESPACE

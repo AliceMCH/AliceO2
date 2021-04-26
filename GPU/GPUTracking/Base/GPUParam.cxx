@@ -17,6 +17,7 @@
 #include "GPUCommonMath.h"
 #include "GPUTPCGMPolynomialFieldManager.h"
 #include "GPUDataTypes.h"
+#include "GPUConstantMem.h"
 
 using namespace GPUCA_NAMESPACE::gpu;
 
@@ -27,6 +28,9 @@ using namespace GPUCA_NAMESPACE::gpu;
 #endif
 #include <cstring>
 #include <tuple>
+#ifdef HAVE_O2HEADERS
+#include "DetectorsBase/Propagator.h"
+#endif
 
 #include "utils/qconfigrtc.h"
 
@@ -115,13 +119,13 @@ void GPUParam::SetDefaults(float solenoidBz)
   GPUTPCGMPolynomialFieldManager::GetPolynomialField(par.BzkG, polynomialField);
 }
 
-void GPUParam::UpdateEventSettings(const GPUSettingsEvent* e, const GPUSettingsProcessing* p)
+void GPUParam::UpdateGRPSettings(const GPUSettingsGRP* g, const GPUSettingsProcessing* p)
 {
-  if (e) {
-    par.AssumeConstantBz = e->constBz;
-    par.ToyMCEventsFlag = e->homemadeEvents;
-    par.ContinuousTracking = e->continuousMaxTimeBin != 0;
-    par.continuousMaxTimeBin = e->continuousMaxTimeBin == -1 ? GPUSettings::TPC_MAX_TF_TIME_BIN : e->continuousMaxTimeBin;
+  if (g) {
+    par.AssumeConstantBz = g->constBz;
+    par.ToyMCEventsFlag = g->homemadeEvents;
+    par.ContinuousTracking = g->continuousMaxTimeBin != 0;
+    par.continuousMaxTimeBin = g->continuousMaxTimeBin == -1 ? GPUSettings::TPC_MAX_TF_TIME_BIN : g->continuousMaxTimeBin;
     polynomialField.Reset();
     if (par.AssumeConstantBz) {
       GPUTPCGMPolynomialFieldManager::GetPolynomialField(GPUTPCGMPolynomialFieldManager::kUniform, par.BzkG, polynomialField);
@@ -136,9 +140,9 @@ void GPUParam::UpdateEventSettings(const GPUSettingsEvent* e, const GPUSettingsP
   par.earlyTpcTransform = rec.ForceEarlyTPCTransform == -1 ? (!par.ContinuousTracking) : rec.ForceEarlyTPCTransform;
 }
 
-void GPUParam::SetDefaults(const GPUSettingsEvent* e, const GPUSettingsRec* r, const GPUSettingsProcessing* p, const GPURecoStepConfiguration* w)
+void GPUParam::SetDefaults(const GPUSettingsGRP* g, const GPUSettingsRec* r, const GPUSettingsProcessing* p, const GPURecoStepConfiguration* w)
 {
-  SetDefaults(e->solenoidBz);
+  SetDefaults(g->solenoidBz);
   if (w) {
     par.dodEdx = w->steps.isSet(GPUDataTypes::RecoStep::TPCdEdx);
   }
@@ -148,7 +152,7 @@ void GPUParam::SetDefaults(const GPUSettingsEvent* e, const GPUSettingsRec* r, c
       rec.fitPropagateBzOnly = rec.NWays - 1;
     }
   }
-  UpdateEventSettings(e, p);
+  UpdateGRPSettings(g, p);
 }
 
 #ifndef GPUCA_ALIROOT_LIB
@@ -244,3 +248,22 @@ std::string GPUParamRTC::generateRTCCode(const GPUParam& param, bool useConstexp
 static_assert(alignof(GPUCA_NAMESPACE::gpu::GPUParam) == alignof(GPUCA_NAMESPACE::gpu::GPUSettingsRec));
 static_assert(alignof(GPUCA_NAMESPACE::gpu::GPUParam) == alignof(GPUCA_NAMESPACE::gpu::GPUSettingsParam));
 static_assert(sizeof(GPUCA_NAMESPACE::gpu::GPUParam) - sizeof(GPUCA_NAMESPACE::gpu::GPUParamRTC) == sizeof(GPUCA_NAMESPACE::gpu::GPUSettingsRec) + sizeof(GPUCA_NAMESPACE::gpu::GPUSettingsParam) - sizeof(GPUCA_NAMESPACE::gpu::gpu_rtc::GPUSettingsRec) - sizeof(GPUCA_NAMESPACE::gpu::gpu_rtc::GPUSettingsParam));
+static_assert(sizeof(GPUParam) % alignof(GPUConstantMem) == 0 && sizeof(GPUParamRTC) % alignof(GPUConstantMem) == 0, "Size of both GPUParam and of GPUParamRTC must be a multiple of the alignmeent of GPUConstantMem");
+
+o2::base::Propagator* GPUParam::GetDefaultO2Propagator(bool useGPUField) const
+{
+  o2::base::Propagator* prop = nullptr;
+#ifdef HAVE_O2HEADERS
+  if (useGPUField == false) {
+    throw std::runtime_error("o2 propagator withouzt gpu field unsupported");
+  }
+  prop = o2::base::Propagator::Instance(useGPUField);
+  if (useGPUField) {
+    prop->setGPUField(&polynomialField);
+    prop->setBz(polynomialField.GetNominalBz());
+  }
+#else
+  throw std::runtime_error("o2 propagator unsupported");
+#endif
+  return prop;
+}

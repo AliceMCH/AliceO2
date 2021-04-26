@@ -18,6 +18,7 @@
 #include "Framework/DataProcessorSpec.h"
 #include "Framework/Task.h"
 #include "DataFormatsTOF/CalibInfoTOF.h"
+#include <string>
 
 class TTree;
 
@@ -31,7 +32,7 @@ namespace tof
 class CalibInfoReader : public Task
 {
  public:
-  CalibInfoReader(int instance, int ninstances, const char* filename) : mInstance(instance), mNinstances(ninstances), mFileName(filename) {}
+  CalibInfoReader(int instance, int ninstances, const char* filename, bool toftpc = false) : mInstance(instance), mNinstances(ninstances), mFileName(filename), mTOFTPC(toftpc) {}
   ~CalibInfoReader() override = default;
   void init(InitContext& ic) final;
   void run(ProcessingContext& pc) final;
@@ -40,9 +41,10 @@ class CalibInfoReader : public Task
   int mState = 0;
   int mInstance;
   int mNinstances;
-  const char* mFileName = nullptr;
+  std::string mFileName{};
   FILE* mFile = nullptr;
   TTree* mTree = nullptr;
+  bool mTOFTPC = false;
   int mCurrentEntry = 0;
   int mGlobalEntry = 0;
   std::vector<o2::dataformats::CalibInfoTOF> mVect, *mPvect = &mVect;
@@ -50,7 +52,7 @@ class CalibInfoReader : public Task
 
 /// create a processor spec
 /// read simulated TOF digits from a root file
-framework::DataProcessorSpec getCalibInfoReaderSpec(int instance, int ninstances, const char* filename);
+framework::DataProcessorSpec getCalibInfoReaderSpec(int instance, int ninstances, const char* filename, bool toftpc = false);
 
 } // namespace tof
 } // namespace o2

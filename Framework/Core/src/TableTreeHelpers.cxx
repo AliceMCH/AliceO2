@@ -420,7 +420,7 @@ bool TableToTree::addAllBranches()
 TTree* TableToTree::process()
 {
 
-  bool togo = true;
+  bool togo = mTreePtr->GetNbranches() > 0;
   while (togo) {
     // fill the tree
     mTreePtr->Fill();
@@ -863,7 +863,10 @@ void TreeToTable::fill(TTree* tree)
   std::vector<std::unique_ptr<ColumnIterator>> columnIterators;
   TTreeReader treeReader{tree};
 
+  tree->SetCacheSize(50000000);
+  tree->SetClusterPrefetch(true);
   for (auto&& columnName : mColumnNames) {
+    tree->AddBranchToCache(columnName.c_str(), true);
     auto colit = std::make_unique<ColumnIterator>(treeReader, columnName.c_str());
     auto stat = colit->getStatus();
     if (!stat) {
@@ -871,16 +874,18 @@ void TreeToTable::fill(TTree* tree)
     }
     columnIterators.push_back(std::move(colit));
   }
+  tree->StopCacheLearningPhase();
   auto numEntries = treeReader.GetEntries(true);
-
-  for (auto&& column : columnIterators) {
-    column->reserve(numEntries);
-  }
-  // copy all values from the tree to the table builders
-  treeReader.Restart();
-  while (treeReader.Next()) {
+  if (numEntries > 0) {
     for (auto&& column : columnIterators) {
-      column->push();
+      column->reserve(numEntries);
+    }
+    // copy all values from the tree to the table builders
+    treeReader.Restart();
+    while (treeReader.Next()) {
+      for (auto&& column : columnIterators) {
+        column->push();
+      }
     }
   }
 

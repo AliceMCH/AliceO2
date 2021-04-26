@@ -71,8 +71,12 @@ int GPUReconstructionCPUBackend::runKernelBackend(krnlSetup& _xyz, const Args&..
   }
   unsigned int num = y.num == 0 || y.num == -1 ? 1 : y.num;
   for (unsigned int k = 0; k < num; k++) {
-    if (mProcessingSettings.ompKernels) {
-      GPUCA_OPENMP(parallel for num_threads(mProcessingSettings.ompThreads))
+    int ompThreads = mProcessingSettings.ompKernels ? (mProcessingSettings.ompKernels == 2 ? ((mProcessingSettings.ompThreads + mNestedLoopOmpFactor - 1) / mNestedLoopOmpFactor) : mProcessingSettings.ompThreads) : 1;
+    if (ompThreads > 1) {
+      if (mProcessingSettings.debugLevel >= 5) {
+        printf("Running %d ompThreads\n", ompThreads);
+      }
+      GPUCA_OPENMP(parallel for num_threads(ompThreads))
       for (unsigned int iB = 0; iB < x.nBlocks; iB++) {
         typename T::GPUSharedMemory smem;
         T::template Thread<I>(x.nBlocks, 1, iB, 0, smem, T::Processor(*mHostConstantMem)[y.start + k], args...);
@@ -108,7 +112,7 @@ size_t GPUReconstructionCPU::GPUMemCpyAlways(bool onGpu, void* dst, const void* 
   return 0;
 }
 size_t GPUReconstructionCPU::WriteToConstantMemory(size_t offset, const void* src, size_t size, int stream, deviceEvent* ev) { return 0; }
-int GPUReconstructionCPU::GPUDebug(const char* state, int stream) { return 0; }
+int GPUReconstructionCPU::GPUDebug(const char* state, int stream, bool force) { return 0; }
 size_t GPUReconstructionCPU::TransferMemoryResourcesHelper(GPUProcessor* proc, int stream, bool all, bool toGPU)
 {
   int inc = toGPU ? GPUMemoryResource::MEMORY_INPUT_FLAG : GPUMemoryResource::MEMORY_OUTPUT_FLAG;
@@ -152,11 +156,11 @@ int GPUReconstructionCPU::GetThread()
 int GPUReconstructionCPU::InitDevice()
 {
   if (mProcessingSettings.memoryAllocationStrategy == GPUMemoryResource::ALLOCATION_GLOBAL) {
-    if (mDeviceMemorySize > mHostMemorySize) {
-      mHostMemorySize = mDeviceMemorySize;
-    }
     if (mMaster == nullptr) {
-      mHostMemoryBase = operator new(mHostMemorySize);
+      if (mDeviceMemorySize > mHostMemorySize) {
+        mHostMemorySize = mDeviceMemorySize;
+      }
+      mHostMemoryBase = operator new(mHostMemorySize GPUCA_OPERATOR_NEW_ALIGNMENT);
     }
     mHostMemoryPermanent = mHostMemoryBase;
     ClearAllocatedMemory();
@@ -173,7 +177,7 @@ int GPUReconstructionCPU::ExitDevice()
 {
   if (mProcessingSettings.memoryAllocationStrategy == GPUMemoryResource::ALLOCATION_GLOBAL) {
     if (mMaster == nullptr) {
-      operator delete(mHostMemoryBase);
+      operator delete(mHostMemoryBase GPUCA_OPERATOR_NEW_ALIGNMENT);
     }
     mHostMemoryPool = mHostMemoryBase = mHostMemoryPoolEnd = mHostMemoryPermanent = nullptr;
     mHostMemorySize = 0;
@@ -288,8 +292,8 @@ int GPUReconstructionCPU::RunChains()
 void GPUReconstructionCPU::ResetDeviceProcessorTypes()
 {
   for (unsigned int i = 0; i < mProcessors.size(); i++) {
-    if (mProcessors[i].proc->mDeviceProcessor) {
-      mProcessors[i].proc->mDeviceProcessor->InitGPUProcessor(this, GPUProcessor::PROCESSOR_TYPE_DEVICE);
+    if (mProcessors[i].proc->mGPUProcessorType != GPUProcessor::PROCESSOR_TYPE_DEVICE && mProcessors[i].proc->mLinkedProcessor) {
+      mProcessors[i].proc->mLinkedProcessor->InitGPUProcessor(this, GPUProcessor::PROCESSOR_TYPE_DEVICE);
     }
   }
 }
@@ -304,12 +308,13 @@ int GPUReconstructionCPU::getOMPMaxThreads()
   return omp_get_max_threads();
 }
 
-static std::atomic_flag timerFlag; // TODO: Should be a class member not global, but cannot be moved to header due to ROOT limitation
+static std::atomic_flag timerFlag = ATOMIC_FLAG_INIT; // TODO: Should be a class member not global, but cannot be moved to header due to ROOT limitation
 
 GPUReconstructionCPU::timerMeta* GPUReconstructionCPU::insertTimer(unsigned int id, std::string&& name, int J, int num, int type, RecoStep step)
 {
-  while (timerFlag.test_and_set())
+  while (timerFlag.test_and_set()) {
     ;
+  }
   if (mTimers.size() <= id) {
     mTimers.resize(id + 1);
   }
@@ -318,6 +323,8 @@ GPUReconstructionCPU::timerMeta* GPUReconstructionCPU::insertTimer(unsigned int 
       name += std::to_string(J);
     }
     mTimers[id].reset(new timerMeta{std::unique_ptr<HighResTimer[]>{new HighResTimer[num]}, name, num, type, 1u, step, (size_t)0});
+  } else {
+    mTimers[id]->count++;
   }
   timerMeta* retVal = mTimers[id].get();
   timerFlag.clear();
@@ -327,8 +334,9 @@ GPUReconstructionCPU::timerMeta* GPUReconstructionCPU::insertTimer(unsigned int 
 GPUReconstructionCPU::timerMeta* GPUReconstructionCPU::getTimerById(unsigned int id)
 {
   timerMeta* retVal = nullptr;
-  while (timerFlag.test_and_set())
+  while (timerFlag.test_and_set()) {
     ;
+  }
   if (mTimers.size() > id && mTimers[id]) {
     retVal = mTimers[id].get();
     retVal->count++;
@@ -341,4 +349,17 @@ unsigned int GPUReconstructionCPU::getNextTimerId()
 {
   static std::atomic<unsigned int> id{0};
   return id.fetch_add(1);
+}
+
+unsigned int GPUReconstructionCPU::SetAndGetNestedLoopOmpFactor(bool condition, unsigned int max)
+{
+  if (condition && mProcessingSettings.ompKernels != 1) {
+    mNestedLoopOmpFactor = mProcessingSettings.ompKernels == 2 ? std::min<unsigned int>(max, mProcessingSettings.ompThreads) : mProcessingSettings.ompThreads;
+  } else {
+    mNestedLoopOmpFactor = 1;
+  }
+  if (mProcessingSettings.debugLevel >= 5) {
+    printf("Running %d OMP threads in outer loop\n", mNestedLoopOmpFactor);
+  }
+  return mNestedLoopOmpFactor;
 }

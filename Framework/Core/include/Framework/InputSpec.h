@@ -17,7 +17,9 @@
 
 #include <string>
 #include <ostream>
+#if !defined(__CLING__) && !defined(__ROOTCLING__)
 #include <variant>
+#endif
 
 namespace o2::framework
 {
@@ -49,6 +51,11 @@ struct InputSpec {
             ConcreteDataTypeMatcher const& dataType,
             enum Lifetime lifetime_ = Lifetime::Timeframe,
             std::vector<ConfigParamSpec> const& metadata_ = {});
+  /// Create an InputSpec which does not check for the description and the subSpec.
+  InputSpec(std::string binding_,
+            header::DataOrigin const& dataType,
+            enum Lifetime lifetime_ = Lifetime::Timeframe,
+            std::vector<ConfigParamSpec> const& metadata_ = {});
   InputSpec(std::string binding,
             data_matcher::DataDescriptorMatcher&& matcher,
             std::vector<ConfigParamSpec> const& metadata_ = {});
@@ -57,7 +64,9 @@ struct InputSpec {
   std::string binding;
 
   /// The actual matcher for the input spec.
+#if !defined(__CLING__) && !defined(__ROOTCLING__)
   std::variant<ConcreteDataMatcher, data_matcher::DataDescriptorMatcher> matcher;
+#endif
 
   enum Lifetime lifetime;
 

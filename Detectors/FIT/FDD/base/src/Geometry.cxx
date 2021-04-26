@@ -17,8 +17,7 @@
 #include <TGeoMedium.h>
 #include <TGeoVolume.h>
 #include <TGeoMatrix.h>
-#include <FairLogger.h>
-#include <sstream>
+#include "Framework/Logger.h"
 
 ClassImp(o2::fdd::Geometry);
 
@@ -120,7 +119,6 @@ void Geometry::buildGeometry()
   vFDAarray->AddNode(secFDA, 2, Ry180);                  //   2    |   1
   vFDAarray->AddNode(secFDA, 3, Rz180);                  // --------------->  x
   vFDAarray->AddNode(secFDA, 4, Rx180);                  //   3    |   4
-
 
   /// FDD_C in the tunnel
 

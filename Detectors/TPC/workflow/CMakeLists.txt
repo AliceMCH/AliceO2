@@ -8,25 +8,45 @@
 # granted to it by virtue of its status as an Intergovernmental Organization or
 # submit itself to any jurisdiction.
                      
-
-# FIXME: do we really need a library here ? Is the exe not enough ?
 o2_add_library(TPCWorkflow
                SOURCES src/RecoWorkflow.cxx
+                       src/ClusterReaderSpec.cxx
                        src/PublisherSpec.cxx
                        src/ClustererSpec.cxx
                        src/ClusterDecoderRawSpec.cxx
-                       src/CATrackerSpec.cxx
                        src/EntropyEncoderSpec.cxx
                        src/EntropyDecoderSpec.cxx
                        src/TrackReaderSpec.cxx
                        src/RawToDigitsSpec.cxx
                        src/LinkZSToDigitsSpec.cxx
-                       src/TPCSectorCompletionPolicy.cxx
                        src/ZSSpec.cxx
+                       src/CalibProcessingHelper.cxx
+                       src/ClusterSharingMapSpec.cxx
+                       src/FileReaderWorkflow.cxx
+                       src/CalDetMergerPublisherSpec.cxx
+                       src/KryptonClustererSpec.cxx
                TARGETVARNAME targetName
                PUBLIC_LINK_LIBRARIES O2::Framework O2::DataFormatsTPC
                                      O2::DPLUtils O2::TPCReconstruction
-                                     O2::TPCCalibration O2::TPCSimulation)
+                                     O2::TPCCalibration O2::TPCSimulation
+                                     O2::TPCQC O2::DetectorsCalibration
+                                     O2::GPUWorkflow
+               PRIVATE_LINK_LIBRARIES O2::GPUTracking # For the Zero Suppression includes
+           )
+
+
+o2_add_executable(chunkeddigit-merger
+        COMPONENT_NAME tpc
+        TARGETVARNAME mergertargetName
+        SOURCES src/ChunkedDigitPublisher.cxx
+        PUBLIC_LINK_LIBRARIES O2::TPCWorkflow)
+
+if(OpenMP_CXX_FOUND)
+  # Must be private, depending libraries might be compiled by compiler not understanding -fopenmp
+  target_compile_definitions(${mergertargetName} PRIVATE WITH_OPENMP)
+  target_link_libraries(${mergertargetName} PRIVATE OpenMP::OpenMP_CXX)
+endif()
+
 
 o2_add_executable(reco-workflow
                   COMPONENT_NAME tpc
@@ -36,6 +56,26 @@ o2_add_executable(reco-workflow
 o2_add_executable(raw-to-digits-workflow
                   COMPONENT_NAME tpc
                   SOURCES src/tpc-raw-to-digits-workflow.cxx
+                  PUBLIC_LINK_LIBRARIES O2::TPCWorkflow)
+
+o2_add_executable(calib-pedestal
+                  COMPONENT_NAME tpc
+                  SOURCES src/tpc-calib-pedestal.cxx
+                  PUBLIC_LINK_LIBRARIES O2::TPCWorkflow)
+
+o2_add_executable(track-reader
+                  COMPONENT_NAME tpc
+                  SOURCES src/TrackReaderWorkflow.cxx
+                  PUBLIC_LINK_LIBRARIES O2::TPCWorkflow)
+
+o2_add_executable(file-reader
+                  COMPONENT_NAME tpc
+                  SOURCES src/FileReaderWorkflow.cxx
+                  PUBLIC_LINK_LIBRARIES O2::TPCWorkflow)
+
+o2_add_executable(krypton-clusterer
+                  COMPONENT_NAME tpc
+                  SOURCES src/tpc-krypton-clusterer.cxx
                   PUBLIC_LINK_LIBRARIES O2::TPCWorkflow)
 
 o2_add_test(workflow

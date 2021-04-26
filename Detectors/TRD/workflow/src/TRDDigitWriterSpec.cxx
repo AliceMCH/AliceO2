@@ -57,7 +57,8 @@ o2::framework::DataProcessorSpec getTRDDigitWriterSpec(bool mctruth)
     // make the actual output object by adopting/casting the buffer
     // into a split format
     o2::dataformats::IOMCTruthContainerView outputcontainer(labeldata);
-    auto br = framework::RootTreeWriter::remapBranch(branch, &outputcontainer);
+    auto ptr = &outputcontainer;
+    auto br = framework::RootTreeWriter::remapBranch(branch, &ptr);
     br->Fill();
     br->ResetAddress();
   };
@@ -71,7 +72,6 @@ o2::framework::DataProcessorSpec getTRDDigitWriterSpec(bool mctruth)
   return MakeRootTreeWriterSpec("TRDDigitWriter",
                                 "trddigits.root",
                                 "o2sim",
-                                1,
                                 // setting a custom callback for closing the writer
                                 MakeRootTreeWriterSpec::CustomClose(finishWriting),
                                 BranchDefinition<std::vector<o2::trd::Digit>>{InputSpec{"input", "TRD", "DIGITS"}, "TRDDigit"},

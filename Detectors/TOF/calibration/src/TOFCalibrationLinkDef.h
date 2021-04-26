@@ -33,4 +33,15 @@
 #pragma link C++ class o2::calibration::TimeSlot < o2::tof::TOFCalibInfoSlot> + ;
 #pragma link C++ class o2::calibration::TimeSlotCalibration < o2::dataformats::CalibInfoTOF, o2::tof::TOFCalibInfoSlot> + ;
 
+#pragma link C++ class std::bitset < o2::tof::Geo::NCHANNELS> + ;
+#pragma link C++ struct std::pair < uint64_t, double> + ;
+#pragma link C++ struct o2::tof::TOFDCSinfo + ;
+#pragma link C++ class std::unordered_map < o2::dcs::DataPointIdentifier, o2::tof::TOFDCSinfo> + ;
+
+#pragma link C++ struct TOFFEElightInfo + ;
+#pragma link C++ struct TOFFEEchannelConfig + ;
+#pragma link C++ struct TOFFEEtriggerConfig + ;
+#pragma link C++ struct TOFFEElightConfig + ;
+#pragma link C++ struct TOFFEElightReader + ;
+
 #endif

@@ -60,6 +60,7 @@ int main(int argc, char** argv)
     uint32_t defRDH = o2::raw::RDHUtils::getVersion<o2::header::RAWDataHeader>();
     add_option("rdh-version,r", bpo::value<uint32_t>()->default_value(defRDH), "RDH version to use");
     add_option("no-empty-hbf,e", bpo::value<bool>()->default_value(false)->implicit_value(true), "do not create empty HBF pages (except for HBF starting TF)");
+    add_option("hbfutils-config,u", bpo::value<std::string>()->default_value(std::string(o2::base::NameConf::DIGITIZATIONCONFIGFILE)), "config file for HBFUtils (or none)");
     add_option("configKeyValues", bpo::value<std::string>()->default_value(""), "comma-separated configKeyValues");
 
     opt_all.add(opt_general).add(opt_hidden);
@@ -80,6 +81,11 @@ int main(int argc, char** argv)
     std::cerr << e.what() << ", application will now exit" << std::endl;
     exit(2);
   }
+
+  std::string confDig = vm["hbfutils-config"].as<std::string>();
+  if (!confDig.empty() && confDig != "none") {
+    o2::conf::ConfigurableParam::updateFromFile(confDig, "HBFUtils");
+  }
   o2::conf::ConfigurableParam::updateFromString(vm["configKeyValues"].as<std::string>());
   digi2raw(vm["input-file"].as<std::string>(),
            vm["output-dir"].as<std::string>(),
@@ -87,6 +93,9 @@ int main(int argc, char** argv)
            vm["verbosity"].as<uint32_t>(),
            vm["rdh-version"].as<uint32_t>(),
            vm["no-empty-hbf"].as<bool>());
+  LOG(INFO) << "HBFUtils settings used for conversion:";
+
+  o2::raw::HBFUtils::Instance().print();
 
   return 0;
 }
@@ -228,7 +237,6 @@ void setupLinks(o2::itsmft::MC2RawEncoder<MAP>& m2r, std::string_view outDir, st
 
         int ruID = nRUtot++;
         bool accept = !(ruSW < m2r.getRUSWMin() || ruSW > m2r.getRUSWMax()); // ignored RUs ?
-        int accL = 0;
         if (accept) {
           m2r.getCreateRUDecode(ruSW); // create RU container
           nRU++;
@@ -237,12 +245,11 @@ void setupLinks(o2::itsmft::MC2RawEncoder<MAP>& m2r, std::string_view outDir, st
           uint32_t lanes = mp.getCablesOnRUType(ru.ruInfo->ruType); // lanes patter of this RU
           ru.links[0] = m2r.addGBTLink();
           auto link = m2r.getGBTLink(ru.links[0]);
-          link->lanes = lanes & ((0x1 << lnkAs) - 1) << (accL);
+          link->lanes = lanes;
           link->idInCRU = linkID;
           link->cruID = cruIDtmp * 100 + o2::detectors::DetID::MFT;
           link->feeID = mp.RUSW2FEEId(ruSW);
           link->endPointID = 0; // 0 or 1
-          accL += lnkAs;
           // register the link in the writer, if not done here, its data will be dumped to common default file
           //printf("Register link: FeeID 0x%02x , CRU ID 0x%x , link ID %2d \n", link->feeID, link->cruID, link->idInCRU);
           //printf("RU SW: %2d   HW: 0x%02x   Type: %2d   %s \n", ruSW, ruHW, ruType, outFileLink.data());

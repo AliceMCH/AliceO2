@@ -10,8 +10,9 @@
 
 #include "MCHSimulation/Digitizer.h"
 
+#include "MCHGeometryCreator/Geometry.h"
+#include "MCHGeometryTransformer/Transformations.h"
 #include "MCHMappingInterface/Segmentation.h"
-#include "MCHSimulation/Geometry.h"
 #include "MCHSimulation/Response.h"
 #include "TGeoManager.h"
 #include "TMath.h"
@@ -19,8 +20,9 @@
 #include <algorithm>
 #include <cassert>
 #include <fairlogger/Logger.h>
-
 #include <iostream>
+#include <numeric>
+
 using namespace std;
 
 using namespace o2::mch;
@@ -103,8 +105,9 @@ void Digitizer::process(const std::vector<Hit> hits, std::vector<Digit>& digits,
   }   //loop over hits
 
   //generate noise-only digits
-  if (mNoise)
+  if (mNoise) {
     generateNoiseDigits();
+  }
 
   fillOutputContainer(digits);
   provideMC(mcContainer);
@@ -123,7 +126,8 @@ int Digitizer::processHit(const Hit& hit, int detID, int event_time)
   auto time = event_time & int(hit.GetTime() / 25.);
 
   //transformation from global to local
-  auto t = o2::mch::getTransformation(detID, *gGeoManager);
+  auto transformation = o2::mch::geo::transformationFromTGeoManager(*gGeoManager);
+  auto t = transformation(detID);
   math_utils::Point3D<float> lpos;
   t.MasterToLocal(pos, lpos);
 
@@ -169,11 +173,10 @@ int Digitizer::processHit(const Hit& hit, int detID, int event_time)
       } else {
         q *= chargenon;
       }
-      auto signal = (unsigned long)q * resp.getInverseChargeThreshold();
+      auto signal = (uint32_t)q * resp.getInverseChargeThreshold();
       if (signal > 0) {
-        Digit::Time dtime;
-        dtime.sampaTime = static_cast<uint16_t>(time) & 0x3FF;
-        digits.emplace_back(detID, padid, signal, dtime);
+        /// FIXME: which time definition is used when calling this function?
+        digits.emplace_back(detID, padid, signal, static_cast<int32_t>(time));
         ++ndigits;
       }
     }
@@ -184,7 +187,7 @@ int Digitizer::processHit(const Hit& hit, int detID, int event_time)
 void Digitizer::generateNoiseDigits()
 {
 
-  o2::mch::mapping::forEachDetectionElement([& digits = this->mDigits, &normProbNoise = this->mNormProbNoise,
+  o2::mch::mapping::forEachDetectionElement([&digits = this->mDigits, &normProbNoise = this->mNormProbNoise,
                                              &eventTime = this->mEventTime, &eventID = this->mEventID,
                                              &srcID = this->mSrcID, &mcTruthOutputContainer = this->mMCTruthOutputContainer](int detID) {
     auto& seg = segmentation(detID);
@@ -193,9 +196,8 @@ void Digitizer::generateNoiseDigits()
     int nNoisyPads = TMath::Nint(gRandom->Gaus(nNoisyPadsAv, TMath::Sqrt(nNoisyPadsAv)));
     for (int i = 0; i < nNoisyPads; i++) {
       int padid = gRandom->Integer(nNoisyPads + 1);
-      Digit::Time dtime;
-      dtime.sampaTime = static_cast<uint16_t>(eventTime) & 0x3FF;
-      digits.emplace_back(detID, padid, 0.6, dtime);
+      // FIXME: can we use eventTime as the digit time?
+      digits.emplace_back(detID, padid, 0.6, static_cast<int32_t>(eventTime));
       //just to roun adbove threshold when added
       MCCompLabel label(-1, eventID, srcID, true);
       mcTruthOutputContainer.addElement(digits.size() - 1, label);
@@ -210,7 +212,7 @@ void Digitizer::mergeDigits()
 {
   std::vector<int> indices(mDigits.size());
   std::iota(begin(indices), end(indices), 0);
-  std::sort(indices.begin(), indices.end(), [& digits = this->mDigits, this](int a, int b) {
+  std::sort(indices.begin(), indices.end(), [&digits = this->mDigits, this](int a, int b) {
     return (getGlobalDigit(digits[a].getDetID(), digits[a].getPadID()) < getGlobalDigit(digits[b].getDetID(), digits[b].getPadID()));
   });
 
@@ -233,10 +235,10 @@ void Digitizer::mergeDigits()
   int i = 0;
   while (i < indices.size()) {
     int j = i + 1;
-    while (j < indices.size() && (getGlobalDigit(sortedDigits(i).getDetID(), sortedDigits(i).getPadID())) == (getGlobalDigit(sortedDigits(j).getDetID(), sortedDigits(j).getPadID())) && (std::fabs(sortedDigits(i).getTime().sampaTime - sortedDigits(j).getTime().sampaTime) < mDeltat)) {
+    while (j < indices.size() && (getGlobalDigit(sortedDigits(i).getDetID(), sortedDigits(i).getPadID())) == (getGlobalDigit(sortedDigits(j).getDetID(), sortedDigits(j).getPadID())) && (std::fabs(sortedDigits(i).getTime() - sortedDigits(j).getTime()) < mDeltat)) {
       j++;
     }
-    unsigned long adc{0};
+    uint32_t adc{0};
     float padc{0};
     Response& resp = response(isStation1(sortedDigits(i).getDetID()));
 

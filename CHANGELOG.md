@@ -1,0 +1,98 @@
+# Changes since 2021-02-23
+
+## Changes in Analysis
+
+- [#5581](https://github.com/AliceO2Group/AliceO2/pull/5581) 2021-02-27: PWGHF: Revert "Add flag to switch off TPC cluster selection" by [@ginnocen](https://github.com/ginnocen)
+- [#5595](https://github.com/AliceO2Group/AliceO2/pull/5595) 2021-03-02: Remove non-templated DCAFitter (overridden by DCAFitterN) by [@shahor02](https://github.com/shahor02)
+- [#5610](https://github.com/AliceO2Group/AliceO2/pull/5610) 2021-03-04: Better message by [@jgrosseo](https://github.com/jgrosseo)
+- [#5601](https://github.com/AliceO2Group/AliceO2/pull/5601) 2021-03-04: DPL: simplify method analysis task introspection by [@alibuild](https://github.com/alibuild)
+- [#5599](https://github.com/AliceO2Group/AliceO2/pull/5599) 2021-03-04: Fix for sparse index builder skipping entries by [@aalkin](https://github.com/aalkin)
+- [#5566](https://github.com/AliceO2Group/AliceO2/pull/5566) 2021-03-04: Renaming index columns for TF merging by [@jgrosseo](https://github.com/jgrosseo)
+- [#5558](https://github.com/AliceO2Group/AliceO2/pull/5558) 2021-03-04: [DPL Analysis] Simple workflow suffix solution by [@saganatt](https://github.com/saganatt)
+- [#5631](https://github.com/AliceO2Group/AliceO2/pull/5631) 2021-03-05: PWGHF: fix wrong casting of track index by [@aalkin](https://github.com/aalkin)
+- [#5611](https://github.com/AliceO2Group/AliceO2/pull/5611) 2021-03-05: Renaming charge() to sign() by [@jgrosseo](https://github.com/jgrosseo)
+- [#5633](https://github.com/AliceO2Group/AliceO2/pull/5633) 2021-03-09: Adapting to updated vertex selection in converter by [@jgrosseo](https://github.com/jgrosseo)
+- [#5623](https://github.com/AliceO2Group/AliceO2/pull/5623) 2021-03-09: Adding Forward (MFT+Muon) tables by [@jgrosseo](https://github.com/jgrosseo)
+- [#5640](https://github.com/AliceO2Group/AliceO2/pull/5640) 2021-03-09: [DPL Analysis] Canonical task names by [@saganatt](https://github.com/saganatt)
+## Changes in Common
+
+- [#5560](https://github.com/AliceO2Group/AliceO2/pull/5560) 2021-02-26: Fix some codechecker violations by [@davidrohr](https://github.com/davidrohr)
+- [#5578](https://github.com/AliceO2Group/AliceO2/pull/5578) 2021-02-27: Misc fixes in propagator  by [@shahor02](https://github.com/shahor02)
+- [#5583](https://github.com/AliceO2Group/AliceO2/pull/5583) 2021-03-01: Track source masks + possibility to select sources for p.vertexing and cosmics workflows by [@shahor02](https://github.com/shahor02)
+- [#5586](https://github.com/AliceO2Group/AliceO2/pull/5586) 2021-03-01: o2-sim: Provide standalone MC header information by [@sawenzel](https://github.com/sawenzel)
+## Changes in DataFormats
+
+- [#5569](https://github.com/AliceO2Group/AliceO2/pull/5569) 2021-02-26: Modifications to auto-detect and decode link-base zero suppression by [@wiechula](https://github.com/wiechula)
+- [#5590](https://github.com/AliceO2Group/AliceO2/pull/5590) 2021-03-01: Additional documentation and cleanup for TRAPsim by [@martenole](https://github.com/martenole)
+- [#5583](https://github.com/AliceO2Group/AliceO2/pull/5583) 2021-03-01: Track source masks + possibility to select sources for p.vertexing and cosmics workflows by [@shahor02](https://github.com/shahor02)
+- [#5586](https://github.com/AliceO2Group/AliceO2/pull/5586) 2021-03-01: o2-sim: Provide standalone MC header information by [@sawenzel](https://github.com/sawenzel)
+- [#5598](https://github.com/AliceO2Group/AliceO2/pull/5598) 2021-03-04: Couple of GPU developments by [@davidrohr](https://github.com/davidrohr)
+- [#5585](https://github.com/AliceO2Group/AliceO2/pull/5585) 2021-03-05: Raw to digits by [@cortesep](https://github.com/cortesep)
+- [#5641](https://github.com/AliceO2Group/AliceO2/pull/5641) 2021-03-06: Complete ZDC CTF content and encoding/decoding workflows by [@shahor02](https://github.com/shahor02)
+- [#5597](https://github.com/AliceO2Group/AliceO2/pull/5597) 2021-03-08: add tool for processing cosmics in real time with TOF by [@noferini](https://github.com/noferini)
+## Changes in Detectors
+
+- [#5557](https://github.com/AliceO2Group/AliceO2/pull/5557) 2021-02-26: Compilation fixes by [@davidrohr](https://github.com/davidrohr)
+- [#5570](https://github.com/AliceO2Group/AliceO2/pull/5570) 2021-02-26: Fix for the out_of_range exception and small clean-ups by [@nburmaso](https://github.com/nburmaso)
+- [#5560](https://github.com/AliceO2Group/AliceO2/pull/5560) 2021-02-26: Fix some codechecker violations by [@davidrohr](https://github.com/davidrohr)
+- [#5574](https://github.com/AliceO2Group/AliceO2/pull/5574) 2021-02-26: Fix: MID digi2raw must read configKeyValues by [@shahor02](https://github.com/shahor02)
+- [#5569](https://github.com/AliceO2Group/AliceO2/pull/5569) 2021-02-26: Modifications to auto-detect and decode link-base zero suppression by [@wiechula](https://github.com/wiechula)
+- [#5578](https://github.com/AliceO2Group/AliceO2/pull/5578) 2021-02-27: Misc fixes in propagator  by [@shahor02](https://github.com/shahor02)
+- [#5577](https://github.com/AliceO2Group/AliceO2/pull/5577) 2021-02-27: Option to detect TF from orbit and SOX info instead of TType by [@shahor02](https://github.com/shahor02)
+- [#5590](https://github.com/AliceO2Group/AliceO2/pull/5590) 2021-03-01: Additional documentation and cleanup for TRAPsim by [@martenole](https://github.com/martenole)
+- [#5572](https://github.com/AliceO2Group/AliceO2/pull/5572) 2021-03-01: Fix number of foam wedges at 90deg, add carbon fleece with glue by [@mario6829](https://github.com/mario6829)
+- [#5584](https://github.com/AliceO2Group/AliceO2/pull/5584) 2021-03-01: Including Rtypes.h by [@pzhristov](https://github.com/pzhristov)
+- [#5583](https://github.com/AliceO2Group/AliceO2/pull/5583) 2021-03-01: Track source masks + possibility to select sources for p.vertexing and cosmics workflows by [@shahor02](https://github.com/shahor02)
+- [#5576](https://github.com/AliceO2Group/AliceO2/pull/5576) 2021-03-01: [EMCAL-684] Add mapping for FEC index by [@mfasDa](https://github.com/mfasDa)
+- [#5586](https://github.com/AliceO2Group/AliceO2/pull/5586) 2021-03-01: o2-sim: Provide standalone MC header information by [@sawenzel](https://github.com/sawenzel)
+- [#5559](https://github.com/AliceO2Group/AliceO2/pull/5559) 2021-03-02: A and C side cables  by [@AllaMaevskaya](https://github.com/AllaMaevskaya)
+- [#5591](https://github.com/AliceO2Group/AliceO2/pull/5591) 2021-03-02: Fix ITS tracking: async/sync settings swapping, not vertexing in cosmics by [@shahor02](https://github.com/shahor02)
+- [#5595](https://github.com/AliceO2Group/AliceO2/pull/5595) 2021-03-02: Remove non-templated DCAFitter (overridden by DCAFitterN) by [@shahor02](https://github.com/shahor02)
+- [#5598](https://github.com/AliceO2Group/AliceO2/pull/5598) 2021-03-04: Couple of GPU developments by [@davidrohr](https://github.com/davidrohr)
+- [#5613](https://github.com/AliceO2Group/AliceO2/pull/5613) 2021-03-04: Fix delay in raw file reader workflow by [@davidrohr](https://github.com/davidrohr)
+- [#5566](https://github.com/AliceO2Group/AliceO2/pull/5566) 2021-03-04: Renaming index columns for TF merging by [@jgrosseo](https://github.com/jgrosseo)
+- [#5609](https://github.com/AliceO2Group/AliceO2/pull/5609) 2021-03-04: Upgrade: fix duplicate guard. by [@ktf](https://github.com/ktf)
+- [#5585](https://github.com/AliceO2Group/AliceO2/pull/5585) 2021-03-05: Raw to digits by [@cortesep](https://github.com/cortesep)
+- [#5614](https://github.com/AliceO2Group/AliceO2/pull/5614) 2021-03-05: Removed overlaps in cdrum by [@MarekKowalski1504](https://github.com/MarekKowalski1504)
+- [#5628](https://github.com/AliceO2Group/AliceO2/pull/5628) 2021-03-05: Split tracks table into three tables by [@nburmaso](https://github.com/nburmaso)
+- [#5612](https://github.com/AliceO2Group/AliceO2/pull/5612) 2021-03-05: Suppress some info output at higher logging severities by [@davidrohr](https://github.com/davidrohr)
+- [#5641](https://github.com/AliceO2Group/AliceO2/pull/5641) 2021-03-06: Complete ZDC CTF content and encoding/decoding workflows by [@shahor02](https://github.com/shahor02)
+- [#5639](https://github.com/AliceO2Group/AliceO2/pull/5639) 2021-03-06: RawFileWriter::addData optionally transfers detectoField to RDH by [@shahor02](https://github.com/shahor02)
+- [#5644](https://github.com/AliceO2Group/AliceO2/pull/5644) 2021-03-07: Do not limit number of entries RootTreeWriter can store by [@shahor02](https://github.com/shahor02)
+- [#5648](https://github.com/AliceO2Group/AliceO2/pull/5648) 2021-03-08: [R3C-469] [MCH] Update Electronic Mapping from Pt2 by [@aphecetche](https://github.com/aphecetche)
+- [#5597](https://github.com/AliceO2Group/AliceO2/pull/5597) 2021-03-08: add tool for processing cosmics in real time with TOF by [@noferini](https://github.com/noferini)
+## Changes in Examples
+
+- [#5634](https://github.com/AliceO2Group/AliceO2/pull/5634) 2021-03-08: Added macro to read event info from a Pythia8 heavy-ion simulation he… by [@preghenella](https://github.com/preghenella)
+## Changes in Framework
+
+- [#5563](https://github.com/AliceO2Group/AliceO2/pull/5563) 2021-02-25: DPL: fix memory leak in ws:// driver. by [@ktf](https://github.com/ktf)
+- [#5567](https://github.com/AliceO2Group/AliceO2/pull/5567) 2021-02-25: DPL: switch to ws:// as default client for self hosted by [@ktf](https://github.com/ktf)
+- [#5561](https://github.com/AliceO2Group/AliceO2/pull/5561) 2021-02-25: Revert "DPL: switch to ws:// as default client for self hosted" by [@ktf](https://github.com/ktf)
+- [#5582](https://github.com/AliceO2Group/AliceO2/pull/5582) 2021-02-28: DPL: improve message when driver client is not yet connected by [@ktf](https://github.com/ktf)
+- [#5580](https://github.com/AliceO2Group/AliceO2/pull/5580) 2021-03-01: DPL: move can_assign helper to the only used place by [@ktf](https://github.com/ktf)
+- [#5587](https://github.com/AliceO2Group/AliceO2/pull/5587) 2021-03-01: DPL: require --aod-writer-keep to be homogeneous by [@ktf](https://github.com/ktf)
+- [#5603](https://github.com/AliceO2Group/AliceO2/pull/5603) 2021-03-03: DPL: do not use --driver-client-backend  when dumping DDS config by [@alibuild](https://github.com/alibuild)
+- [#5596](https://github.com/AliceO2Group/AliceO2/pull/5596) 2021-03-03: Revert "DPL: add wildcards when creating matchers via DataDescriptorQueryBuilder::parse" by [@ktf](https://github.com/ktf)
+- [#5610](https://github.com/AliceO2Group/AliceO2/pull/5610) 2021-03-04: Better message by [@jgrosseo](https://github.com/jgrosseo)
+- [#5602](https://github.com/AliceO2Group/AliceO2/pull/5602) 2021-03-04: DPL: simplify TableBuilder API by [@alibuild](https://github.com/alibuild)
+- [#5601](https://github.com/AliceO2Group/AliceO2/pull/5601) 2021-03-04: DPL: simplify method analysis task introspection by [@alibuild](https://github.com/alibuild)
+- [#5599](https://github.com/AliceO2Group/AliceO2/pull/5599) 2021-03-04: Fix for sparse index builder skipping entries by [@aalkin](https://github.com/aalkin)
+- [#5566](https://github.com/AliceO2Group/AliceO2/pull/5566) 2021-03-04: Renaming index columns for TF merging by [@jgrosseo](https://github.com/jgrosseo)
+- [#5558](https://github.com/AliceO2Group/AliceO2/pull/5558) 2021-03-04: [DPL Analysis] Simple workflow suffix solution by [@saganatt](https://github.com/saganatt)
+- [#5611](https://github.com/AliceO2Group/AliceO2/pull/5611) 2021-03-05: Renaming charge() to sign() by [@jgrosseo](https://github.com/jgrosseo)
+- [#5633](https://github.com/AliceO2Group/AliceO2/pull/5633) 2021-03-09: Adapting to updated vertex selection in converter by [@jgrosseo](https://github.com/jgrosseo)
+- [#5623](https://github.com/AliceO2Group/AliceO2/pull/5623) 2021-03-09: Adding Forward (MFT+Muon) tables by [@jgrosseo](https://github.com/jgrosseo)
+- [#5649](https://github.com/AliceO2Group/AliceO2/pull/5649) 2021-03-09: DPL Analysis: avoid std::function in literal node by [@ktf](https://github.com/ktf)
+- [#5651](https://github.com/AliceO2Group/AliceO2/pull/5651) 2021-03-09: DPL: proper redirection to --forwarding-destination none by [@ktf](https://github.com/ktf)
+- [#5655](https://github.com/AliceO2Group/AliceO2/pull/5655) 2021-03-09: Protect cpuid.h, it cannot be used on Mac M1 by [@pzhristov](https://github.com/pzhristov)
+- [#5640](https://github.com/AliceO2Group/AliceO2/pull/5640) 2021-03-09: [DPL Analysis] Canonical task names by [@saganatt](https://github.com/saganatt)
+## Changes in Steer
+
+- [#5575](https://github.com/AliceO2Group/AliceO2/pull/5575) 2021-02-27: MCKinematicsReader: adding destructor by [@matthias-kleiner](https://github.com/matthias-kleiner)
+- [#5585](https://github.com/AliceO2Group/AliceO2/pull/5585) 2021-03-05: Raw to digits by [@cortesep](https://github.com/cortesep)
+- [#5654](https://github.com/AliceO2Group/AliceO2/pull/5654) 2021-03-09: MCReader: release early by [@sawenzel](https://github.com/sawenzel)
+## Changes in Utilities
+
+- [#5604](https://github.com/AliceO2Group/AliceO2/pull/5604) 2021-03-03: less verbose output from jobutils by [@sawenzel](https://github.com/sawenzel)
+- [#5615](https://github.com/AliceO2Group/AliceO2/pull/5615) 2021-03-04: Use o2_add_executable for Data Sampling benchmark workflow by [@knopers8](https://github.com/knopers8)

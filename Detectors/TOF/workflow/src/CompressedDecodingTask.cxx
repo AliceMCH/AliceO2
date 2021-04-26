@@ -99,7 +99,8 @@ void CompressedDecodingTask::postData(ProcessingContext& pc)
   pc.outputs().snapshot(Output{o2::header::gDataOriginTOF, "DIGITS", 0, Lifetime::Timeframe}, *alldigits);
   pc.outputs().snapshot(Output{o2::header::gDataOriginTOF, "READOUTWINDOW", 0, Lifetime::Timeframe}, *row);
 
-  std::vector<uint32_t>& patterns = mDecoder.getPatterns();
+  std::vector<uint8_t>& patterns = mDecoder.getPatterns();
+
   pc.outputs().snapshot(Output{o2::header::gDataOriginTOF, "PATTERNS", 0, Lifetime::Timeframe}, patterns);
 
   std::vector<uint64_t>& errors = mDecoder.getErrors();
@@ -107,18 +108,6 @@ void CompressedDecodingTask::postData(ProcessingContext& pc)
 
   DigitHeader& digitH = mDecoder.getDigitHeader();
   pc.outputs().snapshot(Output{o2::header::gDataOriginTOF, "DIGITHEADER", 0, Lifetime::Timeframe}, digitH);
-
-  // RS this is a hack to be removed once we have correct propagation of the firstTForbit by the framework
-  auto setFirstTFOrbit = [&](const Output& spec, uint32_t orb) {
-    auto* hd = pc.outputs().findMessageHeader(spec);
-    if (!hd) {
-      throw std::runtime_error(o2::utils::concat_string("failed to find output message header for ", spec.origin.str, "/", spec.description.str, "/", std::to_string(spec.subSpec)));
-    }
-    hd->firstTForbit = orb;
-  };
-
-  setFirstTFOrbit(Output{o2::header::gDataOriginTOF, "DIGITS", 0, Lifetime::Timeframe}, mInitOrbit);
-  setFirstTFOrbit(Output{o2::header::gDataOriginTOF, "READOUTWINDOW", 0, Lifetime::Timeframe}, mInitOrbit);
 
   mDecoder.clear();
 
@@ -131,12 +120,9 @@ void CompressedDecodingTask::run(ProcessingContext& pc)
 {
   mTimer.Start(false);
 
-  if (pc.inputs().getNofParts(0) && !mConetMode) {
-    //RS set the 1st orbit of the TF from the O2 header, relying on rdhHandler is not good (in fact, the RDH might be eliminated in the derived data)
-    const auto* dh = o2::header::get<o2::header::DataHeader*>(pc.inputs().getByPos(0).header);
-    mInitOrbit = dh->firstTForbit;
-  }
-
+  //RS set the 1st orbit of the TF from the O2 header, relying on rdhHandler is not good (in fact, the RDH might be eliminated in the derived data)
+  const auto* dh = o2::header::get<o2::header::DataHeader*>(pc.inputs().getByPos(0).header);
+  mInitOrbit = dh->firstTForbit;
   mDecoder.setFirstIR({0, mInitOrbit});
 
   /** loop over inputs routes **/
@@ -157,7 +143,7 @@ void CompressedDecodingTask::run(ProcessingContext& pc)
     }
   }
 
-  if ((mNCrateOpenTF == 72 || mConetMode) && mNCrateOpenTF == mNCrateCloseTF) {
+  if ((mNCrateOpenTF > 0 || mConetMode) && mNCrateOpenTF == mNCrateCloseTF) {
     mHasToBePosted = true;
   }
 
@@ -177,9 +163,6 @@ void CompressedDecodingTask::headerHandler(const CrateHeader_t* crateHeader, con
 {
   if (mConetMode) {
     LOG(DEBUG) << "Crate found" << crateHeader->drmID;
-
-    mInitOrbit = crateOrbit->orbitID;
-
     mNCrateOpenTF++;
   }
 }
@@ -192,18 +175,25 @@ void CompressedDecodingTask::trailerHandler(const CrateHeader_t* crateHeader, co
     mNCrateCloseTF++;
   }
 
-  mDecoder.addCrateHeaderData(crateOrbit->orbitID, crateHeader->drmID, crateHeader->bunchID, crateTrailer->eventCounter);
+  if (mCurrentOrbit > 0) {
+    mDecoder.addCrateHeaderData(mCurrentOrbit, crateHeader->drmID, crateHeader->bunchID, crateTrailer->eventCounter);
+  } else {
+    mDecoder.addCrateHeaderData(crateOrbit->orbitID, crateHeader->drmID, crateHeader->bunchID, crateTrailer->eventCounter);
+  }
 
   // Diagnostics used to fill digit patterns
   auto numberOfDiagnostics = crateTrailer->numberOfDiagnostics;
   auto numberOfErrors = crateTrailer->numberOfErrors;
   for (int i = 0; i < numberOfDiagnostics; i++) {
     const uint32_t* val = reinterpret_cast<const uint32_t*>(&(diagnostics[i]));
-    mDecoder.addPattern(*val, crateHeader->drmID, crateOrbit->orbitID, crateHeader->bunchID);
+    if (mCurrentOrbit > 0) {
+      mDecoder.addPattern(*val, crateHeader->drmID, mCurrentOrbit, crateHeader->bunchID); // take orbit from crateHeader instead of crateOrbit (it can be wrong, check also for digits!)
+    } else {
+      mDecoder.addPattern(*val, crateHeader->drmID, crateOrbit->orbitID, crateHeader->bunchID);
+    }
 
     /*
     int islot = (*val & 15);
-    printf("DRM = %d (orbit = %d) slot = %d: \n", crateHeader->drmID, crateOrbit->orbitID, islot);
     if (islot == 1) {
       if (o2::tof::diagnostic::DRM_HEADER_MISSING & *val) {
         printf("DRM_HEADER_MISSING\n");
@@ -323,6 +313,7 @@ void CompressedDecodingTask::trailerHandler(const CrateHeader_t* crateHeader, co
     printf("------\n");
     */
   }
+
   for (int i = 0; i < numberOfErrors; i++) {
     const uint32_t* val = reinterpret_cast<const uint32_t*>(&(errors[i]));
     mDecoder.addError(*val, crateHeader->drmID);
@@ -331,12 +322,13 @@ void CompressedDecodingTask::trailerHandler(const CrateHeader_t* crateHeader, co
 
 void CompressedDecodingTask::rdhHandler(const o2::header::RAWDataHeader* rdh)
 {
+  const auto& rdhr = *rdh;
+  // set first orbtìt here (to be check in future), please not remove this!!!
+  mCurrentOrbit = RDHUtils::getHeartBeatOrbit(rdhr);
 
   // rdh close
-  const auto& rdhr = *rdh;
   if (RDHUtils::getStop(rdhr) && RDHUtils::getHeartBeatOrbit(rdhr) == o2::raw::HBFUtils::Instance().getNOrbitsPerTF() - 1 + mInitOrbit) {
     mNCrateCloseTF++;
-    //    printf("New TF close RDH %d\n", int(rdh->feeId));
     return;
   }
 
@@ -353,7 +345,11 @@ void CompressedDecodingTask::frameHandler(const CrateHeader_t* crateHeader, cons
 {
   for (int i = 0; i < frameHeader->numberOfHits; ++i) {
     auto packedHit = packedHits + i;
-    mDecoder.InsertDigit(crateHeader->drmID, frameHeader->trmID, packedHit->tdcID, packedHit->chain, packedHit->channel, crateOrbit->orbitID, crateHeader->bunchID, frameHeader->frameID << 13, packedHit->time, packedHit->tot);
+    if (mCurrentOrbit > 0) {
+      mDecoder.InsertDigit(crateHeader->drmID, frameHeader->trmID, packedHit->tdcID, packedHit->chain, packedHit->channel, mCurrentOrbit, crateHeader->bunchID, frameHeader->frameID << 13, packedHit->time, packedHit->tot);
+    } else {
+      mDecoder.InsertDigit(crateHeader->drmID, frameHeader->trmID, packedHit->tdcID, packedHit->chain, packedHit->channel, crateOrbit->orbitID, crateHeader->bunchID, frameHeader->frameID << 13, packedHit->time, packedHit->tot);
+    }
   }
 };
 

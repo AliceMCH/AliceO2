@@ -11,9 +11,9 @@
 // O2 includes
 #include "Framework/AnalysisTask.h"
 #include "Framework/AnalysisDataModel.h"
-#include "Analysis/MC.h"
+#include "AnalysisCore/MC.h"
 #include "Framework/ASoAHelpers.h"
-#include "Analysis/TrackSelectionTables.h"
+#include "AnalysisDataModel/TrackSelectionTables.h"
 
 // ROOT includes
 #include <TH1F.h>
@@ -104,16 +104,16 @@ struct ReconstructedTask {
   OutputObj<TH2F> pDiff{TH2F("pDiff", "pDiff;#it{p}_{MC} #it{p}_{Rec} (GeV/#it{c})", 500, -2, 2, PDGBINNING)};
 
   Filter trackAcceptance = (nabs(aod::track::eta) < 0.8f);
-  Filter trackCuts = ((aod::track::isGlobalTrack == true) || (aod::track::isGlobalTrackSDD == true));
+  Filter trackCuts = ((aod::track::isGlobalTrack == (uint8_t) true) || (aod::track::isGlobalTrackSDD == (uint8_t) true));
 
   void process(soa::Join<aod::Collisions, aod::McCollisionLabels>::iterator const& collision,
                soa::Filtered<soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksExtended, aod::McTrackLabels, aod::TrackSelection>> const& tracks,
                aod::McParticles& mcParticles, aod::McCollisions const& mcCollisions)
   {
-    LOGF(info, "vtx-z (data) = %f | vtx-z (MC) = %f", collision.posZ(), collision.label().posZ());
+    LOGF(info, "vtx-z (data) = %f | vtx-z (MC) = %f", collision.posZ(), collision.mcCollision().posZ());
     for (auto& track : tracks) {
-      const auto pdg = Form("%i", track.label().pdgCode());
-      if (!isPhysicalPrimary(mcParticles, track.label())) {
+      const auto pdg = Form("%i", track.mcParticle().pdgCode());
+      if (!isPhysicalPrimary(mcParticles, track.mcParticle())) {
         pdgsecH->Fill(pdg, 1);
         const float pdgbinsec = pdgH->GetXaxis()->GetBinCenter(pdgsecH->GetXaxis()->FindBin(pdg));
         dcaxysecH->Fill(track.dcaXY(), pdgbinsec);
@@ -129,8 +129,8 @@ struct ReconstructedTask {
       dcaxyH->Fill(track.dcaXY(), pdgbin);
       dcazH->Fill(track.dcaZ(), pdgbin);
 
-      etaDiff->Fill(track.label().eta() - track.eta(), pdgbin);
-      auto delta = track.label().phi() - track.phi();
+      etaDiff->Fill(track.mcParticle().eta() - track.eta(), pdgbin);
+      auto delta = track.mcParticle().phi() - track.phi();
       if (delta > M_PI) {
         delta -= 2 * M_PI;
       }
@@ -138,8 +138,8 @@ struct ReconstructedTask {
         delta += 2 * M_PI;
       }
       phiDiff->Fill(delta, pdgbin);
-      pDiff->Fill(sqrt(track.label().px() * track.label().px() + track.label().py() * track.label().py() + track.label().pz() * track.label().pz()) - track.p(), pdgbin);
-      ptDiff->Fill(track.label().pt() - track.pt(), pdgbin);
+      pDiff->Fill(sqrt(track.mcParticle().px() * track.mcParticle().px() + track.mcParticle().py() * track.mcParticle().py() + track.mcParticle().pz() * track.mcParticle().pz()) - track.p(), pdgbin);
+      ptDiff->Fill(track.mcParticle().pt() - track.pt(), pdgbin);
     }
   }
 };
@@ -151,13 +151,13 @@ WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
   const bool reco = cfgc.options().get<int>("add-reco");
   WorkflowSpec workflow{};
   if (vertex) {
-    workflow.push_back(adaptAnalysisTask<VertexTask>("vertex-histogram"));
+    workflow.push_back(adaptAnalysisTask<VertexTask>(cfgc, TaskName{"vertex-histogram"}));
   }
   if (gen) {
-    workflow.push_back(adaptAnalysisTask<GeneratedTask>("generator-histogram"));
+    workflow.push_back(adaptAnalysisTask<GeneratedTask>(cfgc, TaskName{"generator-histogram"}));
   }
   if (reco) {
-    workflow.push_back(adaptAnalysisTask<ReconstructedTask>("reconstructed-histogram"));
+    workflow.push_back(adaptAnalysisTask<ReconstructedTask>(cfgc, TaskName{"reconstructed-histogram"}));
   }
   return workflow;
 }

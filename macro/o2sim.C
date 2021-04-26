@@ -56,8 +56,8 @@ FairRunSim* o2sim_init(bool asservice)
   // update the parameters from stuff given at command line (overrides file-based version)
   o2::conf::ConfigurableParam::updateFromString(confref.getKeyValueString());
 
-  // write the configuration file
-  o2::conf::ConfigurableParam::writeINI("o2sim_configuration.ini");
+  // write the final configuration file
+  o2::conf::ConfigurableParam::writeINI(o2::base::NameConf::getMCConfigFileName(confref.getOutPrefix()));
 
   // we can update the binary CCDB entry something like this ( + timestamp key )
   // o2::conf::ConfigurableParam::toCCDB("params_ccdb.root");
@@ -150,6 +150,11 @@ FairRunSim* o2sim_init(bool asservice)
       }
       grp.addDetReadOut(o2::detectors::DetID(det->GetDetId()));
     }
+    // CTP is not a physical detector, just flag in the GRP if requested
+    if (isActivated("CTP")) {
+      grp.addDetReadOut(o2::detectors::DetID::CTP);
+    }
+
     grp.print();
     printf("VMC: %p\n", TVirtualMC::GetMC());
     auto field = dynamic_cast<o2::field::MagneticField*>(run->GetField());
@@ -158,6 +163,7 @@ FairRunSim* o2sim_init(bool asservice)
       o2::units::Current_t currL3 = field->getCurrentSolenoid();
       grp.setL3Current(currL3);
       grp.setDipoleCurrent(currDip);
+      grp.setFieldUniformity(field->IsUniform());
     }
     // save
     std::string grpfilename = o2::base::NameConf::getGRPFileName(confref.getOutPrefix());

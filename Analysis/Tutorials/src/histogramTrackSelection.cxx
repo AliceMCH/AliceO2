@@ -15,8 +15,8 @@
 
 #include <cmath>
 
-#include "Analysis/TrackSelection.h"
-#include "Analysis/TrackSelectionTables.h"
+#include "AnalysisCore/TrackSelection.h"
+#include "AnalysisDataModel/TrackSelectionTables.h"
 
 using namespace o2;
 using namespace o2::framework;
@@ -52,8 +52,8 @@ struct HistogramTrackSelection {
 //--------------------------------------------------------------------
 // Workflow definition
 //--------------------------------------------------------------------
-WorkflowSpec defineDataProcessing(ConfigContext const&)
+WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
 {
   return WorkflowSpec{
-    adaptAnalysisTask<HistogramTrackSelection>("histogram-track-selection")};
+    adaptAnalysisTask<HistogramTrackSelection>(cfgc, TaskName{"histogram-track-selection"})};
 }

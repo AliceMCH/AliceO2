@@ -13,8 +13,9 @@
 //
 // Author: Jan Fiete Grosse-Oetringhaus
 
-#include "Analysis/CorrelationContainer.h"
+#include "AnalysisCore/CorrelationContainer.h"
 #include "Framework/StepTHn.h"
+#include "Framework/Logger.h"
 #include "THnSparse.h"
 #include "TMath.h"
 #include "TList.h"
@@ -25,9 +26,6 @@
 #include "TCanvas.h"
 #include "TF1.h"
 #include "THn.h"
-
-// for LOGF
-#include "Framework/AnalysisTask.h"
 
 ClassImp(CorrelationContainer)
 
@@ -1776,8 +1774,8 @@ void CorrelationContainer::symmetrizepTBins()
               for (Int_t i4 = 1; i4 <= target->GetAxis(4)->GetNbins(); i4++) {
                 Int_t binEta = target->GetAxis(0)->FindBin(-target->GetAxis(0)->GetBinCenter(i0));
                 Double_t phi = -target->GetAxis(4)->GetBinCenter(i4);
-                if (phi < -TMath::Pi() / 2) {
-                  phi += TMath::TwoPi();
+                if (phi < -M_PI / 2) {
+                  phi += M_PI * 2;
                 }
                 Int_t binPhi = target->GetAxis(4)->FindBin(phi);
 

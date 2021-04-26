@@ -32,9 +32,9 @@
 #include "MIDRaw/CrateParameters.h"
 #include "MIDRaw/DecodedDataAggregator.h"
 #include "MIDRaw/Decoder.h"
-#include "MIDRaw/GBTUserLogicDecoder.h"
-#include "MIDRaw/GBTUserLogicEncoder.h"
 #include "MIDRaw/Encoder.h"
+#include "MIDRaw/GBTUserLogicEncoder.h"
+#include "MIDRaw/LinkDecoder.h"
 
 BOOST_AUTO_TEST_SUITE(o2_mid_raw)
 
@@ -119,7 +119,7 @@ std::tuple<std::vector<o2::mid::ColumnData>, std::vector<o2::mid::ROFRecord>> en
   std::remove(tmpFilename.c_str());
   std::remove(tmpConfigFilename.c_str());
 
-  o2::mid::Decoder<o2::mid::GBTUserLogicDecoder> decoder;
+  o2::mid::Decoder decoder;
   gsl::span<const uint8_t> data(reinterpret_cast<uint8_t*>(buffer.data()), buffer.size());
   decoder.process(data);
 
@@ -145,7 +145,7 @@ BOOST_AUTO_TEST_CASE(ColumnDataConverter)
   inData[ir].emplace_back(getColData(14, 1, 0, 0, 0, 0xFF));
 
   std::vector<o2::mid::ROFRecord> rofs;
-  std::vector<o2::mid::LocalBoardRO> outData;
+  std::vector<o2::mid::ROBoard> outData;
   auto inEventType = o2::mid::EventType::Standard;
   o2::mid::ColumnDataToLocalBoard converter;
   converter.setDebugMode(true);
@@ -153,14 +153,8 @@ BOOST_AUTO_TEST_CASE(ColumnDataConverter)
     converter.process(item.second);
     auto firstEntry = outData.size();
     for (auto& gbtItem : converter.getData()) {
-      auto crateId = o2::mid::crateparams::getCrateIdFromROId(gbtItem.first);
       for (auto& loc : gbtItem.second) {
-        // The crate ID information is not encoded in the local board information,
-        // since it is not needed at this level (it is encoded in the feeId)
-        // However, when we put the info back together, we need to know the crate ID
-        // So we encode it in the local board ID in the output
         outData.emplace_back(loc);
-        outData.back().boardId = o2::mid::crateparams::makeUniqueLocID(crateId, loc.boardId);
       }
       rofs.push_back({item.first, inEventType, firstEntry, outData.size() - firstEntry});
     }
@@ -176,9 +170,9 @@ BOOST_AUTO_TEST_CASE(GBTUserLogicDecoder)
 {
   /// Event with just one link fired
 
-  std::map<uint16_t, std::vector<o2::mid::LocalBoardRO>> inData;
+  std::map<uint16_t, std::vector<o2::mid::ROBoard>> inData;
   uint16_t bc = 100;
-  o2::mid::LocalBoardRO loc;
+  o2::mid::ROBoard loc;
   // Crate 5 link 0
   loc.statusWord = o2::mid::raw::sSTARTBIT | o2::mid::raw::sCARDTYPE;
   loc.triggerWord = 0;
@@ -199,9 +193,9 @@ BOOST_AUTO_TEST_CASE(GBTUserLogicDecoder)
 
   uint8_t crateId = 5;
   uint8_t linkInCrate = 0;
-  uint16_t feeId = o2::mid::crateparams::makeROId(crateId, linkInCrate);
+  uint16_t gbtUniqueId = o2::mid::crateparams::makeGBTUniqueId(crateId, linkInCrate);
   o2::mid::GBTUserLogicEncoder encoder;
-  encoder.setFeeId(feeId);
+  encoder.setGBTUniqueId(gbtUniqueId);
   for (auto& item : inData) {
     encoder.process(item.second, o2::InteractionRecord(item.first, 0));
   }
@@ -210,23 +204,25 @@ BOOST_AUTO_TEST_CASE(GBTUserLogicDecoder)
   o2::header::RAWDataHeader rdh;
   auto memSize = buf.size() + 64;
   rdh.word1 |= (memSize | (memSize << 16));
-  // Sets the feeId
-  rdh.word0 |= ((5 * 2) << 16);
-  o2::mid::GBTUserLogicDecoder decoder;
-  decoder.init(feeId);
+  // Sets the linkId
+  uint16_t feeId = gbtUniqueId / 8;
+  rdh.word0 |= (feeId << 16);
+  auto decoder = o2::mid::createLinkDecoder(feeId);
+  std::vector<o2::mid::ROBoard> data;
+  std::vector<o2::mid::ROFRecord> rofs;
   std::vector<uint8_t> convertedBuffer(buf.size());
   memcpy(convertedBuffer.data(), buf.data(), buf.size());
-  decoder.process(convertedBuffer, rdh);
-  BOOST_REQUIRE(decoder.getROFRecords().size() == inData.size());
+  decoder->process(convertedBuffer, rdh, data, rofs);
+  BOOST_REQUIRE(rofs.size() == inData.size());
   auto inItMap = inData.begin();
-  for (auto rofIt = decoder.getROFRecords().begin(); rofIt != decoder.getROFRecords().end(); ++rofIt) {
+  for (auto rofIt = rofs.begin(); rofIt != rofs.end(); ++rofIt) {
     BOOST_TEST(rofIt->interactionRecord.bc == inItMap->first);
     BOOST_TEST(rofIt->nEntries == inItMap->second.size());
-    auto outLoc = decoder.getData().begin() + rofIt->firstEntry;
+    auto outLoc = data.begin() + rofIt->firstEntry;
     for (auto inLoc = inItMap->second.begin(); inLoc != inItMap->second.end(); ++inLoc) {
       BOOST_TEST(inLoc->statusWord == outLoc->statusWord);
       BOOST_TEST(inLoc->triggerWord == outLoc->triggerWord);
-      BOOST_TEST(o2::mid::crateparams::makeUniqueLocID(crateId, inLoc->boardId) == outLoc->boardId);
+      BOOST_TEST(o2::mid::raw::makeUniqueLocID(crateId, inLoc->boardId) == outLoc->boardId);
       BOOST_TEST(inLoc->firedChambers == outLoc->firedChambers);
       for (int ich = 0; ich < 4; ++ich) {
         BOOST_TEST(inLoc->patternsBP[ich] == outLoc->patternsBP[ich]);

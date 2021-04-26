@@ -31,7 +31,7 @@ struct Tracklet final {
 #ifdef _ALLOW_DEBUG_TREES_ITS_
   unsigned char isEmpty() const;
   void dump();
-  unsigned char operator<(const Tracklet&);
+  unsigned char operator<(const Tracklet&) const;
 #endif
 
   int firstClusterIndex;
@@ -51,8 +51,8 @@ GPUdi() Tracklet::Tracklet(const int firstClusterOrderingIndex, const int second
     secondClusterIndex{secondClusterOrderingIndex},
     tanLambda{(firstCluster.zCoordinate - secondCluster.zCoordinate) /
               (firstCluster.rCoordinate - secondCluster.rCoordinate)},
-    phiCoordinate{gpu::GPUCommonMath::ATan2(firstCluster.yCoordinate - secondCluster.yCoordinate,
-                                            firstCluster.xCoordinate - secondCluster.xCoordinate)}
+    phiCoordinate{o2::gpu::GPUCommonMath::ATan2(firstCluster.yCoordinate - secondCluster.yCoordinate,
+                                                firstCluster.xCoordinate - secondCluster.xCoordinate)}
 {
   // Nothing to do
 }
@@ -63,7 +63,7 @@ inline unsigned char Tracklet::isEmpty() const
   return !firstClusterIndex && !secondClusterIndex && !tanLambda && !phiCoordinate;
 }
 
-inline unsigned char Tracklet::operator<(const Tracklet& t)
+inline unsigned char Tracklet::operator<(const Tracklet& t) const
 {
   if (isEmpty() && t.isEmpty()) {
     return false;

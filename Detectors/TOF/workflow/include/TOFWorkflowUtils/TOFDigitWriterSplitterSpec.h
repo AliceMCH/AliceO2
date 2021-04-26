@@ -14,6 +14,8 @@
 /// @file   TOFDigitWriterSplitterSpec.h
 /// @brief  Device to write to tree the information for TOF time slewing calibration.
 
+#include "Framework/ControlService.h"
+#include "Framework/ConfigParamRegistry.h"
 #include "Framework/DataProcessorSpec.h"
 #include "Framework/Task.h"
 #include "TOFBase/Digit.h"
@@ -31,16 +33,18 @@ class TOFDigitWriterSplitter : public Task
 {
   using OutputType = std::vector<o2::tof::Digit>;
   using ReadoutWinType = std::vector<o2::tof::ReadoutWindowData>;
-  using PatternType = std::vector<uint32_t>;
+  using PatternType = std::vector<uint8_t>;
   using ErrorType = std::vector<uint64_t>;
   using HeaderType = o2::tof::DigitHeader;
+
+  std::string mBaseName;
 
  public:
   TOFDigitWriterSplitter(int nTF, bool storeErr = false) : mTFthr(nTF), mStoreErrors(storeErr) {}
 
   void createAndOpenFileAndTree()
   {
-    TString filename = TString::Format("tofdigits_%d.root", mCount);
+    TString filename = TString::Format("%s_%06d.root", mBaseName.c_str(), mCount);
     LOG(DEBUG) << "opening file " << filename.Data();
     mfileOut.reset(TFile::Open(TString::Format("%s", filename.Data()), "RECREATE"));
     mOutputTree = std::make_unique<TTree>("o2sim", "Tree with TOF digits");
@@ -48,14 +52,17 @@ class TOFDigitWriterSplitter : public Task
     mOutputTree->Branch("TOFDigit", &mPDigits);
     mOutputTree->Branch("TOFReadoutWindow", &mPROW);
     mOutputTree->Branch("TOFPatterns", &mPDia);
-    if (mStoreErrors)
+    if (mStoreErrors) {
       mOutputTree->Branch("TOFErrors", &mPErr);
+    }
 
     mNTF = 0;
   }
 
   void init(o2::framework::InitContext& ic) final
   {
+    mBaseName = ic.options().get<std::string>("output-base-name");
+
     mCount = 0;
     createAndOpenFileAndTree();
   }
@@ -133,7 +140,7 @@ class TOFDigitWriterSplitter : public Task
 namespace framework
 {
 
-DataProcessorSpec getTOFCalibCollectorWriterSpec(int nTF, bool storeErr = false)
+DataProcessorSpec getTOFDigitWriterSplitterSpec(int nTF, bool storeErr = false)
 {
   std::vector<InputSpec> inputs;
   inputs.emplace_back("header", o2::header::gDataOriginTOF, "DIGITHEADER");
@@ -141,8 +148,9 @@ DataProcessorSpec getTOFCalibCollectorWriterSpec(int nTF, bool storeErr = false)
   inputs.emplace_back("rows", o2::header::gDataOriginTOF, "READOUTWINDOW");
   inputs.emplace_back("patterns", o2::header::gDataOriginTOF, "PATTERNS");
 
-  if (storeErr)
+  if (storeErr) {
     inputs.emplace_back("errors", o2::header::gDataOriginTOF, "ERRORS");
+  }
 
   std::vector<OutputSpec> outputs; // empty
 
@@ -151,7 +159,7 @@ DataProcessorSpec getTOFCalibCollectorWriterSpec(int nTF, bool storeErr = false)
     inputs,
     outputs,
     AlgorithmSpec{adaptFromTask<o2::tof::TOFDigitWriterSplitter>(nTF, storeErr)},
-    Options{}};
+    Options{{"output-base-name", VariantType::String, "tofdigits", {"Name of the input file (root extension will be added)"}}}};
 }
 
 } // namespace framework

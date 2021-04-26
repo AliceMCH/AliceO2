@@ -10,6 +10,10 @@
 #include "Framework/ConfigParamSpec.h"
 #include "Framework/CompletionPolicyHelpers.h"
 #include "Framework/DeviceSpec.h"
+#include "Framework/RawDeviceService.h"
+#include "Framework/ControlService.h"
+#include "Framework/RunningWorkflowInfo.h"
+#include <FairMQDevice.h>
 #include <InfoLogger/InfoLogger.hxx>
 
 #include <chrono>
@@ -39,10 +43,11 @@ void customize(std::vector<CompletionPolicy>& policies)
 
 AlgorithmSpec simplePipe(std::string const& what, int minDelay)
 {
-  return AlgorithmSpec{adaptStateful([what, minDelay]() {
+  return AlgorithmSpec{adaptStateful([what, minDelay](RunningWorkflowInfo const& runningWorkflow) {
     srand(getpid());
-    return adaptStateless([what, minDelay](DataAllocator& outputs) {
-      std::this_thread::sleep_for(std::chrono::seconds((rand() % 5) + minDelay));
+    LOG(INFO) << "There are " << runningWorkflow.devices.size() << "  devices in the workflow";
+    return adaptStateless([what, minDelay](DataAllocator& outputs, RawDeviceService& device) {
+      device.device()->WaitFor(std::chrono::seconds(rand() % 2));
       auto& bData = outputs.make<int>(OutputRef{what}, 1);
     });
   })};
@@ -57,8 +62,8 @@ WorkflowSpec defineDataProcessing(ConfigContext const& specs)
      {OutputSpec{{"a1"}, "TST", "A1"},
       OutputSpec{{"a2"}, "TST", "A2"}},
      AlgorithmSpec{adaptStateless(
-       [](DataAllocator& outputs, InfoLogger& logger) {
-         std::this_thread::sleep_for(std::chrono::seconds(rand() % 2));
+       [](DataAllocator& outputs, InfoLogger& logger, RawDeviceService& device) {
+         device.device()->WaitFor(std::chrono::seconds(rand() % 2));
          auto& aData = outputs.make<int>(OutputRef{"a1"}, 1);
          auto& bData = outputs.make<int>(OutputRef{"a2"}, 1);
          logger.log("This goes to infologger");

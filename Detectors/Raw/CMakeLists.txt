@@ -11,10 +11,11 @@
 o2_add_library(DetectorsRaw
                SOURCES src/RawFileReader.cxx
                        src/RawFileWriter.cxx
-	       	       src/SimpleRawReader.cxx
-		       src/SimpleSTF.cxx
-	               src/HBFUtils.cxx
-	               src/RDHUtils.cxx		       
+                       src/SimpleRawReader.cxx
+                       src/SimpleSTF.cxx
+                       src/HBFUtils.cxx
+                       src/RDHUtils.cxx
+                       src/HBFUtilsInitializer.cxx
                PUBLIC_LINK_LIBRARIES FairRoot::Base
                                      O2::Headers
                                      O2::CommonDataFormat
@@ -35,11 +36,17 @@ o2_add_executable(file-check
                   PUBLIC_LINK_LIBRARIES O2::DetectorsRaw
                   Boost::program_options)
 
+o2_add_executable(file-split
+                  COMPONENT_NAME raw
+                  SOURCES src/rawfileSplit.cxx
+                  PUBLIC_LINK_LIBRARIES O2::DetectorsRaw)
+
 o2_add_executable(file-reader-workflow
                   COMPONENT_NAME raw
                   SOURCES src/rawfile-reader-workflow.cxx
                   src/RawFileReaderWorkflow.cxx
                   PUBLIC_LINK_LIBRARIES O2::DetectorsRaw)
+
 
 o2_add_test(HBFUtils
             PUBLIC_LINK_LIBRARIES O2::DetectorsRaw
@@ -51,7 +58,7 @@ o2_add_test(HBFUtils
 o2_add_test(RawReaderWriter
             PUBLIC_LINK_LIBRARIES O2::DetectorsRaw
                                   O2::Steer
-	                          O2::DPLUtils
+                            O2::DPLUtils
             SOURCES test/testRawReaderWriter.cxx
             COMPONENT_NAME raw
             LABELS raw)

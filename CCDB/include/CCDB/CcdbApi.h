@@ -25,6 +25,7 @@
 #include "CCDB/CcdbObjectInfo.h"
 
 class TFile;
+class TGrid;
 
 namespace o2
 {
@@ -128,35 +129,6 @@ class CcdbApi //: public DatabaseInterface
   {
     storeAsTFile(rootobj, path, metadata, startValidityTimestamp, endValidityTimestamp);
   }
-
-  /**
-   * Retrieve object at the given path for the given timestamp.
-   *
-   * @param path The path where the object is to be found.
-   * @param metadata Key-values representing the metadata to filter out objects.
-   * @param timestamp Timestamp of the object to retrieve. If omitted, current timestamp is used.
-   * @return the object, or nullptr if none were found.
-   * @deprecated in favour of retrieveFromTFileAny
-   */
-  TObject* retrieve(std::string const& path, std::map<std::string, std::string> const& metadata,
-                    long timestamp = -1) const;
-
-  /**
-   * Retrieve object at the given path for the given timestamp.
-   *
-   * @param path The path where the object is to be found.
-   * @param metadata Key-values representing the metadata to filter out objects.
-   * @param timestamp Timestamp of the object to retrieve. If omitted, current timestamp is used.
-   * @param headers Map to be populated with the headers we received, if it is not null.
-   * @param optional etag from previous call
-   * @param optional createdNotAfter upper time limit for the object creation timestamp (TimeMachine mode)
-   * @param optional createdNotBefore lower time limit for the object creation timestamp (TimeMachine mode)
-   * @return the object, or nullptr if none were found.
-   * @deprecated in favour of retrieveFromTFileAny as it is not limited to TObjects.
-   */
-  TObject* retrieveFromTFile(std::string const& path, std::map<std::string, std::string> const& metadata,
-                             long timestamp = -1, std::map<std::string, std::string>* headers = nullptr, std::string const& etag = "",
-                             const std::string& createdNotAfter = "", const std::string& createdNotBefore = "") const;
 
   /**
    * Retrieve object at the given path for the given timestamp.
@@ -361,7 +333,6 @@ class CcdbApi //: public DatabaseInterface
   void storeAsTFile_impl(const void* obj1, std::type_info const& info, std::string const& path, std::map<std::string, std::string> const& metadata,
                          long startValidityTimestamp = -1, long endValidityTimestamp = -1) const;
 
- private:
   /**
    * A generic helper implementation to query obj whose type is given by a std::type_info
    */
@@ -369,23 +340,49 @@ class CcdbApi //: public DatabaseInterface
                           long timestamp = -1, std::map<std::string, std::string>* headers = nullptr, std::string const& etag = "",
                           const std::string& createdNotAfter = "", const std::string& createdNotBefore = "") const;
 
+ private:
   /**
    * A helper function to extract object from a local ROOT file
    * @param filename name of ROOT file
    * @param cl The TClass object describing the serialized type
    * @return raw pointer to created object
    */
-  void* extractFromLocalFile(std::string const& filename, TClass const* cl) const;
+  void* extractFromLocalFile(std::string const& filename, std::type_info const& tinfo) const;
+
+  /**
+   * Helper function to download binary content from alien:// storage
+   * @param fullUrl The alien URL
+   * @param tcl The TClass object describing the serialized type
+   * @return raw pointer to created object
+   */
+  void* downloadAlienContent(std::string const& fullUrl, std::type_info const& tinfo) const;
+
+  // initialize the TGrid (Alien connection)
+  bool initTGrid() const;
+  // checks if an alien token is available, required to make a TGrid connection
+  bool checkAlienToken() const;
+
+  /// Queries the CCDB server and navigates through possible redirects until binary content is found; Retrieves content as instance
+  /// given by tinfo if that is possible. Returns nullptr if something fails...
+  void* navigateURLsAndRetrieveContent(CURL*, std::string const& url, std::type_info const& tinfo, std::map<std::string, std::string>* headers) const;
+
+  // helper that interprets a content chunk as TMemFile and extracts the object therefrom
+  void* interpretAsTMemFileAndExtract(char* contentptr, size_t contentsize, std::type_info const& tinfo) const;
 
   /**
    * Initialization of CURL
    */
   void curlInit();
 
+  // convert type_info to TClass, throw on failure
+  static TClass* tinfo2TClass(std::type_info const& tinfo);
+
   /// Base URL of the CCDB (with port)
   std::string mUrl{};
   std::string mSnapshotTopPath{};
   bool mInSnapshotMode = false;
+  mutable TGrid* mAlienInstance = nullptr;                     // a cached connection to TGrid (needed for Alien locations)
+  bool mHaveAlienToken = false;                                // stores if an alien token is available
 
   ClassDefNV(CcdbApi, 1);
 };

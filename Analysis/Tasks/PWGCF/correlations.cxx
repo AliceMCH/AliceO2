@@ -13,12 +13,13 @@
 #include "Framework/ASoAHelpers.h"
 #include <CCDB/BasicCCDBManager.h>
 #include "Framework/StepTHn.h"
+#include "Framework/HistogramRegistry.h"
 
-#include "Analysis/EventSelection.h"
-#include "Analysis/TrackSelectionTables.h"
-#include "Analysis/Centrality.h"
-#include "Analysis/CorrelationContainer.h"
-#include "Analysis/PairCuts.h"
+#include "AnalysisDataModel/EventSelection.h"
+#include "AnalysisDataModel/TrackSelectionTables.h"
+#include "AnalysisDataModel/Centrality.h"
+#include "AnalysisCore/CorrelationContainer.h"
+#include "AnalysisCore/PairCuts.h"
 
 #include <TH1F.h>
 #include <cmath>
@@ -57,13 +58,14 @@ struct CorrelationTask {
 
   // Filters and input definitions
   Filter collisionFilter = nabs(aod::collision::posZ) < cfgCutVertex;
-  Filter trackFilter = (nabs(aod::track::eta) < cfgCutEta) && (aod::track::pt > cfgCutPt) && ((aod::track::isGlobalTrack == true) || (aod::track::isGlobalTrackSDD == true));
+  // TODO bitwise operations not supported, yet
+  // Filter vertexTypeFilter = aod::collision::flags & (uint16_t) aod::collision::CollisionFlagsRun2::Run2VertexerTracks;
+  Filter trackFilter = (nabs(aod::track::eta) < cfgCutEta) && (aod::track::pt > cfgCutPt) && ((aod::track::isGlobalTrack == (uint8_t) true) || (aod::track::isGlobalTrackSDD == (uint8_t) true));
   using myTracks = soa::Filtered<soa::Join<aod::Tracks, aod::TrackSelection>>;
 
   // Output definitions
   OutputObj<CorrelationContainer> same{"sameEvent"};
   OutputObj<CorrelationContainer> mixed{"mixedEvent"};
-  //OutputObj<TDirectory> qaOutput{"qa"};
 
   struct Config {
     bool mPairCuts = false;
@@ -71,13 +73,10 @@ struct CorrelationTask {
     THn* mEfficiencyAssociated = nullptr;
   } cfg;
 
-  // HistogramRegistry registry{"qa", true, {
-  //   {"yields", "centrality vs pT vs eta",  {HistogramType::kTH3F, { {100, 0, 100, "centrality"}, {40, 0, 20, "p_{T}"}, {100, -2, 2, "#eta"} }}},
-  //   {"etaphi", "centrality vs eta vs phi", {HistogramType::kTH3F, { {100, 0, 100, "centrality"}, {100, -2, 2, "#eta"}, {200, 0, 2 * M_PI, "#varphi"} }}}
-  // }};
-
-  OutputObj<TH3F> yields{TH3F("yields", "centrality vs pT vs eta", 100, 0, 100, 40, 0, 20, 100, -2, 2)};
-  OutputObj<TH3F> etaphi{TH3F("etaphi", "centrality vs eta vs phi", 100, 0, 100, 100, -2, 2, 200, 0, 2 * M_PI)};
+  HistogramRegistry registry{"registry", {
+                                           {"yields", "centrality vs pT vs eta", {HistType::kTH3F, {{100, 0, 100, "centrality"}, {40, 0, 20, "p_{T}"}, {100, -2, 2, "#eta"}}}},          //
+                                           {"etaphi", "centrality vs eta vs phi", {HistType::kTH3F, {{100, 0, 100, "centrality"}, {100, -2, 2, "#eta"}, {200, 0, 2 * M_PI, "#varphi"}}}} //
+                                         }};
 
   PairCuts mPairCuts;
 
@@ -99,6 +98,8 @@ struct CorrelationTask {
       "p_t_eff: 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0, 3.25, 3.5, 3.75, 4.0, 4.5, 5.0, 6.0, 7.0, 8.0\n"
       "vertex_eff: 10 | -10, 10\n";
 
+    mPairCuts.SetHistogramRegistry(&registry);
+
     if (cfgPairCutPhoton > 0 || cfgPairCutK0 > 0 || cfgPairCutLambda > 0 || cfgPairCutPhi > 0 || cfgPairCutRho > 0) {
       mPairCuts.SetPairCut(PairCuts::Photon, cfgPairCutPhoton);
       mPairCuts.SetPairCut(PairCuts::K0, cfgPairCutK0);
@@ -115,7 +116,6 @@ struct CorrelationTask {
     // --- OBJECT INIT ---
     same.setObject(new CorrelationContainer("sameEvent", "sameEvent", "NumberDensityPhiCentralityVtx", binning));
     mixed.setObject(new CorrelationContainer("mixedEvent", "mixedEvent", "NumberDensityPhiCentralityVtx", binning));
-    //qaOutput.setObject(new TDirectory("qa", "qa"));
 
     // o2-ccdb-upload -p Users/jgrosseo/correlations/LHC15o -f /tmp/correction_2011_global.root -k correction
 
@@ -151,17 +151,26 @@ struct CorrelationTask {
 
     LOGF(info, "Tracks for collision: %d | Vertex: %.1f | INT7: %d | V0M: %.1f", tracks.size(), collision.posZ(), collision.sel7(), collision.centV0M());
 
+    if (std::abs(collision.posZ()) > cfgCutVertex) {
+      LOGF(warning, "Unexpected: Vertex %f outside of cut %f", collision.posZ(), cfgCutVertex);
+    }
+
     const auto centrality = collision.centV0M();
 
     same->fillEvent(centrality, CorrelationContainer::kCFStepAll);
 
-    if (!collision.sel7()) {
+    if (!collision.alias()[kINT7] || !collision.sel7()) {
       return;
     }
 
     same->fillEvent(centrality, CorrelationContainer::kCFStepTriggered);
 
-    // vertex already checked as filter
+    // vertex range already checked as filter, but bitwise operations not yet supported
+    // TODO (collision.flags() != 0) can be removed with next conversion (AliPhysics >= 20210305)
+    if ((collision.flags() != 0) && ((collision.flags() & aod::collision::CollisionFlagsRun2::Run2VertexerTracks) != aod::collision::CollisionFlagsRun2::Run2VertexerTracks)) {
+      return;
+    }
+
     same->fillEvent(centrality, CorrelationContainer::kCFStepVertex);
 
     same->fillEvent(centrality, CorrelationContainer::kCFStepReconstructed);
@@ -179,16 +188,12 @@ struct CorrelationTask {
     }
 
     for (auto& track1 : tracks) {
-
       // LOGF(info, "Track %f | %f | %f  %d %d", track1.eta(), track1.phi(), track1.pt(), track1.isGlobalTrack(), track1.isGlobalTrackSDD());
 
-      // control histograms
-      // ((TH3*) (registry.get("yields").get()))->Fill(centrality, track1.pt(), track1.eta());
-      // ((TH3*) (registry.get("etaphi").get()))->Fill(centrality, track1.eta(), track1.phi());
-      yields->Fill(centrality, track1.pt(), track1.eta());
-      etaphi->Fill(centrality, track1.eta(), track1.phi());
+      registry.fill(HIST("yields"), centrality, track1.pt(), track1.eta());
+      registry.fill(HIST("etaphi"), centrality, track1.eta(), track1.phi());
 
-      if (cfgTriggerCharge != 0 && cfgTriggerCharge * track1.charge() < 0) {
+      if (cfgTriggerCharge != 0 && cfgTriggerCharge * track1.sign() < 0) {
         continue;
       }
 
@@ -211,10 +216,10 @@ struct CorrelationTask {
           continue;
         }
 
-        if (cfgAssociatedCharge != 0 && cfgAssociatedCharge * track2.charge() < 0) {
+        if (cfgAssociatedCharge != 0 && cfgAssociatedCharge * track2.sign() < 0) {
           continue;
         }
-        if (cfgPairCharge != 0 && cfgPairCharge * track1.charge() * track2.charge() < 0) {
+        if (cfgPairCharge != 0 && cfgPairCharge * track1.sign() * track2.sign() < 0) {
           continue;
         }
 
@@ -232,11 +237,11 @@ struct CorrelationTask {
         }
 
         float deltaPhi = track1.phi() - track2.phi();
-        if (deltaPhi > 1.5 * TMath::Pi()) {
-          deltaPhi -= TMath::TwoPi();
+        if (deltaPhi > 1.5 * M_PI) {
+          deltaPhi -= M_PI * 2;
         }
-        if (deltaPhi < -0.5 * TMath::Pi()) {
-          deltaPhi += TMath::TwoPi();
+        if (deltaPhi < -0.5 * M_PI) {
+          deltaPhi += M_PI * 2;
         }
 
         same->getPairHist()->Fill(CorrelationContainer::kCFStepReconstructed,
@@ -260,7 +265,7 @@ struct CorrelationTask {
 
     for (auto track1 = tracks.begin(); track1 != tracks.end(); ++track1) {
 
-      if (cfgTriggerCharge != 0 && cfgTriggerCharge * track1.charge() < 0) {
+      if (cfgTriggerCharge != 0 && cfgTriggerCharge * track1.sign() < 0) {
         continue;
       }
 
@@ -273,13 +278,13 @@ struct CorrelationTask {
     for (auto& [track1, track2] : combinations(tracks, tracks)) {
       //LOGF(info, "Combination %d %d", track1.index(), track2.index());
 
-      if (cfgTriggerCharge != 0 && cfgTriggerCharge * track1.charge() < 0) {
+      if (cfgTriggerCharge != 0 && cfgTriggerCharge * track1.sign() < 0) {
         continue;
       }
-      if (cfgAssociatedCharge != 0 && cfgAssociatedCharge * track2.charge() < 0) {
+      if (cfgAssociatedCharge != 0 && cfgAssociatedCharge * track2.sign() < 0) {
         continue;
       }
-      if (cfgPairCharge != 0 && cfgPairCharge * track1.charge() * track2.charge() < 0) {
+      if (cfgPairCharge != 0 && cfgPairCharge * track1.sign() * track2.sign() < 0) {
         continue;
       }
 
@@ -292,11 +297,11 @@ struct CorrelationTask {
       }
 
       float deltaPhi = track1.phi() - track2.phi();
-      if (deltaPhi > 1.5 * TMath::Pi()) {
-        deltaPhi -= TMath::TwoPi();
+      if (deltaPhi > 1.5 * M_PI) {
+        deltaPhi -= M_PI * 2;
       }
-      if (deltaPhi < -0.5 * TMath::Pi()) {
-        deltaPhi += TMath::TwoPi();
+      if (deltaPhi < -0.5 * M_PI) {
+        deltaPhi += M_PI * 2;
       }
 
       same->getPairHist()->Fill(CorrelationContainer::kCFStepReconstructed,
@@ -316,8 +321,8 @@ struct CorrelationTask {
   }
 };
 
-WorkflowSpec defineDataProcessing(ConfigContext const&)
+WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
 {
   return WorkflowSpec{
-    adaptAnalysisTask<CorrelationTask>("correlation-task")};
+    adaptAnalysisTask<CorrelationTask>(cfgc)};
 }

@@ -15,46 +15,81 @@
 
 #include "MIDRaw/ELinkDecoder.h"
 
-#include "MIDRaw/LocalBoardRO.h"
-
 namespace o2
 {
 namespace mid
 {
 
-void ELinkDecoder::add(uint8_t byte)
+void ELinkDecoder::setBareDecoder(bool isBare)
 {
-  /// Adds next byte
-  mBytes.emplace_back(byte);
-  if (mBytes.size() == sMinimumSize) {
-    if (raw::isLoc(mBytes[0])) {
-      // This is a local card
-      uint8_t mask = getInputs();
-      for (int ich = 0; ich < 4; ++ich) {
-        if ((mask >> ich) & 0x1) {
-          // We expect 2 bytes for the BP and 2 for the NBP
-          mTotalSize += 4;
-        }
+  /// Sets the decoder type
+  mMinimumSize = isBare ? 5 : 6;
+  mMaximumSize = isBare ? 21 : 22;
+  mTotalSize = mMinimumSize;
+}
+
+bool ELinkDecoder::add(size_t& idx, gsl::span<const uint8_t> payload, size_t nBytes, size_t step)
+{
+  /// Fills inner bytes vector
+  auto size = payload.size();
+  auto end = idx + step * nBytes;
+  if (size < end) {
+    end = size;
+  }
+  size_t nAdded = 0;
+  for (; idx < end; idx += step) {
+    mBytes.emplace_back(payload[idx]);
+    ++nAdded;
+  }
+  return (nAdded == nBytes);
+}
+
+bool ELinkDecoder::add(size_t& idx, gsl::span<const uint8_t> payload, size_t step)
+{
+  /// Adds the bytes of the board
+  auto remaining = mTotalSize - mBytes.size();
+  if (add(idx, payload, remaining, step)) {
+    if (mTotalSize == mMinimumSize) {
+      computeSize();
+      remaining = mTotalSize - mBytes.size();
+      if (remaining) {
+        return add(idx, payload, remaining, step);
       }
     }
+    return true;
+  }
+  return false;
+}
+
+void ELinkDecoder::addAndComputeSize(uint8_t byte)
+{
+  /// Adds next byte and computes the expected data size
+  mBytes.emplace_back(byte);
+  if (mBytes.size() == mMinimumSize) {
+    computeSize();
   }
 }
 
-bool ELinkDecoder::add(uint8_t byte, uint8_t expectedStart)
+void ELinkDecoder::computeSize()
 {
-  /// Adds next byte, checking the first one
-  if (mBytes.empty() && (byte & 0xc0) != expectedStart) {
-    return false;
+  /// Computes the board size
+  if (raw::isLoc(mBytes[0])) {
+    // This is a local card
+    uint8_t mask = getInputs();
+    for (int ich = 0; ich < 4; ++ich) {
+      if ((mask >> ich) & 0x1) {
+        // We expect 2 bytes for the BP and 2 for the NBP
+        mTotalSize += 4;
+      }
+    }
   }
-  add(byte);
-  return true;
 }
 
 void ELinkDecoder::reset()
 {
   /// Reset inner objects
   mBytes.clear();
-  mTotalSize = sMinimumSize;
+  mTotalSize = mMinimumSize;
 }
 
 uint16_t ELinkDecoder::getPattern(int cathode, int chamber) const

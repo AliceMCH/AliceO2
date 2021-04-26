@@ -10,11 +10,11 @@
 #include "Framework/runDataProcessing.h"
 #include "Framework/AnalysisTask.h"
 #include "Framework/AnalysisDataModel.h"
-#include "Analysis/EventSelection.h"
-#include "Analysis/MC.h"
-#include "Analysis/HistHelpers.h"
-#include "Analysis/TrackSelection.h"
-#include "Analysis/TrackSelectionTables.h"
+#include "AnalysisDataModel/EventSelection.h"
+#include "AnalysisCore/MC.h"
+#include "AnalysisCore/HistHelpers.h"
+#include "AnalysisCore/TrackSelection.h"
+#include "AnalysisDataModel/TrackSelectionTables.h"
 
 #include <cmath>
 #include <array>
@@ -121,9 +121,9 @@ struct TrackCheckTaskEvSel {
       bool isPrimary = false;
 
       if (isMC) { //determine particle species base on MC truth and if it is primary or not
-        int pdgcode = track.label().pdgCode();
+        int pdgcode = track.mcParticle().pdgCode();
 
-        if (MC::isPhysicalPrimary(mcParticles, track.label())) { //is primary?
+        if (MC::isPhysicalPrimary(mcParticles, track.mcParticle())) { //is primary?
           isPrimary = true;
         }
 
@@ -240,7 +240,7 @@ struct TrackCheckTaskEvSelTrackSel {
 
   //Filters
   Filter collfilter = nabs(aod::collision::posZ) < cfgCutVZ;
-  Filter trackfilter = aod::track::isGlobalTrack == true;
+  Filter trackfilter = aod::track::isGlobalTrack == (uint8_t) true;
   void process(soa::Filtered<soa::Join<aod::Collisions, aod::EvSels>>::iterator const& col,
                soa::Filtered<soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksExtended,
                                        aod::TrackSelection, aod::McTrackLabels>>& tracks,
@@ -261,9 +261,9 @@ struct TrackCheckTaskEvSelTrackSel {
       bool isPrimary = false;
 
       if (isMC) { //determine particle species base on MC truth and if it is primary or not
-        int pdgcode = track.label().pdgCode();
+        int pdgcode = track.mcParticle().pdgCode();
 
-        if (MC::isPhysicalPrimary(mcParticles, track.label())) { //is primary?
+        if (MC::isPhysicalPrimary(mcParticles, track.mcParticle())) { //is primary?
           isPrimary = true;
         }
         //Calculate y
@@ -329,9 +329,9 @@ struct TrackCheckTaskEvSelTrackSel {
   }
 }; // struct TrackCheckTask1
 
-WorkflowSpec defineDataProcessing(ConfigContext const&)
+WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
 {
   return WorkflowSpec{
-    adaptAnalysisTask<TrackCheckTaskEvSel>("track-histos-evsel"),
-    adaptAnalysisTask<TrackCheckTaskEvSelTrackSel>("track-histos-evsel-trksel")};
+    adaptAnalysisTask<TrackCheckTaskEvSel>(cfgc, TaskName{"track-histos-evsel"}),
+    adaptAnalysisTask<TrackCheckTaskEvSelTrackSel>(cfgc, TaskName{"track-histos-evsel-trksel"})};
 }

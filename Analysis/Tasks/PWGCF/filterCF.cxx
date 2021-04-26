@@ -12,10 +12,10 @@
 #include "Framework/AnalysisDataModel.h"
 #include "Framework/ASoAHelpers.h"
 
-#include "Analysis/CFDerived.h"
-#include "Analysis/EventSelection.h"
-#include "Analysis/TrackSelectionTables.h"
-#include "Analysis/Centrality.h"
+#include "AnalysisDataModel/CFDerived.h"
+#include "AnalysisDataModel/EventSelection.h"
+#include "AnalysisDataModel/TrackSelectionTables.h"
+#include "AnalysisDataModel/Centrality.h"
 
 #include <TH3F.h>
 
@@ -34,7 +34,7 @@ struct FilterCF {
 
   // Filters and input definitions
   Filter collisionFilter = nabs(aod::collision::posZ) < cfgCutVertex && aod::cent::centV0M <= 80.0f;
-  Filter trackFilter = (nabs(aod::track::eta) < cfgCutEta) && (aod::track::pt > cfgCutPt) && ((aod::track::isGlobalTrack == true) || (aod::track::isGlobalTrackSDD == true));
+  Filter trackFilter = (nabs(aod::track::eta) < cfgCutEta) && (aod::track::pt > cfgCutPt) && ((aod::track::isGlobalTrack == (uint8_t) true) || (aod::track::isGlobalTrackSDD == (uint8_t) true));
 
   OutputObj<TH3F> yields{TH3F("yields", "centrality vs pT vs eta", 100, 0, 100, 40, 0, 20, 100, -2, 2)};
   OutputObj<TH3F> etaphi{TH3F("etaphi", "centrality vs eta vs phi", 100, 0, 100, 100, -2, 2, 200, 0, 2 * M_PI)};
@@ -46,15 +46,22 @@ struct FilterCF {
   {
   }
 
-  void process(soa::Filtered<soa::Join<aod::Collisions, aod::EvSels, aod::Cents>>::iterator const& collision, aod::BCs const&, soa::Filtered<soa::Join<aod::Tracks, aod::TrackSelection>> const& tracks)
+  void process(soa::Filtered<soa::Join<aod::Collisions, aod::EvSels, aod::Cents>>::iterator const& collision, aod::BCsWithTimestamps const&, soa::Filtered<soa::Join<aod::Tracks, aod::TrackSelection>> const& tracks)
   {
-    LOGF(info, "Tracks for collision: %d | Vertex: %.1f | INT7: %d | V0M: %.1f", tracks.size(), collision.posZ(), collision.sel7(), collision.centV0M());
+    LOGF(info, "Tracks for collision: %d | Vertex: %.1f (%d) | INT7: %d | V0M: %.1f", tracks.size(), collision.posZ(), collision.flags(), collision.sel7(), collision.centV0M());
 
-    if (!collision.sel7()) {
+    if (!collision.alias()[kINT7] || !collision.sel7()) {
       return;
     }
 
-    outputCollisions(collision.bc().runNumber(), collision.posZ(), collision.centV0M());
+    // vertex range already checked as filter, but bitwise operations not yet supported
+    // TODO (collision.flags() != 0) can be removed with next conversion (AliPhysics >= 20210305)
+    if ((collision.flags() != 0) && ((collision.flags() & aod::collision::CollisionFlagsRun2::Run2VertexerTracks) != aod::collision::CollisionFlagsRun2::Run2VertexerTracks)) {
+      return;
+    }
+
+    auto bc = collision.bc_as<aod::BCsWithTimestamps>();
+    outputCollisions(bc.runNumber(), collision.posZ(), collision.centV0M(), bc.timestamp());
 
     for (auto& track : tracks) {
       uint8_t trackType = 0;
@@ -64,7 +71,7 @@ struct FilterCF {
         trackType = 2;
       }
 
-      outputTracks(outputCollisions.lastIndex(), track.pt(), track.eta(), track.phi(), track.charge(), trackType);
+      outputTracks(outputCollisions.lastIndex(), track.pt(), track.eta(), track.phi(), track.sign(), trackType);
 
       yields->Fill(collision.centV0M(), track.pt(), track.eta());
       etaphi->Fill(collision.centV0M(), track.eta(), track.phi());
@@ -72,8 +79,8 @@ struct FilterCF {
   }
 };
 
-WorkflowSpec defineDataProcessing(ConfigContext const&)
+WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
 {
   return WorkflowSpec{
-    adaptAnalysisTask<FilterCF>("filter-cf")};
+    adaptAnalysisTask<FilterCF>(cfgc)};
 }

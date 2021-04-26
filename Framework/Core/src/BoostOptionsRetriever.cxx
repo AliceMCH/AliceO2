@@ -30,9 +30,9 @@ namespace o2::framework
 BoostOptionsRetriever::BoostOptionsRetriever(bool ignoreUnknown,
                                              int argc, char** argv)
   : mDescription{std::make_unique<boost::program_options::options_description>("ALICE O2 Framework - Available options")},
-    mIgnoreUnknown{ignoreUnknown},
     mArgc{argc},
-    mArgv{argv}
+    mArgv{argv},
+    mIgnoreUnknown{ignoreUnknown}
 {
 }
 
@@ -41,7 +41,7 @@ void BoostOptionsRetriever::update(std::vector<ConfigParamSpec> const& specs,
                                    boost::property_tree::ptree& provenance)
 {
   auto options = mDescription->add_options();
-  for (auto& spec : specs) {
+  for (const auto& spec : specs) {
     const char* name = spec.name.c_str();
     const char* help = spec.help.c_str();
     // FIXME: propagate default value?
@@ -68,6 +68,15 @@ void BoostOptionsRetriever::update(std::vector<ConfigParamSpec> const& specs,
       case VariantType::ArrayFloat:
       case VariantType::ArrayDouble:
       case VariantType::ArrayBool:
+      case VariantType::ArrayString:
+      case VariantType::Array2DInt:
+      case VariantType::Array2DFloat:
+      case VariantType::Array2DDouble:
+        options = options(name, bpo::value<std::string>()->default_value(spec.defaultValue.asString()), help);
+        break;
+      case VariantType::LabeledArrayInt:
+      case VariantType::LabeledArrayFloat:
+      case VariantType::LabeledArrayDouble:
       case VariantType::Unknown:
       case VariantType::Empty:
         break;

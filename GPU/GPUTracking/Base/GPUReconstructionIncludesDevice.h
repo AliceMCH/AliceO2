@@ -58,6 +58,12 @@ using namespace GPUCA_NAMESPACE::gpu;
 #include "MatLayerCyl.cxx"
 #include "Ray.cxx"
 
+// O2 track model
+#include "TrackParametrization.cxx"
+#include "TrackParametrizationWithError.cxx"
+#include "Propagator.cxx"
+#include "TrackLTIntegral.cxx"
+
 // Files for GPU dEdx
 #include "GPUdEdx.cxx"
 
@@ -77,8 +83,12 @@ using namespace GPUCA_NAMESPACE::gpu;
 #include "GPUTPCCFClusterizer.cxx"
 #include "GPUTPCCFDeconvolution.cxx"
 #include "GPUTPCCFMCLabelFlattener.cxx"
+#include "GPUTPCCFCheckPadBaseline.cxx"
 #include "GPUTPCCFDecodeZS.cxx"
 #include "GPUTPCCFGather.cxx"
+
+// Files for output into O2 format
+#include "GPUTPCGMO2Output.cxx"
 
 // Files for TRD Tracking
 #include "GPUTRDTrackerKernels.cxx"
@@ -90,13 +100,17 @@ using namespace GPUCA_NAMESPACE::gpu;
 // Files for ITS Track Fit
 #include "GPUITSFitterKernels.cxx"
 
-#if !defined(GPUCA_O2_LIB) && defined(__HIPCC__) && !defined(GPUCA_NO_ITS_TRAITS)
+// Files for Refit
+#include "GPUTrackingRefit.cxx"
+#include "GPUTrackingRefitKernel.cxx"
+
+#if !defined(GPUCA_O2_LIB) && defined(__HIPCC__) && !defined(GPUCA_NO_ITS_TRAITS) && !defined(GPUCA_GPUCODE_GENRTC)
 #include "VertexerTraitsHIP.hip.cxx"
 #include "ContextHIP.hip.cxx"
 #include "DeviceStoreVertexerHIP.hip.cxx"
 #include "ClusterLinesHIP.hip.cxx"
 #include "UtilsHIP.hip.cxx"
-#elif !defined(GPUCA_O2_LIB) && defined(__CUDACC__) && !defined(GPUCA_NO_ITS_TRAITS)
+#elif !defined(GPUCA_O2_LIB) && defined(__CUDACC__) && !defined(GPUCA_NO_ITS_TRAITS) && !defined(GPUCA_GPUCODE_GENRTC)
 #include "TrackerTraitsNV.cu"
 #include "VertexerTraitsGPU.cu"
 #include "Context.cu"

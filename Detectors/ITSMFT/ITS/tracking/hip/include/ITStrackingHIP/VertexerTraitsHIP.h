@@ -21,7 +21,6 @@
 #include "ITStracking/VertexerTraits.h"
 #include "ITStracking/Cluster.h"
 #include "ITStracking/Constants.h"
-// #include "ITStracking/Definitions.h"
 #include "ITStracking/Tracklet.h"
 
 #include "ITStrackingHIP/DeviceStoreVertexerHIP.h"
@@ -37,7 +36,7 @@ namespace its
 {
 class ROframe;
 
-using constants::index_table::InversePhiBinSize;
+using constants::its2::InversePhiBinSize;
 
 class VertexerTraitsHIP : public VertexerTraits
 {
@@ -47,7 +46,7 @@ class VertexerTraitsHIP : public VertexerTraits
   ~VertexerTraitsHIP();
 #else
   VertexerTraitsHIP();
-  ~VertexerTraitsHIP() = default;
+  ~VertexerTraitsHIP() override = default;
 #endif
   void initialise(ROframe*) override;
   void computeTracklets() override;
@@ -59,32 +58,32 @@ class VertexerTraitsHIP : public VertexerTraits
 
   // GPU-specific getters
   GPUd() static const int2 getBinsPhiRectWindow(const Cluster&, float maxdeltaphi);
-  GPUhd() GPU::DeviceStoreVertexerHIP& getDeviceContext();
-  GPUhd() GPU::DeviceStoreVertexerHIP* getDeviceContextPtr();
+  GPUhd() gpu::DeviceStoreVertexerHIP& getDeviceContext();
+  GPUhd() gpu::DeviceStoreVertexerHIP* getDeviceContextPtr();
 
  protected:
   // #ifdef _ALLOW_DEBUG_TREES_ITS_
   //   StandaloneDebugger* mDebugger;
   // #endif
-  GPU::DeviceStoreVertexerHIP mStoreVertexerGPU;
-  GPU::UniquePointer<GPU::DeviceStoreVertexerHIP> mStoreVertexerGPUPtr;
+  gpu::DeviceStoreVertexerHIP mStoreVertexerGPU;
+  gpu::UniquePointer<gpu::DeviceStoreVertexerHIP> mStoreVertexerGPUPtr;
 };
 
 GPUdi() const int2 VertexerTraitsHIP::getBinsPhiRectWindow(const Cluster& currentCluster, float phiCut)
 {
   // This function returns the lowest PhiBin and the number of phi bins to be spanned, In the form int2{phiBinLow, PhiBinSpan}
-  const int phiBinMin{index_table_utils::getPhiBinIndex(
+  const int phiBinMin{constants::its2::getPhiBinIndex(
     math_utils::getNormalizedPhiCoordinate(currentCluster.phiCoordinate - phiCut))};
   const int phiBinSpan{static_cast<int>(MATH_CEIL(phiCut * InversePhiBinSize))};
   return int2{phiBinMin, phiBinSpan};
 }
 
-GPUhdi() GPU::DeviceStoreVertexerHIP& VertexerTraitsHIP::getDeviceContext()
+GPUhdi() gpu::DeviceStoreVertexerHIP& VertexerTraitsHIP::getDeviceContext()
 {
   return *mStoreVertexerGPUPtr;
 }
 
-GPUhdi() GPU::DeviceStoreVertexerHIP* VertexerTraitsHIP::getDeviceContextPtr()
+GPUhdi() gpu::DeviceStoreVertexerHIP* VertexerTraitsHIP::getDeviceContextPtr()
 {
   return mStoreVertexerGPUPtr.get();
 }

@@ -12,14 +12,13 @@
 #include "Framework/WorkflowSpec.h"
 #include "Framework/DataProcessorSpec.h"
 #include "Framework/ControlService.h"
-#include "Framework/CompletionPolicy.h"
-#include "Framework/CompletionPolicyHelpers.h"
 #include "Framework/Logger.h"
 #include "Framework/ConfigParamSpec.h"
+#include "Framework/CompletionPolicy.h"
+#include "Framework/CompletionPolicyHelpers.h"
 #include "CommonUtils/ConfigurableParam.h"
 #include "Algorithm/RangeTokenizer.h"
 #include "TPCWorkflow/RawToDigitsSpec.h"
-#include "TPCWorkflow/LinkZSToDigitsSpec.h"
 #include "TPCWorkflow/RecoWorkflow.h"
 #include "TPCBase/Sector.h"
 #include <vector>
@@ -32,23 +31,9 @@ using namespace o2::framework;
 // customize the completion policy
 void customize(std::vector<o2::framework::CompletionPolicy>& policies)
 {
-  // we customize the completion policy for the writer since it should stream immediately
-  using CompletionPolicy = o2::framework::CompletionPolicy;
-  using CompletionPolicyHelpers = o2::framework::CompletionPolicyHelpers;
-  policies.push_back(CompletionPolicyHelpers::defineByName("tpc-cluster-decoder.*", CompletionPolicy::CompletionOp::Consume));
-  policies.push_back(CompletionPolicyHelpers::defineByName("tpc-clusterer.*", CompletionPolicy::CompletionOp::Consume));
-  policies.push_back(CompletionPolicyHelpers::defineByName("tpc-tracker.*", CompletionPolicy::CompletionOp::Consume));
+  using o2::framework::CompletionPolicy;
+  policies.push_back(CompletionPolicyHelpers::defineByName("tpc-raw-to-digits-.*", CompletionPolicy::CompletionOp::Consume));
 }
-
-enum class DecoderType {
-  GBT,   ///< GBT frame raw decoding
-  LinkZS ///< Link based zero suppression
-};
-
-const std::unordered_map<std::string, DecoderType> DecoderTypeMap{
-  {"GBT", DecoderType::GBT},
-  {"LinkZS", DecoderType::LinkZS},
-};
 
 // we need to add workflow options before including Framework/runDataProcessing
 void customize(std::vector<ConfigParamSpec>& workflowOptions)
@@ -60,14 +45,12 @@ void customize(std::vector<ConfigParamSpec>& workflowOptions)
   const std::string sectorshelp("List of TPC sectors, comma separated ranges, e.g. 0-3,7,9-15");
   const std::string sectorDefault = "0-" + std::to_string(o2::tpc::Sector::MAXSECTOR - 1);
   const std::string tpcrthelp("Run TPC reco workflow to specified output type, currently supported: 'digits,clusters,tracks'");
-  const std::string decoderHelp("Decoder type to use: 'GBT,LinkZS'");
 
   std::vector<ConfigParamSpec> options{
     {"input-spec", VariantType::String, "A:TPC/RAWDATA", {"selection string input specs"}},
     {"tpc-lanes", VariantType::Int, defaultlanes, {laneshelp}},
     {"tpc-sectors", VariantType::String, sectorDefault.c_str(), {sectorshelp}},
     {"tpc-reco-output", VariantType::String, "", {tpcrthelp}},
-    {"decoder-type", VariantType::String, "GBT", {decoderHelp}},
     {"configKeyValues", VariantType::String, "", {"Semicolon separated key=value strings (e.g.: 'TPCCalibPedestal.FirstTimeBin=10;...')"}},
     {"configFile", VariantType::String, "", {"configuration file for configurable parameters"}}};
 
@@ -104,17 +87,9 @@ WorkflowSpec defineDataProcessing(ConfigContext const& configcontext)
   auto tpcSectors = o2::RangeTokenizer::tokenize<int>(configcontext.options().get<std::string>("tpc-sectors"));
   auto lanes = 1; //getNumTPCLanes(tpcSectors, config);
 
-  const auto decoderType = DecoderTypeMap.at(configcontext.options().get<std::string>("decoder-type"));
-
   int fanoutsize = 0;
   for (int l = 0; l < lanes; ++l) {
-    if (decoderType == DecoderType::GBT) {
-      specs.emplace_back(o2::tpc::getRawToDigitsSpec(fanoutsize, configcontext.options().get<std::string>("input-spec"), tpcSectors));
-    } else if (decoderType == DecoderType::LinkZS) {
-      specs.emplace_back(o2::tpc::getLinkZSToDigitsSpec(fanoutsize, configcontext.options().get<std::string>("input-spec"), tpcSectors));
-    } else {
-      LOG(FATAL) << "bad decoder type";
-    }
+    specs.emplace_back(o2::tpc::getRawToDigitsSpec(fanoutsize, configcontext.options().get<std::string>("input-spec"), tpcSectors));
     fanoutsize++;
   }
 
@@ -125,9 +100,6 @@ WorkflowSpec defineDataProcessing(ConfigContext const& configcontext)
   if (!tpcRecoOutputType.empty()) {
     recoOuput = tpcRecoOutputType.c_str();
   }
-
-  auto tpcRecoWorkflow = o2::tpc::reco_workflow::getWorkflow(nullptr, tpcSectors, tpcSectors, false, lanes, "digitizer", recoOuput.data());
-  specs.insert(specs.end(), tpcRecoWorkflow.begin(), tpcRecoWorkflow.end());
 
   return specs;
 }

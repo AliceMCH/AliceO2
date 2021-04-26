@@ -16,6 +16,7 @@
 #include <utility>
 #include <vector>
 #include "DataFormatsTOF/Cluster.h"
+#include "DataFormatsTOF/CalibInfoCluster.h"
 #include "TOFBase/Geo.h"
 #include "TOFReconstruction/DataReader.h"
 #include "SimulationDataFormat/MCTruthContainer.h"
@@ -51,8 +52,17 @@ class Clusterer
     mCalibApi = calibApi;
   }
 
-  void setFirstOrbit(uint32_t orb);
-  uint32_t getFirstOrbit() const { return mFirstOrbit; }
+  void addCalibFromCluster(int ch1, int8_t dch, float dtime, short tot1, short tot2);
+
+  void setFirstOrbit(uint64_t orb);
+  uint64_t getFirstOrbit() const { return mFirstOrbit; }
+
+  void setCalibFromCluster(bool val = 1) { mCalibFromCluster = val; }
+  bool isCalibFromCluster() const { return mCalibFromCluster; }
+
+  void setDeltaTforClustering(float val) { mDeltaTforClustering = val; }
+  float getDeltaTforClustering() const { return mDeltaTforClustering; }
+  std::vector<o2::tof::CalibInfoCluster>* getInfoFromCluster() { return &mCalibInfosFromCluster; }
 
  private:
   void calibrateStrip();
@@ -68,8 +78,13 @@ class Clusterer
   void addContributingDigit(Digit* dig);
   void buildCluster(Cluster& c, MCLabelContainer const* digitMCTruth);
   CalibApi* mCalibApi = nullptr; //! calib api to handle the TOF calibration
-  uint32_t mFirstOrbit = 0;      //! 1st orbit of the TF
+  uint64_t mFirstOrbit = 0;      //! 1st orbit of the TF
   uint64_t mBCOffset = 0;        //! 1st orbit of the TF converted to BCs
+
+  float mDeltaTforClustering = 5000; //! delta time (in ps) accepted for clustering
+  bool mCalibFromCluster = false;    //! if producing calib from clusters
+
+  std::vector<o2::tof::CalibInfoCluster> mCalibInfosFromCluster;
 };
 
 } // namespace tof

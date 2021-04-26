@@ -19,11 +19,12 @@
 #include <cstdint>           // uint8_t etc
 #include <cassert>
 #include <stdexcept>
-#include <gsl/gsl> // for guideline support library; array_view
+#include <gsl/span> // for guideline support library span
 #include <type_traits>
 #include <cstring> // memmove, memcpy
 #include <memory>
 #include <vector>
+
 // type traits are needed for the compile time consistency check
 // maybe to be moved out of Framework first
 //#include "Framework/TypeTraits.h"
@@ -140,6 +141,11 @@ class MCTruthContainer
   size_t getIndexedSize() const { return mHeaderArray.size(); }
   // return the number of elements managed in this container
   size_t getNElements() const { return mTruthArray.size(); }
+  // return unterlaying vector of elements
+  const std::vector<TruthElement>& getTruthArray() const
+  {
+    return mTruthArray;
+  }
 
   // get individual "view" container for a given data index
   // the caller can do modifications on this view (such as sorting)

@@ -8,73 +8,43 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-/// \file HFD0CandidateSelector.cxx
-/// \brief Lc->pKpi selection task.
+/// \file HFLcCandidateSelector.cxx
+/// \brief Λc± → p± K∓ π± selection task
 ///
-/// \author Luigi Dello Stritto <luigi.dellostritto@cern.ch>, CERN
+/// \author Luigi Dello Stritto <luigi.dello.stritto@cern.ch>, University and INFN SALERNO
 /// \author Nima Zardoshti <nima.zardoshti@cern.ch>, CERN
 
 #include "Framework/runDataProcessing.h"
 #include "Framework/AnalysisTask.h"
-#include "Analysis/HFSecondaryVertex.h"
-#include "Analysis/HFCandidateSelectionTables.h"
+#include "AnalysisDataModel/HFSecondaryVertex.h"
+#include "AnalysisDataModel/HFCandidateSelectionTables.h"
 
 using namespace o2;
 using namespace o2::framework;
 using namespace o2::aod::hf_cand_prong3;
-
-static const int npTBins = 10;
-static const int nCutVars = 8;
-//temporary until 2D array in configurable is solved - then move to json
-//m  ptp  ptk  ptpi DCA sigmavtx dlenght cosp
-constexpr double cuts[npTBins][nCutVars] = {{0.5, 0.2, 0.2, 0.2, 0.05, 0.09, 0.005, 0.},  /* pt<1     */
-                                            {0.5, 0.2, 0.2, 0.2, 0.05, 0.09, 0.005, 0.},  /* 1<pt<2   */
-                                            {0.5, 0.2, 0.2, 0.2, 0.05, 0.09, 0.005, 0.},  /* 2<pt<3   */
-                                            {0.5, 0.2, 0.2, 0.2, 0.05, 0.09, 0.005, 0.},  /* 3<pt<4   */
-                                            {0.5, 0.2, 0.2, 0.2, 0.05, 0.09, 0.005, 0.},  /* 4<pt<5   */
-                                            {0.5, 0.2, 0.2, 0.2, 0.05, 0.09, 0.005, 0.},  /* 5<pt<6   */
-                                            {0.5, 0.2, 0.2, 0.2, 0.05, 0.09, 0.005, 0.},  /* 6<pt<8   */
-                                            {0.5, 0.2, 0.2, 0.2, 0.05, 0.09, 0.005, 0.},  /* 8<pt<12  */
-                                            {0.5, 0.2, 0.2, 0.2, 0.05, 0.09, 0.005, 0.},  /* 12<pt<24 */
-                                            {0.5, 0.2, 0.2, 0.2, 0.05, 0.09, 0.005, 0.}}; /* 24<pt<36 */
+using namespace o2::analysis::hf_cuts_lc_topkpi;
 
 /// Struct for applying Lc selection cuts
-
 struct HFLcCandidateSelector {
-
   Produces<aod::HFSelLcCandidate> hfSelLcCandidate;
 
   Configurable<double> d_pTCandMin{"d_pTCandMin", 0., "Lower bound of candidate pT"};
   Configurable<double> d_pTCandMax{"d_pTCandMax", 36., "Upper bound of candidate pT"};
 
-  Configurable<double> d_pidTPCMinpT{"d_pidTPCMinpT", 0.15, "Lower bound of track pT for TPC PID"};
+  Configurable<double> d_pidTPCMinpT{"d_pidTPCMinpT", 0.1, "Lower bound of track pT for TPC PID"};
   Configurable<double> d_pidTPCMaxpT{"d_pidTPCMaxpT", 1., "Upper bound of track pT for TPC PID"};
   Configurable<double> d_pidTOFMinpT{"d_pidTOFMinpT", 0.5, "Lower bound of track pT for TOF PID"};
-  Configurable<double> d_pidTOFMaxpT{"d_pidTOFMaxpT", 4., "Upper bound of track pT for TOF PID"};
+  Configurable<double> d_pidTOFMaxpT{"d_pidTOFMaxpT", 2.5, "Upper bound of track pT for TOF PID"};
 
+  Configurable<bool> d_FilterPID{"d_FilterPID", true, "Bool to use or not the PID at filtering level"};
   Configurable<double> d_TPCNClsFindablePIDCut{"d_TPCNClsFindablePIDCut", 70., "Lower bound of TPC findable clusters for good PID"};
   Configurable<double> d_nSigmaTPC{"d_nSigmaTPC", 3., "Nsigma cut on TPC only"};
   Configurable<double> d_nSigmaTPCCombined{"d_nSigmaTPCCombined", 5., "Nsigma cut on TPC combined with TOF"};
   Configurable<double> d_nSigmaTOF{"d_nSigmaTOF", 3., "Nsigma cut on TOF only"};
   Configurable<double> d_nSigmaTOFCombined{"d_nSigmaTOFCombined", 5., "Nsigma cut on TOF combined with TPC"};
 
-  /// Gets corresponding pT bin from cut file array
-  /// \param candpT is the pT of the candidate
-  /// \return corresponding bin number of array
-  template <typename T>
-  int getpTBin(T candpT)
-  {
-    double pTBins[npTBins + 1] = {0, 1., 2., 3., 4., 5., 6., 8., 12., 24., 36.};
-    if (candpT < pTBins[0] || candpT >= pTBins[npTBins]) {
-      return -1;
-    }
-    for (int i = 0; i < npTBins; i++) {
-      if (candpT < pTBins[i + 1]) {
-        return i;
-      }
-    }
-    return -1;
-  }
+  Configurable<std::vector<double>> pTBins{"pTBins", std::vector<double>{hf_cuts_lc_topkpi::pTBins_v}, "pT bin limits"};
+  Configurable<LabeledArray<double>> cuts{"Lc_to_p_K_pi_cuts", {hf_cuts_lc_topkpi::cuts[0], npTBins, nCutVars, pTBinLabels, cutVarLabels}, "Lc candidate selection per pT bin"};
 
   /// Selection on goodness of daughter tracks
   /// \note should be applied at candidate selection
@@ -83,23 +53,24 @@ struct HFLcCandidateSelector {
   template <typename T>
   bool daughterSelection(const T& track)
   {
-    if (track.charge() == 0) {
+    if (track.sign() == 0) {
       return false;
     }
-    if (track.tpcNClsFound() == 0) {
+    /*if (track.tpcNClsFound() == 0) {
       return false; //is it clusters findable or found - need to check
-    }
+      }*/
     return true;
   }
 
-  /// Conjugate independent toplogical cuts
+  /// Conjugate-independent topological cuts
   /// \param hfCandProng3 is candidate
   /// \return true if candidate passes all cuts
   template <typename T>
   bool selectionTopol(const T& hfCandProng3)
   {
     auto candpT = hfCandProng3.pt();
-    int pTBin = getpTBin(candpT);
+
+    int pTBin = findBin(pTBins, candpT);
     if (pTBin == -1) {
       return false;
     }
@@ -107,49 +78,50 @@ struct HFLcCandidateSelector {
     if (candpT < d_pTCandMin || candpT >= d_pTCandMax) {
       return false; //check that the candidate pT is within the analysis range
     }
-    if (hfCandProng3.cpa() <= cuts[pTBin][7]) {
+
+    if (hfCandProng3.cpa() <= cuts->get(pTBin, "cos pointing angle")) {
       return false; //cosine of pointing angle
     }
-    // if (hfCandProng3.dca() > cuts[pTBin][4]) return false; //candidate DCA
-    if (hfCandProng3.chi2PCA() > cuts[pTBin][5]) { //candidate DCA
-      return false;
-    }
 
-    if (hfCandProng3.decayLength() * hfCandProng3.decayLength() < cuts[pTBin][6] * cuts[pTBin][6]) {
+    /*  if (hfCandProng3.chi2PCA() > cuts[pTBin][5]) { //candidate DCA
+      return false;
+      }*/
+
+    if (hfCandProng3.decayLength() <= cuts->get(pTBin, "decay length")) {
       return false;
     }
     return true;
   }
 
-  /// Conjugate dependent toplogical cuts
+  /// Conjugate-dependent topological cuts
   /// \param hfCandProng3 is candidate
   /// \param trackProton is the track with the proton hypothesis
   /// \param trackPion is the track with the pion hypothesis
   /// \param trackKaon is the track with the kaon hypothesis
-  /// \note trackPion = positive and trackKaon = negative for D0 selection and inverse for D0bar
   /// \return true if candidate passes all cuts for the given Conjugate
   template <typename T1, typename T2>
   bool selectionTopolConjugate(const T1& hfCandProng3, const T2& trackProton, const T2& trackKaon, const T2& trackPion)
   {
 
     auto candpT = hfCandProng3.pt();
-    int pTBin = getpTBin(candpT);
+    int pTBin = findBin(pTBins, candpT);
     if (pTBin == -1) {
       return false;
     }
 
-    //invariant mass cut
-    if (TMath::Abs(InvMassLc(hfCandProng3) - RecoDecay::getMassPDG(4122)) > cuts[pTBin][0]) {
-      return false;
-    }
-
-    if (TMath::Abs(trackProton.pt()) < TMath::Abs(cuts[pTBin][1]) || TMath::Abs(trackKaon.pt()) < TMath::Abs(cuts[pTBin][2]) || TMath::Abs(trackPion.pt()) < TMath::Abs(cuts[pTBin][3])) {
+    if (trackProton.pt() < cuts->get(pTBin, "pT p") || trackKaon.pt() < cuts->get(pTBin, "pT K") || trackPion.pt() < cuts->get(pTBin, "pT Pi")) {
       return false; //cut on daughter pT
     }
 
-    /* if (TMath::Sqrt( trackProton.dcaPrim0()*trackProton.dcaPrim0() + trackKaon.dcaPrim0()*trackKaon.dcaPrim0() + trackPion.dcaPrim0()*trackPion.dcaPrim0() ) > cuts[pTBin][5]) {
-      return false; //cut on daughter dca - need to add secondary vertex constraint here
-    }*/
+    if (trackProton.globalIndex() == hfCandProng3.index0Id()) {
+      if (std::abs(InvMassLcpKpi(hfCandProng3) - RecoDecay::getMassPDG(pdg::Code::kLambdaCPlus)) > cuts->get(pTBin, "m")) {
+        return false;
+      }
+    } else {
+      if (std::abs(InvMassLcpiKp(hfCandProng3) - RecoDecay::getMassPDG(pdg::Code::kLambdaCPlus)) > cuts->get(pTBin, "m")) {
+        return false;
+      }
+    }
 
     return true;
   }
@@ -161,7 +133,7 @@ struct HFLcCandidateSelector {
   template <typename T>
   bool validTPCPID(const T& track)
   {
-    if (TMath::Abs(track.pt()) < d_pidTPCMinpT || TMath::Abs(track.pt()) >= d_pidTPCMaxpT) {
+    if (track.pt() < d_pidTPCMinpT || track.pt() >= d_pidTPCMaxpT) {
       return false;
     }
     //if (track.TPCNClsFindable() < d_TPCNClsFindablePIDCut) return false;
@@ -175,7 +147,7 @@ struct HFLcCandidateSelector {
   template <typename T>
   bool validTOFPID(const T& track)
   {
-    if (TMath::Abs(track.pt()) < d_pidTOFMinpT || TMath::Abs(track.pt()) >= d_pidTOFMaxpT) {
+    if (track.pt() < d_pidTOFMinpT || track.pt() >= d_pidTOFMaxpT) {
       return false;
     }
     return true;
@@ -185,46 +157,44 @@ struct HFLcCandidateSelector {
   /// \param track is the track
   /// \param nPDG is the flavour hypothesis PDG number
   /// \param nSigmaCut is the nsigma threshold to test against
-  /// \note nPDG=2212 proton  nPDG=211 pion  nPDG=321 kaon
   /// \return true if track satisfies TPC PID hypothesis for given Nsigma cut
   template <typename T>
   bool selectionPIDTPC(const T& track, int nPDG, int nSigmaCut)
   {
-    double nSigma = 100.0; //arbitarily large value
-    nPDG = TMath::Abs(nPDG);
-    if (nPDG == 2212) {
+    double nSigma = 100.; //arbitarily large value
+    nPDG = std::abs(nPDG);
+    if (nPDG == kProton) {
       nSigma = track.tpcNSigmaPr();
-    } else if (nPDG == 321) {
+    } else if (nPDG == kKPlus) {
       nSigma = track.tpcNSigmaKa();
-    } else if (nPDG == 111) {
+    } else if (nPDG == kPiPlus) {
       nSigma = track.tpcNSigmaPi();
     } else {
       return false;
     }
-    return nSigma < nSigmaCut;
+    return std::abs(nSigma) < nSigmaCut;
   }
 
   /// Check if track is compatible with given TOF NSigma cut for a given flavour hypothesis
   /// \param track is the track
   /// \param nPDG is the flavour hypothesis PDG number
   /// \param nSigmaCut is the nSigma threshold to test against
-  /// \note nPDG=2212 proton  nPDG=211 pion  nPDG=321 kaon
   /// \return true if track satisfies TOF PID hypothesis for given NSigma cut
   template <typename T>
   bool selectionPIDTOF(const T& track, int nPDG, int nSigmaCut)
   {
-    double nSigma = 100.0; //arbitarily large value
-    nPDG = TMath::Abs(nPDG);
-    if (nPDG == 2212) {
+    double nSigma = 100.; //arbitarily large value
+    nPDG = std::abs(nPDG);
+    if (nPDG == kProton) {
       nSigma = track.tofNSigmaPr();
-    } else if (nPDG == 321) {
+    } else if (nPDG == kKPlus) {
       nSigma = track.tofNSigmaKa();
-    } else if (nPDG == 321) {
+    } else if (nPDG == kPiPlus) {
       nSigma = track.tofNSigmaPi();
     } else {
       return false;
     }
-    return nSigma < nSigmaCut;
+    return std::abs(nSigma) < nSigmaCut;
   }
 
   /// PID selection on daughter track
@@ -277,74 +247,92 @@ struct HFLcCandidateSelector {
     }
   }
 
-  void process(aod::HfCandProng3 const& hfCandProng3s, aod::BigTracksPID const& tracks)
+  void process(aod::HfCandProng3 const& hfCandProng3s, aod::BigTracksPID const&)
   {
-    int statusLc; // final selection flag : 0-rejected  1-accepted
-    bool topolLc;
-    int pidLc, proton, kaonMinus, pionPlus;
+    for (auto& hfCandProng3 : hfCandProng3s) {
+      // final selection flag : 0-rejected  1-accepted
+      auto statusLcpKpi = 0;
+      auto statusLcpiKp = 0;
 
-    for (auto& hfCandProng3 : hfCandProng3s) { //looping over 3 prong candidates
-
-      auto trackPos1 = hfCandProng3.index0_as<aod::BigTracksPID>(); //positive daughter
-      auto trackNeg1 = hfCandProng3.index1_as<aod::BigTracksPID>(); //negative daughter
-      auto trackPos2 = hfCandProng3.index2_as<aod::BigTracksPID>(); //positive daughter
-
-      statusLc = 0;
-      topolLc = true;
-      pidLc = -1;
-      proton = -1;
-      kaonMinus = -1;
-      pionPlus = -1;
+      if (!(hfCandProng3.hfflag() & 1 << DecayType::LcToPKPi)) {
+        hfSelLcCandidate(statusLcpKpi, statusLcpiKp);
+        continue;
+      }
+      auto trackPos1 = hfCandProng3.index0_as<aod::BigTracksPID>(); //positive daughter (negative for the antiparticles)
+      auto trackNeg1 = hfCandProng3.index1_as<aod::BigTracksPID>(); //negative daughter (positive for the antiparticles)
+      auto trackPos2 = hfCandProng3.index2_as<aod::BigTracksPID>(); //positive daughter (negative for the antiparticles)
 
       // daughter track validity selection
       if (!daughterSelection(trackPos1) || !daughterSelection(trackNeg1) || !daughterSelection(trackPos2)) {
-        hfSelLcCandidate(statusLc);
+        hfSelLcCandidate(statusLcpKpi, statusLcpiKp);
         continue;
       }
+
+      auto pidLcpKpi = -1;
+      auto pidLcpiKp = -1;
 
       //implement filter bit 4 cut - should be done before this task at the track selection level
 
-      //conjugate independent topological selection
+      //conjugate-independent topological selection
       if (!selectionTopol(hfCandProng3)) {
-        hfSelLcCandidate(statusLc);
+        hfSelLcCandidate(statusLcpKpi, statusLcpiKp);
         continue;
       }
 
-      //conjugate dependent toplogical selection for Lc
-      topolLc = selectionTopolConjugate(hfCandProng3, trackPos1, trackNeg1, trackPos2);
+      //conjugate-dependent topological selection for Lc
 
-      if (!topolLc) {
-        hfSelLcCandidate(statusLc);
+      bool topolLcpKpi = selectionTopolConjugate(hfCandProng3, trackPos1, trackNeg1, trackPos2);
+      bool topolLcpiKp = selectionTopolConjugate(hfCandProng3, trackPos2, trackNeg1, trackPos1);
+
+      if (!topolLcpKpi && !topolLcpiKp) {
+        hfSelLcCandidate(statusLcpKpi, statusLcpiKp);
         continue;
       }
 
-      proton = selectionPID(trackPos1, 2212);
-      kaonMinus = selectionPID(trackNeg1, 321);
-      pionPlus = selectionPID(trackPos2, 211);
+      if (!d_FilterPID) {
+        // PID non applied
+        pidLcpKpi = 1;
+        pidLcpiKp = 1;
+      } else {
+        int proton1 = selectionPID(trackPos1, kProton);
+        int proton2 = selectionPID(trackPos2, kProton);
+        int kaonMinus = selectionPID(trackNeg1, kKPlus);
+        int pionPlus1 = selectionPID(trackPos1, kPiPlus);
+        int pionPlus2 = selectionPID(trackPos2, kPiPlus);
 
-      if (proton == 0 || kaonMinus == 0 || pionPlus == 0) {
-        pidLc = 0; //exclude Lc
-      }
-      if (proton == 1 && kaonMinus == 1 && pionPlus == 1) {
-        pidLc = 1; //accept Lc
+        if (proton1 == 0 || kaonMinus == 0 || pionPlus2 == 0) {
+          pidLcpKpi = 0; //exclude LcpKpi
+        }
+        if (proton1 == 1 && kaonMinus == 1 && pionPlus2 == 1) {
+          pidLcpKpi = 1; //accept LcpKpi
+        }
+        if (proton2 == 0 || kaonMinus == 0 || pionPlus1 == 0) {
+          pidLcpiKp = 0; //exclude LcpiKp
+        }
+        if (proton2 == 1 && kaonMinus == 1 && pionPlus1 == 1) {
+          pidLcpiKp = 1; //accept LcpiKp
+        }
       }
 
-      if (pidLc == 0) {
-        hfSelLcCandidate(statusLc);
+      if (pidLcpKpi == 0 && pidLcpiKp == 0) {
+        hfSelLcCandidate(statusLcpKpi, statusLcpiKp);
         continue;
       }
 
-      if ((pidLc == -1 || pidLc == 1) && topolLc) {
-        statusLc = 1; //identified as Lc
+      if ((pidLcpKpi == -1 || pidLcpKpi == 1) && topolLcpKpi) {
+        statusLcpKpi = 1; //identified as LcpKpi
+      }
+      if ((pidLcpiKp == -1 || pidLcpiKp == 1) && topolLcpiKp) {
+        statusLcpiKp = 1; //identified as LcpiKp
       }
 
-      hfSelLcCandidate(statusLc);
+      hfSelLcCandidate(statusLcpKpi, statusLcpiKp);
     }
   }
 };
 
-WorkflowSpec defineDataProcessing(ConfigContext const&)
+WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
 {
   return WorkflowSpec{
-    adaptAnalysisTask<HFLcCandidateSelector>("hf-lc-candidate-selector")};
+    adaptAnalysisTask<HFLcCandidateSelector>(cfgc, TaskName{"hf-lc-candidate-selector"})};
 }

@@ -9,29 +9,43 @@
 // or submit itself to any jurisdiction.
 
 #include "PHOSBase/Geometry.h"
+#include "FairLogger.h"
+#include "TSystem.h"
+#include "TFile.h"
 
 using namespace o2::phos;
 
 ClassImp(Geometry);
 
+// module numbering:
+//  start from module 0 (non-existing), 1 (half-module), 2 (bottom),... 4(highest)
+// absId:
+// start from 1 till 4*64*56. Numbering in each module starts at bottom left and first go in z direction:
+//  56   112   3584
+//  ...  ...    ...
+//  1    57 ...3529
+//  relid[3]: (module number[0...3], iphi[1...64], iz[1...56])
+//
+//  Then TRU channels go 112 per branch, 2 branches per ddl
+//  absId = getTotalNCells() + TRUabsId ;
+//  relId for TRU
+//  relid: [DDL id=0..13] [x in 2x2 system: 0..7] [z in 2x2 system 0..27] TODO: verify with real TRU data!!!
+
 // these initialisations are needed for a singleton
 Geometry* Geometry::sGeom = nullptr;
 
-Geometry::Geometry(const std::string_view name) : mGeoName(name) {}
+Geometry::Geometry(const std::string_view name) : mGeoName(name)
+{
+  std::string p = gSystem->Getenv("O2_ROOT");
+  p += "/share/Detectors/PHOS/files/alignment.root";
+  TFile fin(p.data());
 
-// static Geometry* Geometry::GetInstance(const std::string_view name)
-// {
-//     if(sGeom){
-//       if(sGeom->GetName()==name){
-//         return sGeom;
-//       }
-//       else{
-//         delete sGeom ;
-//       }
-//     }
-//     sGeom = new Geometry(name) ;
-//     return sGeom;
-// }
+  //try reading rotation mathices
+  for (int m = 1; m < 5; m++) {
+    mPHOS[m] = *static_cast<TGeoHMatrix*>(fin.Get(Form("Module%d", m)));
+  }
+  fin.Close();
+}
 
 short Geometry::relToAbsId(char moduleNumber, int strip, int cell)
 {
@@ -67,6 +81,38 @@ bool Geometry::absToRelNumbering(short absId, char* relid)
 
   return true;
 }
+bool Geometry::truAbsToRelNumbering(short truId, char* relid)
+{
+  //convert trigger cell Id to
+  relid[0] = truId / 224; //2*112 channels // DDL id
+  truId = truId % 224;
+  relid[1] = truId % 8; // x index in TRU internal 2x2 coordinate system
+  relid[2] = truId / 8; // z index in TRU internal 2x2 coordinate system
+  return true;
+}
+short Geometry::truRelToAbsNumbering(const char* relId)
+{
+  return relId[0] * 224 + // the offset of PHOS modules
+         relId[1] +       // the offset along phi
+         relId[2] * 8;    // the offset along z
+}
+bool Geometry::truRelId2RelId(const char* truRelId, char* relId)
+{
+  relId[0] = 1 + (truRelId[0] + 2) / 4;
+  relId[1] = ((truRelId[0] + 2) % 4) * 16 + truRelId[1] * 2 + 1;
+  relId[2] = truRelId[2] * 2 + 1;
+  return true;
+}
+short Geometry::relPosToTruId(char mod, float x, float z, short& ddl)
+{
+  //tranform local cluster coordinates to truId
+  const float cellStep = 2.25;
+  char relid[3] = {mod, static_cast<char>(ceil(x / cellStep + 32.5)), static_cast<char>(ceil(z / cellStep + 28.5))};
+  ddl = (mod - 1) * 4 + relid[1] / 16 - 2;
+  char truid[3] = {static_cast<char>(ddl), static_cast<char>((relid[1] % 16) / 2), static_cast<char>(relid[2] / 2)};
+  return truRelToAbsNumbering(truid);
+}
+
 char Geometry::absIdToModule(short absId)
 {
   const short nZ = 56;
@@ -122,8 +168,8 @@ void Geometry::absIdToRelPosInModule(short absId, float& x, float& z)
   char relid[3];
   absToRelNumbering(absId, relid);
 
-  x = (relid[1] - 28 - 0.5) * cellStep;
-  z = (relid[2] - 32 - 0.5) * cellStep;
+  x = (relid[1] - 32 - 0.5) * cellStep;
+  z = (relid[2] - 28 - 0.5) * cellStep;
 }
 bool Geometry::relToAbsNumbering(const char* relId, short& absId)
 {
@@ -136,4 +182,23 @@ bool Geometry::relToAbsNumbering(const char* relId, short& absId)
     relId[2];                    // the offset along z
 
   return true;
+}
+//local position to absId
+void Geometry::relPosToAbsId(char module, float x, float z, short& absId)
+{
+  const float cellStep = 2.25;
+
+  char relid[3] = {module, static_cast<char>(ceil(x / cellStep + 32.5)), static_cast<char>(ceil(z / cellStep + 28.5))};
+  relToAbsNumbering(relid, absId);
+}
+
+// convert local position in module to global position in ALICE
+void Geometry::local2Global(char module, float x, float z, TVector3& globaPos) const
+{
+  // constexpr float shiftY=-10.76; Run2
+  constexpr float shiftY = -1.26; //Depth-optimized
+  Double_t posL[3] = {x, z, shiftY};
+  Double_t posG[3];
+  mPHOS[module].LocalToMaster(posL, posG);
+  globaPos.SetXYZ(posG[0], posG[1], posG[2]);
 }

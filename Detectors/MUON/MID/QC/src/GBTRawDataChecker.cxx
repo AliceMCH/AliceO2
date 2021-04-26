@@ -31,7 +31,7 @@ void GBTRawDataChecker::init(uint16_t feeId, uint8_t mask)
   mCrateMask = mask;
 }
 
-bool GBTRawDataChecker::checkLocalBoardSize(const LocalBoardRO& board)
+bool GBTRawDataChecker::checkLocalBoardSize(const ROBoard& board)
 {
   /// Checks that the board has the expected non-null patterns
 
@@ -52,7 +52,7 @@ bool GBTRawDataChecker::checkLocalBoardSize(const LocalBoardRO& board)
   return true;
 }
 
-bool GBTRawDataChecker::checkLocalBoardSize(const std::vector<LocalBoardRO>& boards)
+bool GBTRawDataChecker::checkLocalBoardSize(const std::vector<ROBoard>& boards)
 {
   /// Checks that the boards have the expected non-null patterns
   for (auto& board : boards) {
@@ -63,7 +63,7 @@ bool GBTRawDataChecker::checkLocalBoardSize(const std::vector<LocalBoardRO>& boa
   return true;
 }
 
-bool GBTRawDataChecker::checkConsistency(const LocalBoardRO& board)
+bool GBTRawDataChecker::checkConsistency(const ROBoard& board)
 {
   /// Checks that the event information is consistent
 
@@ -91,7 +91,7 @@ bool GBTRawDataChecker::checkConsistency(const LocalBoardRO& board)
   return true;
 }
 
-bool GBTRawDataChecker::checkConsistency(const std::vector<LocalBoardRO>& boards)
+bool GBTRawDataChecker::checkConsistency(const std::vector<ROBoard>& boards)
 {
   /// Checks that the event information is consistent
   for (auto& board : boards) {
@@ -105,7 +105,7 @@ bool GBTRawDataChecker::checkConsistency(const std::vector<LocalBoardRO>& boards
   return true;
 }
 
-bool GBTRawDataChecker::checkMasks(const std::vector<LocalBoardRO>& locs)
+bool GBTRawDataChecker::checkMasks(const std::vector<ROBoard>& locs)
 {
   /// Checks the masks
   for (auto loc : locs) {
@@ -132,12 +132,12 @@ bool GBTRawDataChecker::checkMasks(const std::vector<LocalBoardRO>& locs)
   return true;
 }
 
-bool GBTRawDataChecker::checkRegLocConsistency(const std::vector<LocalBoardRO>& regs, const std::vector<LocalBoardRO>& locs)
+bool GBTRawDataChecker::checkRegLocConsistency(const std::vector<ROBoard>& regs, const std::vector<ROBoard>& locs)
 {
   /// Checks consistency between local and regional info
   uint8_t regFired{0};
   for (auto& reg : regs) {
-    uint8_t ireg = crateparams::getLocId(reg.boardId) % 2;
+    uint8_t ireg = raw::getLocId(reg.boardId) % 2;
     auto busyItem = mBusyFlagSelfTrig.find(8 + ireg);
     if (reg.triggerWord == 0) {
       // Self-triggered event: check the decision
@@ -188,7 +188,7 @@ bool GBTRawDataChecker::checkRegLocConsistency(const std::vector<LocalBoardRO>& 
   return true;
 }
 
-std::string GBTRawDataChecker::printBoards(const std::vector<LocalBoardRO>& boards) const
+std::string GBTRawDataChecker::printBoards(const std::vector<ROBoard>& boards) const
 {
   /// Prints the boards
   std::stringstream ss;
@@ -198,7 +198,7 @@ std::string GBTRawDataChecker::printBoards(const std::vector<LocalBoardRO>& boar
   return ss.str();
 }
 
-bool GBTRawDataChecker::checkEvent(bool isTriggered, const std::vector<LocalBoardRO>& regs, const std::vector<LocalBoardRO>& locs)
+bool GBTRawDataChecker::checkEvent(bool isTriggered, const std::vector<ROBoard>& regs, const std::vector<ROBoard>& locs)
 {
   /// Checks the cards belonging to the same BC
   mEventDebugMsg.clear();
@@ -223,7 +223,7 @@ bool GBTRawDataChecker::checkEvent(bool isTriggered, const std::vector<LocalBoar
   return true;
 }
 
-uint8_t GBTRawDataChecker::getElinkId(const LocalBoardRO& board) const
+uint8_t GBTRawDataChecker::getElinkId(const ROBoard& board) const
 {
   /// Returns the e-link ID
   if (raw::isLoc(board.statusWord)) {
@@ -267,15 +267,16 @@ bool GBTRawDataChecker::isCompleteSelfTrigEvent(const o2::InteractionRecord& ir)
   // compared to triggered events.
   // So, we expect information from a previous orbit after having received an orbit trigger.
   // Let us check that we have all boards with the same orbit
+
   bool isIncluded = false;
   for (uint8_t ireg = 8; ireg < 10; ++ireg) {
     auto item = mBoardsSelfTrig.find(ireg);
     if (item != mBoardsSelfTrig.end()) {
+      if (item->second.back().interactionRecord.orbit == ir.orbit) {
+        return false;
+      }
       if (item->second.front().interactionRecord.orbit <= ir.orbit) {
         isIncluded = true;
-      }
-      if (item->second.back().interactionRecord.orbit <= ir.orbit) {
-        return false;
       }
     }
   }
@@ -304,7 +305,7 @@ unsigned int GBTRawDataChecker::getLastCompleteTrigEvent()
   for (; trigEventIt != end; ++trigEventIt) {
     if ((trigEventIt->second & fullMask) == fullMask) {
       // The trigger events contain the unprocessed events for both triggered and self-triggered events
-      // These might not be synchronized (typically the latest complete self-triggered events lies behind)
+      // These might not be synchronized (typically the latest complete self-triggered events lie behind)
       // If the latest IR in memory is more recent than the current complete event found,
       // then it means that we need to wait for more HBs.
       if (mLastCompleteIRTrig.isDummy() || mLastCompleteIRTrig < trigEventIt->first) {
@@ -320,11 +321,33 @@ unsigned int GBTRawDataChecker::getLastCompleteTrigEvent()
         }
         ++trIt;
       }
+
       return completeMask;
     }
   }
 
   return completeMask;
+}
+
+bool GBTRawDataChecker::runCheckEvents(unsigned int completeMask)
+{
+  /// Runs the checker if needed
+
+  bool isOk = true;
+
+  if (completeMask & 0x1) {
+    sortEvents(true);
+    isOk &= checkEvents(true);
+    clearChecked(true, mBoardsSelfTrig.empty());
+  }
+
+  if (completeMask & 0x2) {
+    sortEvents(false);
+    isOk &= checkEvents(false);
+    clearChecked(false, true);
+  }
+
+  return isOk;
 }
 
 void GBTRawDataChecker::sortEvents(bool isTriggered)
@@ -337,7 +360,7 @@ void GBTRawDataChecker::sortEvents(bool isTriggered)
   orderedIndexes.clear();
   lastIndexes.clear();
   for (auto& boardItem : boards) {
-    size_t lastIdx = 0;
+    long int lastIdx = -1;
     for (auto boardIt = boardItem.second.begin(), end = boardItem.second.end(); boardIt != end; ++boardIt) {
       if (boardIt->interactionRecord > lastCompleteTrigEventIR) {
         break;
@@ -411,13 +434,17 @@ bool GBTRawDataChecker::checkEvents(bool isTriggered)
   return isOk;
 }
 
-bool GBTRawDataChecker::process(gsl::span<const LocalBoardRO> localBoards, gsl::span<const ROFRecord> rofRecords, gsl::span<const ROFRecord> pageRecords)
+bool GBTRawDataChecker::process(gsl::span<const ROBoard> localBoards, gsl::span<const ROFRecord> rofRecords, gsl::span<const ROFRecord> pageRecords)
 {
   /// Checks the raw data
   mDebugMsg.clear();
 
   // Fill board information
   for (auto rofIt = rofRecords.begin(); rofIt != rofRecords.end(); ++rofIt) {
+    if (rofIt->interactionRecord.orbit == 0xffffffff) {
+      // Protection for event with orbit 0
+      continue;
+    }
     for (auto locIt = localBoards.begin() + rofIt->firstEntry; locIt != localBoards.begin() + rofIt->firstEntry + rofIt->nEntries; ++locIt) {
       // Find what page this event corresponds to.
       // This is useful for debugging.
@@ -455,8 +482,8 @@ bool GBTRawDataChecker::process(gsl::span<const LocalBoardRO> localBoards, gsl::
         selfVec.push_back({*locIt, ir, page});
       }
 
-      // Keep track of the orbit triggers
-      if (locIt->triggerWord & raw::sORB) {
+      // Keep track of the trigger chosen for synchronisation
+      if (locIt->triggerWord & mSyncTrigger) {
         mTrigEvents[rofIt->interactionRecord] |= (1 << id);
         mResetVal = rofIt->interactionRecord.bc;
       }
@@ -479,23 +506,7 @@ bool GBTRawDataChecker::process(gsl::span<const LocalBoardRO> localBoards, gsl::
     } // loop on local boards
   }   // loop on ROF records
 
-  auto completeMask = getLastCompleteTrigEvent();
-
-  bool isOk = true;
-
-  if (completeMask & 0x1) {
-    sortEvents(true);
-    isOk &= checkEvents(true);
-    clearChecked(true, mBoardsSelfTrig.empty());
-  }
-
-  if (completeMask & 0x2) {
-    sortEvents(false);
-    isOk &= checkEvents(false);
-    clearChecked(false, true);
-  }
-
-  return isOk;
+  return runCheckEvents(getLastCompleteTrigEvent());
 }
 
 void GBTRawDataChecker::clear()

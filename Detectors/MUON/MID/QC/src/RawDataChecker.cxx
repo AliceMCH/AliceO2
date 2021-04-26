@@ -32,7 +32,7 @@ void RawDataChecker::init(const CrateMasks& crateMasks)
   }
 }
 
-bool RawDataChecker::process(gsl::span<const LocalBoardRO> localBoards, gsl::span<const ROFRecord> rofRecords, gsl::span<const ROFRecord> pageRecords)
+bool RawDataChecker::process(gsl::span<const ROBoard> localBoards, gsl::span<const ROFRecord> rofRecords, gsl::span<const ROFRecord> pageRecords)
 {
   /// Checks the raw data
 
@@ -41,9 +41,9 @@ bool RawDataChecker::process(gsl::span<const LocalBoardRO> localBoards, gsl::spa
   std::unordered_map<uint16_t, std::vector<ROFRecord>> rofs;
   for (auto& rof : rofRecords) {
     auto& loc = localBoards[rof.firstEntry];
-    auto crateId = crateparams::getCrateId(loc.boardId);
-    auto linkId = crateparams::getGBTIdFromBoardInCrate(crateparams::getLocId(loc.boardId));
-    auto feeId = crateparams::makeROId(crateId, linkId);
+    auto crateId = raw::getCrateId(loc.boardId);
+    auto linkId = crateparams::getGBTIdFromBoardInCrate(raw::getLocId(loc.boardId));
+    auto feeId = crateparams::makeGBTUniqueId(crateId, linkId);
     rofs[feeId].emplace_back(rof);
   }
 
@@ -53,6 +53,14 @@ bool RawDataChecker::process(gsl::span<const LocalBoardRO> localBoards, gsl::spa
   }
 
   return isOk;
+}
+
+void RawDataChecker::setSyncTrigger(uint32_t syncTrigger)
+{
+  /// Sets the trigger use to verify if all data of an event where received
+  for (auto& checker : mCheckers) {
+    checker.setSyncTrigger(syncTrigger);
+  }
 }
 
 unsigned int RawDataChecker::getNEventsProcessed() const

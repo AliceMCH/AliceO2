@@ -8,13 +8,13 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 #include "Framework/AnalysisDataModel.h"
-#include "Analysis/HFSecondaryVertex.h"
-#include "PID/PIDResponse.h"
-#include "Analysis/Multiplicity.h"
-#include "Analysis/Centrality.h"
-#include "Analysis/TrackSelectionTables.h"
-#include "Analysis/Jet.h"
-#include "Analysis/StrangenessTables.h"
+#include "AnalysisDataModel/HFSecondaryVertex.h"
+#include "AnalysisDataModel/PID/PIDResponse.h"
+#include "AnalysisDataModel/Multiplicity.h"
+#include "AnalysisDataModel/Centrality.h"
+#include "AnalysisDataModel/TrackSelectionTables.h"
+#include "AnalysisDataModel/Jet.h"
+#include "AnalysisDataModel/StrangenessTables.h"
 #include <fmt/printf.h>
 #include <map>
 
@@ -67,14 +67,21 @@ enum StyleType : int {
 };
 
 static std::vector<std::pair<std::string, StyleType>> tableStyles = {
-  {"HfTrackIndexProng", StyleType::GREEN},
+  {"HfTrackIndexProng", StyleType::BLUE},
+  {"HfCandProng", StyleType::BLUE},
   {"pidResp", StyleType::GREEN},
   {"Mults", StyleType::GREEN},
   {"Cents", StyleType::GREEN},
+  {"Timestamps", StyleType::GREEN},
   {"Jet", StyleType::BLUE},
   {"Mc", StyleType::RED},
-  {"V0Data", StyleType::GREEN},
-  {"CascData", StyleType::GREEN}};
+  {"V0Datas", StyleType::GREEN},
+  {"CascData", StyleType::GREEN},
+  {"TrackSelection", StyleType::GREEN},
+  {"TracksExtended", StyleType::GREEN},
+  {"Transient", StyleType::GREEN},
+  {"Extension", StyleType::GREEN},
+};
 
 template <typename T>
 Style getStyleFor()
@@ -238,6 +245,7 @@ int main(int, char**)
   displayEntity<FT0s>();
   displayEntity<FV0As>();
   displayEntity<FDDs>();
+  displayEntity<HMPIDs>();
 
   displayEntities<Collisions, Cents, Mults, Timestamps>();
   displayEntity<McCollisions>();
@@ -248,26 +256,32 @@ int main(int, char**)
   displayEntity<McCaloLabels>();
 
   displayEntity<FV0Cs>();
+  displayEntity<Run2BCInfos>();
 
-  displayEntities<Tracks, TracksCov, TracksExtra, TracksExtended, TrackSelection, pidRespTOF, pidRespTPC>();
+  displayEntities<Tracks, TracksCov, TracksExtra, TracksExtended, TrackSelection,
+                  pidRespTOFEl, pidRespTOFMu, pidRespTOFPi,
+                  pidRespTOFKa, pidRespTOFPr, pidRespTOFDe,
+                  pidRespTOFTr, pidRespTOFHe, pidRespTOFAl,
+                  pidRespTPCEl, pidRespTPCMu, pidRespTPCPi,
+                  pidRespTPCKa, pidRespTPCPr, pidRespTPCDe,
+                  pidRespTPCTr, pidRespTPCHe, pidRespTPCAl>();
   displayEntity<UnassignedTracks>();
+  displayEntity<UnassignedMFTTracks>();
 
   displayEntity<McParticles>();
   displayEntity<McTrackLabels>();
 
-  displayEntity<HfTrackIndexProng2>();
-  displayEntity<HfTrackIndexProng3>();
-
   displayEntity<Jets>();
   displayEntity<JetConstituents>();
 
-  displayEntities<V0s, V0DataFull>();
-  displayEntity<V0FinderData>();
+  displayEntities<V0s, V0Datas>();
 
   displayEntities<Cascades, CascDataFull>();
 
-  displayEntity<Muons>();
-  displayEntity<MuonClusters>();
+  displayEntities<MFTTracks, FwdTracks, FwdTracksCov>();
+
+  displayEntities<HfTrackIndexProng2, HfCandProng2>();
+  displayEntities<HfTrackIndexProng3, HfCandProng3>();
 
   graphFooter();
   return 0;

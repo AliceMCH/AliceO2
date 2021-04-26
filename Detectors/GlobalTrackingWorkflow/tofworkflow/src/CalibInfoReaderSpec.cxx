@@ -20,6 +20,7 @@
 #include "Framework/ConfigParamRegistry.h"
 #include "Framework/Logger.h"
 #include "TOFWorkflow/CalibInfoReaderSpec.h"
+#include "DetectorsCommonDataFormats/NameConf.h"
 
 using namespace o2::framework;
 using namespace o2::tof;
@@ -29,12 +30,15 @@ namespace o2
 namespace tof
 {
 
+constexpr o2::header::DataDescription ddCalib{"CALIBDATA"}, ddCalib_tpc{"CALIBDATA_TPC"};
+
 void CalibInfoReader::init(InitContext& ic)
 {
   LOG(INFO) << "Init CalibInfo reader!";
-  mFile = fopen(mFileName, "r");
+  auto fname = o2::utils::concat_string(o2::base::NameConf::rectifyDirectory(ic.options().get<std::string>("input-dir")), mFileName);
+  mFile = fopen(fname.c_str(), "r");
   if (!mFile) {
-    LOG(ERROR) << "Cannot open the " << mFileName << " file !";
+    LOG(ERROR) << "Cannot open the " << fname << " file !";
     mState = 0;
     return;
   }
@@ -59,7 +63,7 @@ void CalibInfoReader::run(ProcessingContext& pc)
     if ((mGlobalEntry % mNinstances) == mInstance) {
       mTree->GetEvent(mCurrentEntry);
       LOG(INFO) << "Send " << mVect.size() << " calib infos";
-      pc.outputs().snapshot(Output{o2::header::gDataOriginTOF, "CALIBDATA", 0, Lifetime::Timeframe}, mVect);
+      pc.outputs().snapshot(Output{o2::header::gDataOriginTOF, mTOFTPC ? ddCalib_tpc : ddCalib, 0, Lifetime::Timeframe}, mVect);
       usleep(10000);
     }
     mGlobalEntry++;
@@ -71,16 +75,17 @@ void CalibInfoReader::run(ProcessingContext& pc)
   return;
 }
 
-DataProcessorSpec getCalibInfoReaderSpec(int instance, int ninstances, const char* filename)
+DataProcessorSpec getCalibInfoReaderSpec(int instance, int ninstances, const char* filename, bool toftpc)
 {
   std::vector<OutputSpec> outputs;
-  outputs.emplace_back(o2::header::gDataOriginTOF, "CALIBDATA", 0, Lifetime::Timeframe);
+  outputs.emplace_back(o2::header::gDataOriginTOF, toftpc ? ddCalib_tpc : ddCalib, 0, Lifetime::Timeframe);
 
-  const char* nameSpec;
-  if (ninstances == 1) {
-    nameSpec = "tof-calibinfo-reader";
-  } else {
-    nameSpec = Form("tof-calibinfo-reader-%d", instance);
+  std::string nameSpec = "tof-calibinfo-reader";
+  if (toftpc) {
+    nameSpec += "-tpc";
+  }
+  if (ninstances > 1) {
+    nameSpec += fmt::format("-{:d}", instance);
   }
 
   return DataProcessorSpec{
@@ -88,7 +93,7 @@ DataProcessorSpec getCalibInfoReaderSpec(int instance, int ninstances, const cha
     Inputs{},
     outputs,
     AlgorithmSpec{adaptFromTask<CalibInfoReader>(instance, ninstances, filename)},
-    Options{/* for the moment no options */}};
+    Options{{"input-dir", VariantType::String, "none", {"Input directory"}}}};
 }
 } // namespace tof
 } // namespace o2

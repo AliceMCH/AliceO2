@@ -56,16 +56,16 @@ void run_trd_tracker(std::string path = "./",
   const o2::trd::GeometryFlat geoFlat(*geo);
 
   //-------- init GPU reconstruction --------//
-  GPUSettingsEvent cfgEvent;                       // defaults should be ok
-  GPUSettingsRec cfgRec;                           // don't care for now, NWaysOuter is set in here for instance
-  GPUSettingsProcessing cfgDeviceProcessing;       // also keep defaults here, or adjust debug level
+  GPUSettingsGRP cfgGRP;                     // defaults should be ok
+  GPUSettingsRec cfgRec;                     // don't care for now, NWaysOuter is set in here for instance
+  GPUSettingsProcessing cfgDeviceProcessing; // also keep defaults here, or adjust debug level
   cfgDeviceProcessing.debugLevel = 5;
   GPURecoStepConfiguration cfgRecoStep;
   cfgRecoStep.steps = GPUDataTypes::RecoStep::NoRecoStep;
   cfgRecoStep.inputs.clear();
   cfgRecoStep.outputs.clear();
   auto rec = GPUReconstruction::CreateInstance("CPU", true);
-  rec->SetSettings(&cfgEvent, &cfgRec, &cfgDeviceProcessing, &cfgRecoStep);
+  rec->SetSettings(&cfgGRP, &cfgRec, &cfgDeviceProcessing, &cfgRecoStep);
 
   auto chainTracking = rec->AddChain<GPUChainTracking>();
 
@@ -86,7 +86,7 @@ void run_trd_tracker(std::string path = "./",
   tracker->SetPtThreshold(0.5);
   tracker->SetChi2Threshold(15);
   tracker->SetChi2Penalty(12);
-  tracker->SetMaxMissingLayers(6);
+  tracker->SetStopTrkFollowingAfterNMissingLayers(6);
   tracker->PrintSettings();
 
   // load input tracks

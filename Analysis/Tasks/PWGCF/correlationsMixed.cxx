@@ -13,10 +13,10 @@
 #include "Framework/ASoAHelpers.h"
 #include "Framework/StepTHn.h"
 
-#include "Analysis/EventSelection.h"
-#include "Analysis/Centrality.h"
-#include "Analysis/CorrelationContainer.h"
-#include "Analysis/TrackSelectionTables.h"
+#include "AnalysisDataModel/EventSelection.h"
+#include "AnalysisDataModel/Centrality.h"
+#include "AnalysisCore/CorrelationContainer.h"
+#include "AnalysisDataModel/TrackSelectionTables.h"
 
 #include <TH1F.h>
 #include <cmath>
@@ -78,7 +78,7 @@ struct HashTask {
 
 #define O2_DEFINE_CONFIGURABLE(NAME, TYPE, DEFAULT, HELP) Configurable<TYPE> NAME{#NAME, DEFAULT, HELP};
 
-struct CorrelationTask {
+struct CorrelationTaskMixed {
 
   // Input definitions
   using myTracks = soa::Filtered<aod::Tracks>;
@@ -197,7 +197,7 @@ struct CorrelationTask {
 
       for (auto& track1 : tracks1) {
 
-        if (cfgTriggerCharge != 0 && cfgTriggerCharge * track1.charge() < 0) {
+        if (cfgTriggerCharge != 0 && cfgTriggerCharge * track1.sign() < 0) {
           continue;
         }
 
@@ -207,10 +207,10 @@ struct CorrelationTask {
 
         for (auto& track2 : tracks2) {
 
-          if (cfgAssociatedCharge != 0 && cfgAssociatedCharge * track2.charge() < 0) {
+          if (cfgAssociatedCharge != 0 && cfgAssociatedCharge * track2.sign() < 0) {
             continue;
           }
-          if (cfgPairCharge != 0 && cfgPairCharge * track1.charge() * track2.charge() < 0) {
+          if (cfgPairCharge != 0 && cfgPairCharge * track1.sign() * track2.sign() < 0) {
             continue;
           }
 
@@ -223,11 +223,11 @@ struct CorrelationTask {
           }
 
           float deltaPhi = track1.phi() - track2.phi();
-          if (deltaPhi > 1.5 * TMath::Pi()) {
-            deltaPhi -= TMath::TwoPi();
+          if (deltaPhi > 1.5 * M_PI) {
+            deltaPhi -= M_PI * 2;
           }
-          if (deltaPhi < -0.5 * TMath::Pi()) {
-            deltaPhi += TMath::TwoPi();
+          if (deltaPhi < -0.5 * M_PI) {
+            deltaPhi += M_PI * 2;
           }
 
           mixed->getPairHist()->Fill(CorrelationContainer::kCFStepReconstructed,
@@ -241,7 +241,7 @@ struct CorrelationTask {
   bool conversionCuts(T const& track1, T const& track2)
   {
     // skip if like sign
-    if (track1.charge() * track2.charge() > 0) {
+    if (track1.sign() * track2.sign() > 0) {
       return false;
     }
 
@@ -387,20 +387,20 @@ struct CorrelationTask {
 
     // fold onto 0...pi
     float deltaPhi = TMath::Abs(phi1 - phi2);
-    while (deltaPhi > TMath::TwoPi()) {
-      deltaPhi -= TMath::TwoPi();
+    while (deltaPhi > M_PI * 2) {
+      deltaPhi -= M_PI * 2;
     }
-    if (deltaPhi > TMath::Pi()) {
-      deltaPhi = TMath::TwoPi() - deltaPhi;
+    if (deltaPhi > M_PI) {
+      deltaPhi = M_PI * 2 - deltaPhi;
     }
 
     float cosDeltaPhi = 0;
-    if (deltaPhi < TMath::Pi() / 3) {
+    if (deltaPhi < M_PI / 3) {
       cosDeltaPhi = 1.0 - deltaPhi * deltaPhi / 2 + deltaPhi * deltaPhi * deltaPhi * deltaPhi / 24;
-    } else if (deltaPhi < 2 * TMath::Pi() / 3) {
-      cosDeltaPhi = -(deltaPhi - TMath::Pi() / 2) + 1.0 / 6 * TMath::Power((deltaPhi - TMath::Pi() / 2), 3);
+    } else if (deltaPhi < 2 * M_PI / 3) {
+      cosDeltaPhi = -(deltaPhi - M_PI / 2) + 1.0 / 6 * TMath::Power((deltaPhi - M_PI / 2), 3);
     } else {
-      cosDeltaPhi = -1.0 + 1.0 / 2.0 * (deltaPhi - TMath::Pi()) * (deltaPhi - TMath::Pi()) - 1.0 / 24.0 * TMath::Power(deltaPhi - TMath::Pi(), 4);
+      cosDeltaPhi = -1.0 + 1.0 / 2.0 * (deltaPhi - M_PI) * (deltaPhi - M_PI) - 1.0 / 24.0 * TMath::Power(deltaPhi - M_PI, 4);
     }
 
     double mass2 = m0_1 * m0_1 + m0_2 * m0_2 + 2 * (TMath::Sqrt(e1squ * e2squ) - (pt1 * pt2 * (cosDeltaPhi + 1.0 / tantheta1 / tantheta2)));
@@ -443,7 +443,7 @@ struct CorrelationTask {
         qa.mTwoTrackDistancePt[0]->Fill(deta, dphistarmin, TMath::Abs(track1.pt() - track2.pt()));
 
         if (dphistarminabs < cfgTwoTrackCut && TMath::Abs(deta) < cfgTwoTrackCut) {
-          //Printf("Removed track pair %ld %ld with %f %f %f %f %d %f %f %d %d", track1.index(), track2.index(), deta, dphistarminabs, track1.phi(), track1.pt(), track1.charge(), track2.phi(), track2.pt(), track2.charge(), bSign);
+          //Printf("Removed track pair %ld %ld with %f %f %f %f %d %f %f %d %d", track1.index(), track2.index(), deta, dphistarminabs, track1.phi(), track1.pt(), track1.sign(), track2.phi(), track2.pt(), track2.sign(), bSign);
           return true;
         }
 
@@ -463,24 +463,22 @@ struct CorrelationTask {
 
     auto phi1 = track1.phi();
     auto pt1 = track1.pt();
-    auto charge1 = track1.charge();
+    auto charge1 = track1.sign();
 
     auto phi2 = track2.phi();
     auto pt2 = track2.pt();
-    auto charge2 = track2.charge();
+    auto charge2 = track2.sign();
 
     float dphistar = phi1 - phi2 - charge1 * bSign * TMath::ASin(0.075 * radius / pt1) + charge2 * bSign * TMath::ASin(0.075 * radius / pt2);
 
-    static const Double_t kPi = TMath::Pi();
-
-    if (dphistar > kPi) {
-      dphistar = kPi * 2 - dphistar;
+    if (dphistar > M_PI) {
+      dphistar = M_PI * 2 - dphistar;
     }
-    if (dphistar < -kPi) {
-      dphistar = -kPi * 2 - dphistar;
+    if (dphistar < -M_PI) {
+      dphistar = -M_PI * 2 - dphistar;
     }
-    if (dphistar > kPi) { // might look funny but is needed
-      dphistar = kPi * 2 - dphistar;
+    if (dphistar > M_PI) { // might look funny but is needed
+      dphistar = M_PI * 2 - dphistar;
     }
 
     return dphistar;
@@ -500,9 +498,9 @@ struct CorrelationTask {
   //   float getInvMassSquared(float pt1, float eta1, float phi1, float pt2, float eta2, float phi2, float m0_1, float m0_2)
 };
 
-WorkflowSpec defineDataProcessing(ConfigContext const&)
+WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
 {
   return WorkflowSpec{
-    adaptAnalysisTask<HashTask>("produce-hashes"),
-    adaptAnalysisTask<CorrelationTask>("correlation-task")};
+    adaptAnalysisTask<HashTask>(cfgc),
+    adaptAnalysisTask<CorrelationTaskMixed>(cfgc)};
 }

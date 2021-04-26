@@ -33,7 +33,7 @@ namespace o2
 {
 namespace its
 {
-namespace GPU
+namespace gpu
 {
 
 enum class TrackletingLayerOrder {
@@ -55,7 +55,7 @@ class DeviceStoreVertexerHIP final
   ~DeviceStoreVertexerHIP() = default;
 
   UniquePointer<DeviceStoreVertexerHIP> initialise(const std::array<std::vector<Cluster>, constants::its::LayersNumberVertexer>&,
-                                                   const std::array<std::array<int, constants::index_table::ZBins * constants::index_table::PhiBins + 1>,
+                                                   const std::array<std::array<int, constants::its2::ZBins * constants::its2::PhiBins + 1>,
                                                                     constants::its::LayersNumberVertexer>&);
 
   // RO APIs
@@ -141,7 +141,7 @@ inline std::vector<int> DeviceStoreVertexerHIP::getNFoundTrackletsFromGPU(const 
   std::vector<int> nFoundDuplets;
   nFoundDuplets.resize(sizes[1]);
 
-  if (order == GPU::Order::fromInnermostToMiddleLayer) {
+  if (order == gpu::Order::fromInnermostToMiddleLayer) {
     mNFoundDuplets[0].copyIntoSizedVector(nFoundDuplets);
   } else {
     mNFoundDuplets[1].copyIntoSizedVector(nFoundDuplets);
@@ -161,7 +161,7 @@ inline std::vector<Tracklet> DeviceStoreVertexerHIP::getRawDupletsFromGPU(const 
   std::vector<int> nFoundDuplets;
   nFoundDuplets.resize(sizes[1]);
 
-  if (order == GPU::Order::fromInnermostToMiddleLayer) {
+  if (order == gpu::Order::fromInnermostToMiddleLayer) {
     mNFoundDuplets[0].copyIntoSizedVector(nFoundDuplets);
     mDuplets01.copyIntoSizedVector(tmpDuplets);
   } else {
@@ -184,7 +184,7 @@ inline std::vector<Tracklet> DeviceStoreVertexerHIP::getDupletsFromGPU(const Ord
   nFoundDuplets.resize(sizes[1]);
   std::vector<Tracklet> shrinkedDuplets;
 
-  if (order == GPU::Order::fromInnermostToMiddleLayer) {
+  if (order == gpu::Order::fromInnermostToMiddleLayer) {
     mNFoundDuplets[0].copyIntoSizedVector(nFoundDuplets);
     mDuplets01.copyIntoSizedVector(tmpDuplets);
   } else {
@@ -223,7 +223,7 @@ inline std::array<std::vector<int>, 2> DeviceStoreVertexerHIP::getHistogramXYFro
 {
   std::array<std::vector<int>, 2> histoXY;
   for (int iHisto{0}; iHisto < 2; ++iHisto) {
-    histoXY[iHisto].resize(mGPUConf.nBinsXYZ[iHisto] - 1);
+    histoXY[iHisto].resize(mGPUConf.histConf.nBinsXYZ[iHisto] - 1);
     mHistogramXYZ[iHisto].copyIntoSizedVector(histoXY[iHisto]);
   }
 
@@ -233,7 +233,7 @@ inline std::array<std::vector<int>, 2> DeviceStoreVertexerHIP::getHistogramXYFro
 inline std::vector<int> DeviceStoreVertexerHIP::getHistogramZFromGPU()
 {
   std::vector<int> histoZ;
-  histoZ.resize(mGPUConf.nBinsXYZ[2] - 1);
+  histoZ.resize(mGPUConf.histConf.nBinsXYZ[2] - 1);
   std::cout << "Size of dest vector to be refined" << std::endl;
   mHistogramXYZ[2].copyIntoSizedVector(histoZ);
 
@@ -242,7 +242,7 @@ inline std::vector<int> DeviceStoreVertexerHIP::getHistogramZFromGPU()
 
 inline void DeviceStoreVertexerHIP::updateDuplets(const Order order, std::vector<Tracklet>& duplets)
 {
-  if (order == GPU::Order::fromInnermostToMiddleLayer) {
+  if (order == gpu::Order::fromInnermostToMiddleLayer) {
     mDuplets01.reset(duplets.data(), static_cast<int>(duplets.size()));
   } else {
     mDuplets12.reset(duplets.data(), static_cast<int>(duplets.size()));
@@ -251,7 +251,7 @@ inline void DeviceStoreVertexerHIP::updateDuplets(const Order order, std::vector
 
 inline void DeviceStoreVertexerHIP::updateFoundDuplets(const Order order, std::vector<int>& nDuplets)
 {
-  if (order == GPU::Order::fromInnermostToMiddleLayer) {
+  if (order == gpu::Order::fromInnermostToMiddleLayer) {
     mNFoundDuplets[0].reset(nDuplets.data(), static_cast<int>(nDuplets.size()));
   } else {
     mNFoundDuplets[1].reset(nDuplets.data(), static_cast<int>(nDuplets.size()));
@@ -291,7 +291,7 @@ inline std::vector<Line> DeviceStoreVertexerHIP::getLinesFromGPU()
   return lines;
 }
 #endif
-} // namespace GPU
+} // namespace gpu
 } // namespace its
 } // namespace o2
 #endif //O2_ITS_TRACKING_INCLUDE_DEVICESTOREVERTEXER_HIP_H_

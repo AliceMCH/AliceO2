@@ -37,7 +37,7 @@
 #include "Framework/runDataProcessing.h"
 
 #include "DPLUtils/DPLRawParser.h"
-#include "MCHBase/Digit.h"
+#include "DataFormatsMCH/Digit.h"
 #include "MCHRawDecoder/OrbitInfo.h"
 
 using namespace o2;
@@ -84,15 +84,17 @@ class DigitsSinkTask
     // get the input digits
     auto digits = pc.inputs().get<gsl::span<Digit>>("digits");
     auto orbits = pc.inputs().get<gsl::span<OrbitInfo>>("orbits");
+    std::set<OrbitInfo> ordered_orbits(orbits.begin(), orbits.end());
 
     if (mText) {
-      for (auto o : orbits) {
-        mOutputFile << std::endl
-                    << " FEEID " << o.getFeeID() << "  LINK " << (int)o.getLinkID() << "  ORBIT " << o.getOrbit() << std::endl;
+      mOutputFile << std::endl
+                  << "=======================" << std::endl;
+      for (auto o : ordered_orbits) {
+        mOutputFile << " FEEID " << o.getFeeID() << "  LINK " << (int)o.getLinkID() << "  ORBIT " << o.getOrbit() << std::endl;
       }
       mOutputFile << "---------------" << std::endl;
       for (auto d : digits) {
-        mOutputFile << " DE# " << d.getDetID() << " PadId " << d.getPadID() << " ADC " << d.getADC() << " time " << d.getTime().sampaTime << std::endl;
+        mOutputFile << " DE# " << d.getDetID() << "  PadId " << d.getPadID() << "  ADC " << d.getADC() << "  time " << d.getTime() << std::endl;
       }
     } else {
       int nDigits = digits.size();

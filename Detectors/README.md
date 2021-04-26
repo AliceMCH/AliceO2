@@ -14,11 +14,14 @@ This module contains the following submodules:
 * \subpage refDetectorsBasetest
 * \subpage refDetectorsGeometry
 * \subpage refDetectorsGlobalTracking
+* \subpage refDetectorsGlobalTrackingWorkflow
 * \subpage refDetectorsVertexing
 * \subpage refDetectorsCalibration
 * \subpage refDetectorsCPV
 * \subpage refDetectorsCTF
+* \subpage refDetectorsDCS
 * \subpage refDetectorsEMCAL
+* \subpage refDetectorsDCS
 * \subpage refDetectorsFIT
 * \subpage refDetectorsHMPID
 * \subpage refDetectorsITSMFT
@@ -28,5 +31,6 @@ This module contains the following submodules:
 * \subpage refDetectorsTOF
 * \subpage refDetectorsTPC
 * \subpage refDetectorsTRD
+* \subpage refDetectorsUpgrades
 * \subpage refDetectorsZDC
 /doxy -->

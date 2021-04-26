@@ -19,9 +19,9 @@
 #include "GlobalTracking/MatchTPCITSParams.h"
 #include "GlobalTrackingWorkflow/MatchTPCITSWorkflow.h"
 #include "GlobalTrackingWorkflow/PrimaryVertexingSpec.h"
-#include "GlobalTrackingWorkflow/PrimaryVertexReaderSpec.h"
+#include "GlobalTrackingWorkflowReaders/PrimaryVertexReaderSpec.h"
 #include "GlobalTrackingWorkflow/TPCITSMatchingSpec.h"
-#include "GlobalTrackingWorkflow/TrackTPCITSReaderSpec.h"
+#include "GlobalTrackingWorkflowReaders/TrackTPCITSReaderSpec.h"
 #include "GlobalTrackingWorkflow/TrackWriterTPCITSSpec.h"
 #include "ITSMFTWorkflow/ClusterReaderSpec.h"
 #include "ITSWorkflow/TrackReaderSpec.h"
@@ -31,11 +31,11 @@
 namespace o2::aodproducer
 {
 
-framework::WorkflowSpec getAODProducerWorkflow()
+framework::WorkflowSpec getAODProducerWorkflow(int ignoreWriter)
 {
   // TODO:
   // switch to configurable parameters (?)
-  bool useMC = false;
+  bool useMC = true;
 
   // FIXME:
   // switch (?) from o2::ft0::getReconstructionSpec to RecPointReader
@@ -47,7 +47,7 @@ framework::WorkflowSpec getAODProducerWorkflow()
     o2::tpc::getTPCTrackReaderSpec(useMC),
     o2::ft0::getDigitReaderSpec(useMC),
     o2::ft0::getReconstructionSpec(useMC),
-    o2::aodproducer::getAODProducerWorkflowSpec()};
+    o2::aodproducer::getAODProducerWorkflowSpec(ignoreWriter)};
 
   return specs;
 }

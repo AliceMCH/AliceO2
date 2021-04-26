@@ -33,6 +33,8 @@
 #include <ROOT/RDataFrame.hxx>
 #include <TGrid.h>
 #include <TFile.h>
+#include <TTreeCache.h>
+#include <TTreePerfStats.h>
 
 #include <arrow/ipc/reader.h>
 #include <arrow/ipc/writer.h>
@@ -59,11 +61,20 @@ auto setEOSCallback(InitContext& ic)
                                            });
 }
 
+template <typename... Ts>
+static inline auto doExtractTypedOriginal(framework::pack<Ts...>, ProcessingContext& pc)
+{
+  if constexpr (sizeof...(Ts) == 1) {
+    return pc.inputs().get<TableConsumer>(aod::MetadataTrait<framework::pack_element_t<0, framework::pack<Ts...>>>::metadata::tableLabel())->asArrowTable();
+  } else {
+    return std::vector{pc.inputs().get<TableConsumer>(aod::MetadataTrait<Ts>::metadata::tableLabel())->asArrowTable()...};
+  }
+}
+
 template <typename O>
 static inline auto extractTypedOriginal(ProcessingContext& pc)
 {
-  ///FIXME: this should be done in invokeProcess() as some of the originals may be compound tables
-  return O{pc.inputs().get<TableConsumer>(aod::MetadataTrait<O>::metadata::tableLabel())->asArrowTable()};
+  return O{doExtractTypedOriginal(soa::make_originals_from_type<O>(), pc)};
 }
 
 template <typename... Os>
@@ -75,7 +86,6 @@ static inline auto extractOriginalsTuple(framework::pack<Os...>, ProcessingConte
 AlgorithmSpec AODReaderHelpers::indexBuilderCallback(std::vector<InputSpec> requested)
 {
   return AlgorithmSpec::InitCallback{[requested](InitContext& ic) {
-
     return [requested](ProcessingContext& pc) {
       auto outputs = pc.outputs();
       // spawn tables
@@ -117,9 +127,15 @@ AlgorithmSpec AODReaderHelpers::indexBuilderCallback(std::vector<InputSpec> requ
         } else if (description == header::DataDescription{"MA_RN3_SP"}) {
           outputs.adopt(Output{origin, description}, maker(o2::aod::Run3MatchedSparseMetadata{}));
         } else if (description == header::DataDescription{"MA_BCCOL_EX"}) {
-          outputs.adopt(Output{origin, description}, maker(o2::aod::BCCollisionsExclusiveMetadata{}));
+          outputs.adopt(Output{origin, description}, maker(o2::aod::MatchedBCCollisionsExclusiveMetadata{}));
         } else if (description == header::DataDescription{"MA_BCCOL_SP"}) {
-          outputs.adopt(Output{origin, description}, maker(o2::aod::BCCollisionsSparseMetadata{}));
+          outputs.adopt(Output{origin, description}, maker(o2::aod::MatchedBCCollisionsSparseMetadata{}));
+        } else if (description == header::DataDescription{"MA_RN3_BC_SP"}) {
+          outputs.adopt(Output{origin, description}, maker(o2::aod::Run3MatchedToBCSparseMetadata{}));
+        } else if (description == header::DataDescription{"MA_RN3_BC_EX"}) {
+          outputs.adopt(Output{origin, description}, maker(o2::aod::Run3MatchedToBCExclusiveMetadata{}));
+        } else if (description == header::DataDescription{"MA_RN2_BC_SP"}) {
+          outputs.adopt(Output{origin, description}, maker(o2::aod::Run2MatchedToBCSparseMetadata{}));
         } else {
           throw std::runtime_error("Not an index table");
         }
@@ -131,7 +147,6 @@ AlgorithmSpec AODReaderHelpers::indexBuilderCallback(std::vector<InputSpec> requ
 AlgorithmSpec AODReaderHelpers::aodSpawnerCallback(std::vector<InputSpec> requested)
 {
   return AlgorithmSpec::InitCallback{[requested](InitContext& ic) {
-
     return [requested](ProcessingContext& pc) {
       auto outputs = pc.outputs();
       // spawn tables
@@ -155,9 +170,9 @@ AlgorithmSpec AODReaderHelpers::aodSpawnerCallback(std::vector<InputSpec> reques
           return o2::framework::spawner(expressions{}, original_table.get());
         };
 
-        if (description == header::DataDescription{"TRACK:PAR"}) {
+        if (description == header::DataDescription{"TRACK"}) {
           outputs.adopt(Output{origin, description}, maker(o2::aod::TracksExtensionMetadata{}));
-        } else if (description == header::DataDescription{"TRACK:PARCOV"}) {
+        } else if (description == header::DataDescription{"TRACKCOV"}) {
           outputs.adopt(Output{origin, description}, maker(o2::aod::TracksCovExtensionMetadata{}));
         } else if (description == header::DataDescription{"MUON"}) {
           outputs.adopt(Output{origin, description}, maker(o2::aod::MuonsExtensionMetadata{}));
@@ -167,144 +182,6 @@ AlgorithmSpec AODReaderHelpers::aodSpawnerCallback(std::vector<InputSpec> reques
       }
     };
   }};
-}
-
-AlgorithmSpec AODReaderHelpers::rootFileReaderCallback()
-{
-  auto callback = AlgorithmSpec{adaptStateful([](ConfigParamRegistry const& options,
-                                                 DeviceSpec const& spec,
-                                                 Monitoring& monitoring) {
-    monitoring.send(Metric{(uint64_t)0, "arrow-bytes-created"}.addTag(Key::Subsystem, monitoring::tags::Value::DPL));
-    monitoring.send(Metric{(uint64_t)0, "arrow-messages-created"}.addTag(Key::Subsystem, monitoring::tags::Value::DPL));
-    monitoring.send(Metric{(uint64_t)0, "arrow-bytes-destroyed"}.addTag(Key::Subsystem, monitoring::tags::Value::DPL));
-    monitoring.send(Metric{(uint64_t)0, "arrow-messages-destroyed"}.addTag(Key::Subsystem, monitoring::tags::Value::DPL));
-    monitoring.flushBuffer();
-
-    if (!options.isSet("aod-file")) {
-      LOGP(ERROR, "No input file defined!");
-      throw std::runtime_error("Processing is stopped!");
-    }
-
-    auto filename = options.get<std::string>("aod-file");
-
-    // create a DataInputDirector
-    auto didir = std::make_shared<DataInputDirector>(filename);
-    if (options.isSet("aod-reader-json")) {
-      auto jsonFile = options.get<std::string>("aod-reader-json");
-      if (!didir->readJson(jsonFile)) {
-        LOGP(ERROR, "Check the JSON document! Can not be properly parsed!");
-      }
-    }
-
-    // get the run time watchdog
-    auto* watchdog = new RuntimeWatchdog(options.get<int64_t>("time-limit"));
-
-    // selected the TFN input and
-    // create list of requested tables
-    header::DataHeader TFNumberHeader;
-    std::vector<OutputRoute> requestedTables;
-    std::vector<OutputRoute> routes(spec.outputs);
-    for (auto route : routes) {
-      if (DataSpecUtils::partialMatch(route.matcher, header::DataOrigin("TFN"))) {
-        auto concrete = DataSpecUtils::asConcreteDataMatcher(route.matcher);
-        TFNumberHeader = header::DataHeader(concrete.description, concrete.origin, concrete.subSpec);
-      } else {
-        requestedTables.emplace_back(route);
-      }
-    }
-
-    auto fileCounter = std::make_shared<int>(0);
-    auto numTF = std::make_shared<int>(-1);
-    return adaptStateless([TFNumberHeader,
-                           requestedTables,
-                           fileCounter,
-                           numTF,
-                           watchdog,
-                           didir](Monitoring& monitoring, DataAllocator& outputs, ControlService& control, DeviceSpec const& device) {
-      // check if RuntimeLimit is reached
-      if (!watchdog->update()) {
-        LOGP(INFO, "Run time exceeds run time limit of {} seconds!", watchdog->runTimeLimit);
-        LOGP(INFO, "Stopping reader {} after time frame {}.", device.inputTimesliceId, watchdog->numberTimeFrames - 1);
-        didir->closeInputFiles();
-        control.endOfStream();
-        control.readyToQuit(QuitRequest::Me);
-        return;
-      }
-
-      // Each parallel reader device.inputTimesliceId reads the files fileCounter*device.maxInputTimeslices+device.inputTimesliceId
-      // the TF to read is numTF
-      assert(device.inputTimesliceId < device.maxInputTimeslices);
-      uint64_t timeFrameNumber = 0;
-      int fcnt = (*fileCounter * device.maxInputTimeslices) + device.inputTimesliceId;
-      int ntf = *numTF + 1;
-      monitoring.send(Metric{(uint64_t)ntf, "tf-sent"}.addTag(Key::Subsystem, monitoring::tags::Value::DPL));
-
-      // loop over requested tables
-      TTree* tr = nullptr;
-      bool first = true;
-      for (auto route : requestedTables) {
-
-        // create header
-        auto concrete = DataSpecUtils::asConcreteDataMatcher(route.matcher);
-        auto dh = header::DataHeader(concrete.description, concrete.origin, concrete.subSpec);
-
-        // create a TreeToTable object
-        tr = didir->getDataTree(dh, fcnt, ntf);
-        if (!tr) {
-          if (first) {
-            // check if there is a next file to read
-            fcnt += device.maxInputTimeslices;
-            if (didir->atEnd(fcnt)) {
-              LOGP(INFO, "No input files left to read for reader {}!", device.inputTimesliceId);
-              didir->closeInputFiles();
-              control.endOfStream();
-              control.readyToQuit(QuitRequest::Me);
-              return;
-            }
-            // get first folder of next file
-            ntf = 0;
-            tr = didir->getDataTree(dh, fcnt, ntf);
-            if (!tr) {
-              LOGP(FATAL, "Can not retrieve tree for table {}: fileCounter {}, timeFrame {}", concrete.origin, fcnt, ntf);
-              throw std::runtime_error("Processing is stopped!");
-            }
-          } else {
-            LOGP(FATAL, "Can not retrieve tree for table {}: fileCounter {}, timeFrame {}", concrete.origin, fcnt, ntf);
-            throw std::runtime_error("Processing is stopped!");
-          }
-        }
-        if (first) {
-          timeFrameNumber = didir->getTimeFrameNumber(dh, fcnt, ntf);
-          auto o = Output(TFNumberHeader);
-          outputs.make<uint64_t>(o) = timeFrameNumber;
-        }
-
-        // create table output
-        auto o = Output(dh);
-        auto& t2t = outputs.make<TreeToTable>(o);
-
-        // add branches to read
-        auto colnames = aod::datamodel::getColumnNames(dh);
-        if (colnames.size() == 0) {
-          t2t.addAllColumns(tr);
-        } else {
-          for (auto colname : colnames) {
-            t2t.addColumn(colname.c_str());
-          }
-        }
-
-        // fill the table
-        t2t.fill(tr);
-        first = false;
-      }
-
-      // save file number and time frame
-      *fileCounter = (fcnt - device.inputTimesliceId) / device.maxInputTimeslices;
-      *numTF = ntf;
-    });
-  })};
-
-  return callback;
 }
 
 } // namespace o2::framework::readers

@@ -60,6 +60,7 @@ struct InputObjectRoute {
   std::string directory;
   uint32_t taskHash;
   OutputObjHandlingPolicy policy;
+  OutputObjSourceType sourceType;
 };
 
 struct InputObject {
@@ -123,8 +124,7 @@ DataProcessorSpec CommonDataProcessors::getOutputObjHistSink(outputObjects const
           };
 
           TDirectory* currentDir = f[route.policy]->GetDirectory(currentDirectory.c_str());
-          TNamed* named = static_cast<TNamed*>(entry.obj);
-          if (named->InheritsFrom(TList::Class())) {
+          if (route.sourceType == OutputObjSourceType::HistogramRegistrySource) {
             TList* outputList = (TList*)entry.obj;
             outputList->SetOwner(false);
 
@@ -185,6 +185,7 @@ DataProcessorSpec CommonDataProcessors::getOutputObjHistSink(outputObjects const
       }
 
       auto policy = objh->mPolicy;
+      auto sourceType = objh->mSourceType;
       auto hash = objh->mTaskHash;
 
       obj.obj = tm.ReadObjectAny(obj.kind);
@@ -207,7 +208,7 @@ DataProcessorSpec CommonDataProcessors::getOutputObjHistSink(outputObjects const
         return;
       }
       auto nameHash = compile_time_hash(obj.name.c_str());
-      InputObjectRoute key{obj.name, nameHash, taskname, hash, policy};
+      InputObjectRoute key{obj.name, nameHash, taskname, hash, policy, sourceType};
       auto existing = std::find_if(inputObjects->begin(), inputObjects->end(), [&](auto&& x) { return (x.first.uniqueId == nameHash) && (x.first.taskHash == hash); });
       if (existing == inputObjects->end()) {
         inputObjects->push_back(std::make_pair(key, obj));
@@ -226,7 +227,7 @@ DataProcessorSpec CommonDataProcessors::getOutputObjHistSink(outputObjects const
   };
 
   DataProcessorSpec spec{
-    "internal-dpl-global-analysis-file-sink",
+    "internal-dpl-aod-global-analysis-file-sink",
     {InputSpec("x", DataSpecUtils::dataDescriptorMatcherFrom(header::DataOrigin{"ATSK"}))},
     Outputs{},
     AlgorithmSpec(writerFunction),
@@ -306,8 +307,8 @@ DataProcessorSpec
 
       // loop over the DataRefs which are contained in pc.inputs()
       for (const auto& ref : pc.inputs()) {
-        if (!ref.spec || !ref.payload) {
-          LOGP(WARNING, "The input \"{}\" is not valid and will be skipped!", ref.spec->binding);
+        if (!ref.spec) {
+          LOGP(DEBUG, "The input \"{}\" is not valid and will be skipped!", ref.spec->binding);
           continue;
         }
 
@@ -319,53 +320,54 @@ DataProcessorSpec
 
         // does this need to be saved?
         auto dh = DataRefUtils::getHeader<header::DataHeader*>(ref);
+        auto tableName = std::string(dh->dataDescription.str);
         auto ds = dod->getDataOutputDescriptors(*dh);
-        if (ds.size() > 0) {
+        if (ds.size() <= 0) {
+          continue;
+        }
 
-          // get TF number fro startTime
-          auto it = tfNumbers.find(startTime);
-          if (it != tfNumbers.end()) {
-            tfNumber = (it->second / dod->getNumberTimeFramesToMerge()) * dod->getNumberTimeFramesToMerge();
-          } else {
-            LOGP(FATAL, "No time frame number found for output with start time {}", startTime);
-            throw std::runtime_error("Processing is stopped!");
-          }
+        // get TF number fro startTime
+        auto it = tfNumbers.find(startTime);
+        if (it != tfNumbers.end()) {
+          tfNumber = (it->second / dod->getNumberTimeFramesToMerge()) * dod->getNumberTimeFramesToMerge();
+        } else {
+          LOGP(FATAL, "No time frame number found for output with start time {}", startTime);
+          throw std::runtime_error("Processing is stopped!");
+        }
 
-          // get the TableConsumer and corresponding arrow table
-          auto s = pc.inputs().get<TableConsumer>(ref.spec->binding);
-          auto table = s->asArrowTable();
-          if (!table->Validate().ok()) {
-            LOGP(WARNING, "The table \"{}\" is not valid and will not be saved!", dh->description.str);
-            continue;
-          } else if (table->num_rows() <= 0) {
-            LOGP(WARNING, "The table \"{}\" is empty but will be saved anyway!", dh->description.str);
-          }
+        // get the TableConsumer and corresponding arrow table
+        auto s = pc.inputs().get<TableConsumer>(ref.spec->binding);
+        auto table = s->asArrowTable();
+        if (!table->Validate().ok()) {
+          LOGP(WARNING, "The table \"{}\" is not valid and will not be saved!", tableName);
+          continue;
+        } else if (table->schema()->fields().empty() == true) {
+          LOGP(DEBUG, "The table \"{}\" is empty but will be saved anyway!", tableName);
+        }
 
-          // loop over all DataOutputDescriptors
-          // a table can be saved in multiple ways
-          // e.g. different selections of columns to different files
-          for (auto d : ds) {
+        // loop over all DataOutputDescriptors
+        // a table can be saved in multiple ways
+        // e.g. different selections of columns to different files
+        for (auto d : ds) {
+          auto fileAndFolder = dod->getFileFolder(d, tfNumber);
+          auto treename = fileAndFolder.folderName + d->treename;
+          TableToTree ta2tr(table,
+                            fileAndFolder.file,
+                            treename.c_str());
 
-            auto fileAndFolder = dod->getFileFolder(d, tfNumber);
-            auto treename = fileAndFolder.folderName + d->treename;
-            TableToTree ta2tr(table,
-                              fileAndFolder.file,
-                              treename.c_str());
-
-            if (d->colnames.size() > 0) {
-              for (auto cn : d->colnames) {
-                auto idx = table->schema()->GetFieldIndex(cn);
-                auto col = table->column(idx);
-                auto field = table->schema()->field(idx);
-                if (idx != -1) {
-                  ta2tr.addBranch(col, field);
-                }
+          if (d->colnames.size() > 0) {
+            for (auto cn : d->colnames) {
+              auto idx = table->schema()->GetFieldIndex(cn);
+              auto col = table->column(idx);
+              auto field = table->schema()->field(idx);
+              if (idx != -1) {
+                ta2tr.addBranch(col, field);
               }
-            } else {
-              ta2tr.addAllBranches();
             }
-            ta2tr.process();
+          } else {
+            ta2tr.addAllBranches();
           }
+          ta2tr.process();
         }
       }
     });
@@ -449,7 +451,7 @@ DataProcessorSpec
                std::back_inserter(unmatched), noTimeframe);
 
   DataProcessorSpec spec{
-    "internal-dpl-global-binary-file-sink",
+    "internal-dpl-injected-global-binary-file-sink",
     validBinaryInputs,
     Outputs{},
     AlgorithmSpec(writerFunction),
@@ -480,16 +482,16 @@ DataProcessorSpec CommonDataProcessors::getGlobalFairMQSink(std::vector<InputSpe
   externalChannelSpec.protocol = ChannelProtocol::IPC;
   std::string defaultChannelConfig = formatExternalChannelConfiguration(externalChannelSpec);
   // at some point the formatting tool might add the transport as well so we have to check
-  return specifyFairMQDeviceOutputProxy("internal-dpl-output-proxy", danglingOutputInputs, defaultChannelConfig.c_str());
+  return specifyFairMQDeviceOutputProxy("internal-dpl-injected-output-proxy", danglingOutputInputs, defaultChannelConfig.c_str());
 }
 
 DataProcessorSpec CommonDataProcessors::getDummySink(std::vector<InputSpec> const& danglingOutputInputs)
 {
   return DataProcessorSpec{
-    "internal-dpl-dummy-sink",
+    "internal-dpl-injected-dummy-sink",
     danglingOutputInputs,
     Outputs{},
-  };
+    AlgorithmSpec([](ProcessingContext& ctx) {})};
 }
 
 } // namespace framework

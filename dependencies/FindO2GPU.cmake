@@ -27,7 +27,6 @@ string(TOUPPER "${ENABLE_HIP}" ENABLE_HIP)
 
 # Detect and enable CUDA
 if(ENABLE_CUDA)
-  set(CUDA_MINIMUM_VERSION "11.0")
   set(CMAKE_CUDA_STANDARD 17)
   set(CMAKE_CUDA_STANDARD_REQUIRED TRUE)
   include(CheckLanguage)
@@ -50,6 +49,9 @@ if(ENABLE_CUDA)
     if(THRUST_INCLUDE_DIR STREQUAL "THRUST_INCLUDE_DIR-NOTFOUND")
       message(FATAL_ERROR "CUDA found but thrust not available")
     endif()
+    if (NOT CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL "11.3")
+      message(FATAL_ERROR "CUDA Version too old: ${CMAKE_CUDA_COMPILER_VERSION}, 11.3 required")
+    endif()
 
     # Forward CXX flags to CUDA C++ Host compiler (for warnings, gdb, etc.)
     STRING(REGEX REPLACE "\-std=[^ ]*" "" CMAKE_CXX_FLAGS_NOSTD ${CMAKE_CXX_FLAGS}) # Need to strip c++17 imposed by alidist defaults
@@ -64,7 +66,7 @@ if(ENABLE_CUDA)
     if(CUDA_COMPUTETARGET)
       set(CMAKE_CUDA_ARCHITECTURES ${CUDA_COMPUTETARGET})
     else()
-      set(CMAKE_CUDA_ARCHITECTURES OFF)
+      set(CMAKE_CUDA_ARCHITECTURES 61-virtual)
     endif()
 
     set(CUDA_ENABLED ON)
@@ -102,13 +104,13 @@ endif()
 
 # Detect and enable OpenCL 2.x
 if(ENABLE_OPENCL2)
+  find_package(OpenCL)
   find_package(LLVM)
   if(LLVM_FOUND)
     find_package(Clang)
   endif()
-  find_package(ROCM PATHS /opt/rocm)
-  if(NOT ROCM_DIR STREQUAL "ROCM_DIR-NOTFOUND")
-    get_filename_component(ROCM_ROOT "${ROCM_DIR}/../../../" ABSOLUTE)
+  if(DEFINED ENV{ROCM_PATH})
+    get_filename_component(ROCM_ROOT "$ENV{ROCM_PATH}" ABSOLUTE)
   else()
     set(ROCM_ROOT "/opt/rocm")
   endif()
@@ -117,7 +119,7 @@ if(ENABLE_OPENCL2)
   find_program(LLVM_SPIRV llvm-spirv)
   if(Clang_FOUND
      AND LLVM_FOUND
-     AND LLVM_PACKAGE_VERSION VERSION_GREATER_EQUAL 10.0)
+     AND LLVM_PACKAGE_VERSION VERSION_GREATER_EQUAL 13.0)
     set(OPENCL2_COMPATIBLE_CLANG_FOUND ON)
   endif()
   if(OpenCL_VERSION_STRING VERSION_GREATER_EQUAL 2.0

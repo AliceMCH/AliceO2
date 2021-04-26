@@ -59,8 +59,24 @@ struct ATask {
   }
 };
 
-WorkflowSpec defineDataProcessing(ConfigContext const&)
+// Partition inside process
+// Caveat: partitioned table cannot be passed as const& to process()
+struct BTask {
+  void process(aod::Collisions const& collisions, aod::Tracks& tracks)
+  {
+    for (auto& c : collisions) {
+      Partition<aod::Tracks> groupedTracks = aod::track::collisionId == c.globalIndex();
+      groupedTracks.bindTable(tracks);
+      for (auto& t : groupedTracks) {
+        LOGF(INFO, "collision global index: %d grouped track collision id: %d", c.globalIndex(), t.collisionId());
+      }
+    }
+  }
+};
+
+WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
 {
   return WorkflowSpec{
-    adaptAnalysisTask<ATask>("consume-tracks")};
+    adaptAnalysisTask<ATask>(cfgc, TaskName{"consume-tracks"}),
+    adaptAnalysisTask<BTask>(cfgc, TaskName{"partition-in-process"})};
 }
