@@ -141,6 +141,7 @@ class FileReaderTask
     mPrint = ic.options().get<bool>("print");
     mFullHBF = ic.options().get<bool>("full-hbf");
     mFullTF = ic.options().get<bool>("full-tf");
+    mSaveTF = ic.options().get<bool>("save-tf");
     mOverlap = ic.options().get<int>("overlap");
 
     auto inputFileName = ic.options().get<std::string>("infile");
@@ -194,6 +195,8 @@ class FileReaderTask
     char* buf{nullptr};
     size_t frameSize{0};
 
+    static int TFid = 0;
+
     //if (nSent >= 2) {
     //  pc.services().get<ControlService>().endOfStream();
     //  return; // probably reached eof
@@ -228,7 +231,7 @@ class FileReaderTask
       // check that the RDH version is ok (only RDH versions from 4 to 6 are supported at the moment)
       auto rdhVersion = o2::raw::RDHUtils::getVersion(rdh);
       auto rdhHeaderSize = o2::raw::RDHUtils::getHeaderSize(rdh);
-      if (mPrint && false) {
+      if (mPrint) {
         std::cout << "header_version=" << (int)rdhVersion << std::endl;
       }
       if (rdhVersion < 4 || rdhVersion > 6 || rdhHeaderSize != 64) {
@@ -365,9 +368,20 @@ class FileReaderTask
               tfQueue.front().print();
             }
             if (tfQueue.front().payloadSize > 0) {
+              if (mSaveTF && TFid < 100) {
+                char fname[500];
+                snprintf(fname, 499, "tf-%03d.raw", TFid);
+                FILE* fout = fopen(fname, "wb");
+                if (fout) {
+                  fwrite(tfQueue.front().buf, tfQueue.front().totalSize, 1, fout);
+                  fclose(fout);
+                }
+              }
+
               auto freefct = [](void* data, void* /*hint*/) { free(data); };
               pc.outputs().adoptChunk(Output{"ROUT", "RAWDATA"}, tfQueue.front().buf, tfQueue.front().totalSize, freefct, nullptr);
               nSent += 1;
+              TFid += 1;
               //usleep(500000);
             }
             tfQueue.pop();
@@ -487,7 +501,8 @@ class FileReaderTask
   std::ifstream mInputFile{}; ///< input file
   int mFrameMax;              ///< number of frames to process
   bool mFullHBF;              ///< send full HeartBeat frames
-  bool mFullTF;               ///< send full HeartBeat frames
+  bool mFullTF;               ///< send full time frames
+  bool mSaveTF;               ///< save individual time frames to file
   int mOverlap;               ///< overlap between contiguous TimeFrames
   bool mPrint = false;        ///< print debug messages
   int nSent = 0;
@@ -506,6 +521,7 @@ o2::framework::DataProcessorSpec getFileReaderSpec()
             {"nframes", VariantType::Int, -1, {"number of frames to process"}},
             {"full-hbf", VariantType::Bool, false, {"send full HeartBeat frames"}},
             {"full-tf", VariantType::Bool, false, {"send full time frames"}},
+            {"save-tf", VariantType::Bool, false, {"save individual time frames to file"}},
             {"overlap", VariantType::Int, 1, {"overlap between contiguous TimeFrames"}},
             {"print", VariantType::Bool, false, {"verbose output"}}}};
 }
