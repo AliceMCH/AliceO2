@@ -26,8 +26,7 @@ static const int32_t BCROLLOVER = (1 << 20);
 using RawDigit = DataDecoder::RawDigit;
 using RawDigitVector = DataDecoder::RawDigitVector;
 
-
-static RawDigit makeDigit(int ds, uint32_t tfTime,  uint32_t orbit)
+static RawDigit makeDigit(int ds, uint32_t tfTime, uint32_t orbit)
 {
   RawDigit digit;
   digit.digit = o2::mch::Digit(100, 10, 1000, 0x7FFFFFFF, 10);
@@ -43,7 +42,7 @@ static RawDigit makeDigit(int ds, uint32_t tfTime,  uint32_t orbit)
   return digit;
 }
 
-static RawDigitVector makeDigitsVector(uint32_t tfTime1,  uint32_t orbit1, uint32_t tfTime2,  uint32_t orbit2)
+static RawDigitVector makeDigitsVector(uint32_t tfTime1, uint32_t orbit1, uint32_t tfTime2, uint32_t orbit2)
 {
   RawDigit digit1 = makeDigit(1, tfTime1, orbit1);
   RawDigit digit2 = makeDigit(2, tfTime2, orbit2);

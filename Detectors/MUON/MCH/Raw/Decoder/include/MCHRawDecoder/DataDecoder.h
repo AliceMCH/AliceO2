@@ -27,7 +27,6 @@
 #include "MCHRawDecoder/OrbitInfo.h"
 #include "MCHRawDecoder/PageDecoder.h"
 
-
 namespace o2
 {
 namespace mch
@@ -100,8 +99,7 @@ class DataDecoder
 
   using SampaTimeFrameStarts = std::unordered_map<uint32_t, std::optional<SampaTimeFrameStart>>;
 
-  struct RawDigit
-  {
+  struct RawDigit {
     o2::mch::Digit digit;
     SampaInfo info;
     auto getDetID() const { return digit.getDetID(); }

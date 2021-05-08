@@ -192,7 +192,7 @@ class FileReaderTask
   void printHBF(char* framePtr, size_t frameSize)
   {
     size_t pageStart = 0;
-    std::cout<<"----\n";
+    std::cout << "----\n";
     while (pageStart < frameSize) {
       RDH* rdh = (RDH*)(&(framePtr[pageStart]));
       // check that the RDH version is ok (only RDH versions from 4 to 6 are supported at the moment)
@@ -208,18 +208,18 @@ class FileReaderTask
       auto pageCounter = RDHUtils::getPageCounter(rdh);
 
       printf("%6d:  V %X  offset %4d  packet %3d  srcID %d  cruID %2d  dp %d  link %2d  orbit %u  bc %4d  trig 0x%08X  p %d  s %d",
-          (int)0, (int)rdhVersion, (int)pageSize,
-          (int)RDHUtils::getPacketCounter(rdh), (int)RDHUtils::getSourceID(rdh),
-          (int)cruID, (int)endPointID, (int)linkID,
-          (uint32_t)RDHUtils::getHeartBeatOrbit(rdh), (int)RDHUtils::getTriggerBC(rdh),
-          (int)triggerType, (int)pageCounter, (int)stopBit);
+             (int)0, (int)rdhVersion, (int)pageSize,
+             (int)RDHUtils::getPacketCounter(rdh), (int)RDHUtils::getSourceID(rdh),
+             (int)cruID, (int)endPointID, (int)linkID,
+             (uint32_t)RDHUtils::getHeartBeatOrbit(rdh), (int)RDHUtils::getTriggerBC(rdh),
+             (int)triggerType, (int)pageCounter, (int)stopBit);
       if ((triggerType & 0x800) != 0) {
         printf(" <===");
       }
       printf("\n");
       pageStart += pageSize;
     }
-    std::cout<<"----\n";
+    std::cout << "----\n";
   }
 
   bool appendHBF(TimeFrame& tf, char* framePtr, size_t frameSize, bool addHBF)

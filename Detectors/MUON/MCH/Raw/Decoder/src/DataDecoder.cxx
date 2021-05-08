@@ -94,19 +94,18 @@ std::ostream& operator<<(std::ostream& os, const DataDecoder::RawDigit& d)
   return os;
 }
 
-
 //=======================
 // Data decoder
 
 bool DataDecoder::SampaInfo::operator==(const DataDecoder::SampaInfo& other) const
 {
   return chip == other.chip &&
-      ds == other.ds &&
-      solar == other.solar &&
-      sampaTime == other.sampaTime &&
-      bunchCrossing == other.bunchCrossing &&
-      orbit == other.orbit &&
-      tfTime == other.tfTime;
+         ds == other.ds &&
+         solar == other.solar &&
+         sampaTime == other.sampaTime &&
+         bunchCrossing == other.bunchCrossing &&
+         orbit == other.orbit &&
+         tfTime == other.tfTime;
   ;
 }
 
@@ -288,8 +287,8 @@ void DataDecoder::decodePage(gsl::span<const std::byte> page)
     if (mDebug) {
       RawDigit& lastDigit = mDigits.back();
       std::cout << "DIGIT STORED:\n ORBIT " << mOrbitId << "  ADC " << lastDigit.getADC()
-          << " DE# " << lastDigit.getDetID() << " PadId " << lastDigit.getPadID()
-          << " time " << lastDigit.getSampaTime() << std::endl;
+                << " DE# " << lastDigit.getDetID() << " PadId " << lastDigit.getPadID()
+                << " time " << lastDigit.getSampaTime() << std::endl;
     }
     ++ndigits;
   };
@@ -367,10 +366,10 @@ void DataDecoder::computeDigitsTime_(RawDigitVector& digits, SampaTimeFrameStart
 
     if (!tfStart) {
       LOG(ERROR) << "\n[computeDigitsTime_] missing TimeFrame start for ID " << info.id << "  DS " << info.solar << ","
-          << info.ds << " (J" << (info.ds / 5) + 1 << " B" << (info.ds % 5) << ")," << info.chip
-          << "  pad " << d.getDetID() << "," << d.getPadID() << "  "
-          << info.orbit << " " << info.tfTime << " " << info.bunchCrossing << " "
-          << info.sampaTime << " " << info.getBXTime();
+                 << info.ds << " (J" << (info.ds / 5) + 1 << " B" << (info.ds % 5) << ")," << info.chip
+                 << "  pad " << d.getDetID() << "," << d.getPadID() << "  "
+                 << info.orbit << " " << info.tfTime << " " << info.bunchCrossing << " "
+                 << info.sampaTime << " " << info.getBXTime();
       d.setTime(timeInvalid);
       info.tfTime = timeInvalid;
     } else {
