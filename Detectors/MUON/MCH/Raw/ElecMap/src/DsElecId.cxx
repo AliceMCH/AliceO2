@@ -117,7 +117,7 @@ std::ostream& operator<<(std::ostream& os, const DsElecId& id)
 
 std::string asString(DsElecId dsId)
 {
-  return fmt::format("S{}-J{}-DS{}", dsId.solarId(), dsId.elinkGroupId(), dsId.elinkIndexInGroup());
+  return fmt::format("S{}-J{}-DS{}", dsId.solarId(), dsId.elinkGroupId() + 1, dsId.elinkIndexInGroup());
 }
 
 std::optional<uint8_t> groupFromElinkId(uint8_t elinkId)
