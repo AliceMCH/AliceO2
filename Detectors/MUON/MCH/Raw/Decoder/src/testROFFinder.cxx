@@ -62,7 +62,8 @@ BOOST_AUTO_TEST_CASE(TwoDigitsInOneROF)
 
   auto digits = makeDigitsVector(tfTime1, orbit1, tfTime2, orbit2);
 
-  std::cout << digits[0] << "\n" << digits[1] << std::endl;
+  std::cout << digits[0] << "\n"
+            << digits[1] << std::endl;
 
   ROFFinder rofFinder(digits, orbit1);
   rofFinder.process();
