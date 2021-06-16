@@ -18,6 +18,7 @@
 #include <random>
 #include <iostream>
 #include <fstream>
+#include <chrono>
 #include <stdexcept>
 #include <array>
 #include <functional>
@@ -83,6 +84,12 @@ class DataDecoderTask
     auto useDummyElecMap = ic.options().get<bool>("dummy-elecmap");
     mDecoder = new DataDecoder(channelHandler, rdhHandler, sampaBcOffset, mapCRUfile, mapFECfile, ds2manu, mDebug,
                                useDummyElecMap);
+
+    auto stop = [this]() {
+      LOG(INFO) << "decoding duration = " << mTimeDecoding.count() * 1000 / mTFcount << " us / TF";
+      LOG(INFO) << "ROF finder duration = " << mTimeROFFinder.count() * 1000 / mTFcount << " us / TF";
+    };
+    ic.services().get<CallbackService>().set(CallbackService::Id::Stop, stop);
   }
 
   //_________________________________________________________________________________________________
@@ -180,6 +187,7 @@ class DataDecoderTask
 
     mDecoder->reset();
 
+    auto tStart = std::chrono::high_resolution_clock::now();
     for (auto&& input : pc.inputs()) {
       if (input.spec->binding == "readout") {
         decodeReadout(input);
@@ -189,6 +197,8 @@ class DataDecoderTask
       }
     }
     mDecoder->computeDigitsTime();
+    auto tEnd = std::chrono::high_resolution_clock::now();
+    mTimeDecoding += tEnd - tStart;
 
     auto& digits = mDecoder->getDigits();
     auto& orbits = mDecoder->getOrbits();
@@ -208,8 +218,11 @@ class DataDecoderTask
     }
 #endif
 
+    tStart = std::chrono::high_resolution_clock::now();
     ROFFinder rofFinder(digits, mFirstTForbit);
     rofFinder.process(mDummyROFs);
+    tEnd = std::chrono::high_resolution_clock::now();
+    mTimeROFFinder += tEnd - tStart;
 
     if (mDebug) {
       rofFinder.dumpOutputDigits();
@@ -236,6 +249,8 @@ class DataDecoderTask
     pc.outputs().adoptChunk(Output{header::gDataOriginMCH, "DIGITS", 0}, digitsBuffer, digitsSize, freefct, nullptr);
     pc.outputs().adoptChunk(Output{header::gDataOriginMCH, "DIGITROFS", 0}, rofsBuffer, rofsSize, freefct, nullptr);
     pc.outputs().adoptChunk(Output{header::gDataOriginMCH, "ORBITS", 0}, orbitsBuffer, orbitsSize, freefct, nullptr);
+
+    mTFcount += 1;
   }
 
  private:
@@ -245,6 +260,11 @@ class DataDecoderTask
   bool mDummyROFs = {false};         /// flag to disable the ROFs finding
   uint32_t mFirstTForbit{0};         /// first orbit of the time frame being processed
   DataDecoder* mDecoder = {nullptr}; /// pointer to the data decoder instance
+
+  uint32_t mTFcount{0};
+
+  std::chrono::duration<double, std::milli> mTimeDecoding{};  ///< timer
+  std::chrono::duration<double, std::milli> mTimeROFFinder{}; ///< timer
 };
 
 //_________________________________________________________________________________________________
