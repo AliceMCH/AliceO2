@@ -637,7 +637,7 @@ void DataDecoder::reset()
 {
   mDigits.clear();
   mOrbits.clear();
-  for (auto& mergerCh: mMergerRecords) {
+  for (auto& mergerCh : mMergerRecords) {
     mergerCh.digitId = -1;
     mergerCh.bcEnd = -1;
   }
