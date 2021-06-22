@@ -75,6 +75,7 @@ class DataDecoderTask
     RdhHandler rdhHandler;
 
     auto ds2manu = ic.options().get<bool>("ds2manu");
+    DigitsMappingMode mapMode = static_cast<DigitsMappingMode>(ic.options().get<int>("map-mode"));
     auto sampaBcOffset = CoDecParam::Instance().sampaBcOffset;
     mDebug = ic.options().get<bool>("debug");
     mCheckROFs = ic.options().get<bool>("check-rofs");
@@ -83,7 +84,7 @@ class DataDecoderTask
     auto mapFECfile = ic.options().get<std::string>("fec-map");
     auto useDummyElecMap = ic.options().get<bool>("dummy-elecmap");
     mDecoder = new DataDecoder(channelHandler, rdhHandler, sampaBcOffset, mapCRUfile, mapFECfile, ds2manu, mDebug,
-                               useDummyElecMap);
+                               useDummyElecMap, mapMode);
 
     auto stop = [this]() {
       LOG(INFO) << "decoding duration = " << mTimeDecoding.count() * 1000 / mTFcount << " us / TF";
@@ -283,6 +284,7 @@ o2::framework::DataProcessorSpec getDecodingSpec(std::string inputSpec)
             {"fec-map", VariantType::String, "", {"custom FEC mapping"}},
             {"dummy-elecmap", VariantType::Bool, false, {"use dummy electronic mapping (for debug, temporary)"}},
             {"ds2manu", VariantType::Bool, false, {"convert channel numbering from Run3 to Run1-2 order"}},
+            {"map-mode", VariantType::Int, static_cast<int>(eDigitsMappingStandard), {"method to apply the electronics mapping:\n0 -> standard\n1 -> pre-computed with SOLARID idexing"}},
             {"check-rofs", VariantType::Bool, false, {"perform consistency checks on the output ROFs"}},
             {"dummy-rofs", VariantType::Bool, false, {"disable the ROFs finding algorithm"}}}};
 }

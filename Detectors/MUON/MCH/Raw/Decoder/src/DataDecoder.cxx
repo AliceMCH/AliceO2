@@ -151,8 +151,8 @@ bool DataDecoder::RawDigit::operator==(const DataDecoder::RawDigit& other) const
 DataDecoder::DataDecoder(SampaChannelHandler channelHandler, RdhHandler rdhHandler,
                          uint32_t sampaBcOffset,
                          std::string mapCRUfile, std::string mapFECfile,
-                         bool ds2manu, bool verbose, bool useDummyElecMap)
-  : mChannelHandler(channelHandler), mRdhHandler(rdhHandler), mSampaTimeOffset(sampaBcOffset), mMapCRUfile(mapCRUfile), mMapFECfile(mapFECfile), mDs2manu(ds2manu), mDebug(verbose), mUseDummyElecMap(useDummyElecMap)
+                         bool ds2manu, bool verbose, bool useDummyElecMap, DigitsMappingMode mappingMode)
+  : mChannelHandler(channelHandler), mRdhHandler(rdhHandler), mSampaTimeOffset(sampaBcOffset), mMapCRUfile(mapCRUfile), mMapFECfile(mapFECfile), mDs2manu(ds2manu), mDebug(verbose), mUseDummyElecMap(useDummyElecMap), mMappingMode(mappingMode)
 {
   init();
 }
@@ -264,28 +264,47 @@ bool DataDecoder::getPadMapping(const DsElecId& dsElecId, DualSampaChannelId cha
   dsIddet = -1;
   padId = -1;
 
-  if (auto opt = mElec2Det(dsElecId); opt.has_value()) {
-    DsDetId dsDetId = opt.value();
-    dsIddet = dsDetId.dsId();
-    deId = dsDetId.deId();
-  }
-  if (mDebug) {
-    auto s = asString(dsElecId);
-    auto ch = fmt::format("{}-CH{:02d}", s, channel);
-    std::cout << ch << "  "
-              << "deId " << deId << "  dsIddet " << dsIddet << std::endl;
-  }
+  if (mMappingMode == eDigitsMappingFast1) {
+    if (channel < 0 || channel >= 64) { return false; }
 
-  if (deId < 0 || dsIddet < 0 || !isValidDeID(deId)) {
-    LOGP(error, "got invalid DsDetId from dsElecId={}", asString(dsElecId));
-    return false;
-  }
+    auto solarId = dsElecId.solarId();
+    if (solarId < 0 || solarId >= 1024) { return false; }
 
-  const Segmentation& segment = segmentation(deId);
-  padId = segment.findPadByFEE(dsIddet, int(channel));
+    auto dsId = dsElecId.elinkId();
+    if (dsId < 0 || dsId >= 40) { return false; }
 
-  if (padId < 0) {
-    return false;
+    const auto& mapDs = mMapSolar[solarId][dsId];
+    deId = mapDs.deId;
+    dsIddet = mapDs.dsIddet;
+    padId = mapDs.padIds[channel];
+
+    if (padId < 0) {
+      return false;
+    }
+  } else {
+    if (auto opt = mElec2Det(dsElecId); opt.has_value()) {
+      DsDetId dsDetId = opt.value();
+      dsIddet = dsDetId.dsId();
+      deId = dsDetId.deId();
+    }
+    if (mDebug) {
+      auto s = asString(dsElecId);
+      auto ch = fmt::format("{}-CH{:02d}", s, channel);
+      std::cout << ch << "  "
+          << "deId " << deId << "  dsIddet " << dsIddet << std::endl;
+    }
+
+    if (deId < 0 || dsIddet < 0 || !isValidDeID(deId)) {
+      LOGP(error, "got invalid DsDetId from dsElecId={}", asString(dsElecId));
+      return false;
+    }
+
+    const Segmentation& segment = segmentation(deId);
+    padId = segment.findPadByFEE(dsIddet, int(channel));
+
+    if (padId < 0) {
+      return false;
+    }
   }
   return true;
 }
@@ -372,12 +391,6 @@ void DataDecoder::decodePage(gsl::span<const std::byte> page)
     if (mDs2manu) {
       LOGP(error, "using ds2manu");
       channel = ds2manu(int(channel));
-    }
-
-    int32_t mergerChannelId = getMergerChannelId(dsElecId, channel);
-    if (mergerChannelId < 0) {
-      LOGP(error, "dsElecId={} is out-of-bounds", asString(dsElecId));
-      return;
     }
 
     if (!addDigit(dsElecId, channel, sc)) {
@@ -467,7 +480,7 @@ void DataDecoder::computeDigitsTime(RawDigitVector& digits, SampaTimeFrameStart&
     uint32_t bc = sampaTimeFrameStart.mBunchCrossing;
     uint32_t orbit = sampaTimeFrameStart.mOrbit;
     tfTime = DataDecoder::digitsTimeDiff(orbit, bc, info.orbit, info.getBXTime());
-    if (tfTime >= bcInTF) {
+    if (debug && tfTime >= bcInTF) {
       LOGP(warning, "DE {} PAD {}: time {} exceeds TF length", d.getDetID(), d.getPadID(), tfTime);
     }
     if (debug) {
@@ -551,6 +564,35 @@ void DataDecoder::init()
 
   initFee2SolarMapper(mMapCRUfile);
   initElec2DetMapper(mMapFECfile);
+
+  for (int solarId = 0; solarId < 1024; solarId++) {
+
+    auto& mapSolar = mMapSolar[solarId];
+
+    for (int dsId = 0; dsId < 40; dsId++) {
+      DsElecId dsElecId(solarId, dsId / 5, dsId % 5);
+      auto dsDetId = mElec2Det(dsElecId);
+      if (!dsDetId) { continue; }
+
+      auto& mapDs = mapSolar[dsId];
+
+      mapDs.deId = dsDetId->deId();
+      mapDs.dsIddet = dsDetId->dsId();
+
+      if (mapDs.deId < 0 || mapDs.dsIddet < 0 || !isValidDeID(mapDs.deId)) {
+        LOGP(error, "got invalid DsDetId from dsElecId={}", asString(dsElecId));
+        return;
+      }
+
+      const Segmentation& segment = segmentation(mapDs.deId);
+
+      for (int channel = 0; channel < 64; channel++) {
+        int padId = segment.findPadByFEE(mapDs.dsIddet, int(channel));
+        if (padId < 0) { continue; }
+        mapDs.padIds[channel] = padId;
+      }
+    }
+  }
 };
 
 //_________________________________________________________________________________________________

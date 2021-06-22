@@ -34,6 +34,12 @@ namespace mch
 namespace raw
 {
 
+enum DigitsMappingMode
+{
+  eDigitsMappingStandard = 0,
+  eDigitsMappingFast1 = 1
+};
+
 using RdhHandler = std::function<void(o2::header::RDHAny*)>;
 
 // custom hash for OrbitInfo objects
@@ -128,7 +134,8 @@ class DataDecoder
   DataDecoder(SampaChannelHandler channelHandler, RdhHandler rdhHandler,
               uint32_t sampaBcOffset,
               std::string mapCRUfile, std::string mapFECfile,
-              bool ds2manu, bool verbose, bool useDummyElecMap);
+              bool ds2manu, bool verbose, bool useDummyElecMap,
+              DigitsMappingMode mappingMode);
 
   void reset();
   void decodeBuffer(gsl::span<const std::byte> buf);
@@ -163,6 +170,23 @@ class DataDecoder
   FeeLink2SolarMapper mFee2Solar{nullptr}; ///< CRU electronics mapping
   std::string mMapFECfile;                 ///< optional text file with custom front-end electronics mapping
   std::string mMapCRUfile;                 ///< optional text file with custom CRU mapping
+
+  struct MapDS
+  {
+    MapDS()
+    {
+      std::fill(padIds, padIds + 64, -1);
+    }
+
+    int deId{-1};
+    int dsIddet{-1};
+    int padIds[64];
+  };
+  using MapSolar = std::array<MapDS, 40>;
+  using MapFee = std::array<MapSolar, 12>;
+  std::vector<MapFee> mMapMCH{64};
+  std::vector<MapSolar> mMapSolar{1024};
+  DigitsMappingMode mMappingMode;
 
   o2::mch::raw::PageDecoder mDecoder; ///< CRU page decoder
 
