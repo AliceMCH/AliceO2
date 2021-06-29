@@ -98,7 +98,7 @@ class TimeClusterFinderTask
 
     // create the output message
     auto freefct = [](void* data, void*) { free(data); };
-    pc.outputs().adoptChunk(Output{header::gDataOriginMCH, "PRECLUSTERROFS", 0}, rofsBuffer, rofsSize, freefct, nullptr);
+    pc.outputs().adoptChunk(Output{header::gDataOriginMCH, "TIMECLUSTERROFS", 0}, rofsBuffer, rofsSize, freefct, nullptr);
 
     mTFcount += 1;
   }
@@ -117,7 +117,7 @@ o2::framework::DataProcessorSpec getTimeClusterFinderSpec()
     "TimeClusterFinder",
     Inputs{InputSpec{"rofs", header::gDataOriginMCH, "DIGITROFS", 0, Lifetime::Timeframe},
            InputSpec{"orbits", header::gDataOriginMCH, "ORBITS", 0, Lifetime::Timeframe}},
-    Outputs{OutputSpec{header::gDataOriginMCH, "PRECLUSTERROFS", 0, Lifetime::Timeframe}},
+    Outputs{OutputSpec{header::gDataOriginMCH, "TIMECLUSTERROFS", 0, Lifetime::Timeframe}},
     AlgorithmSpec{adaptFromTask<TimeClusterFinderTask>()},
     Options{}};
 }
