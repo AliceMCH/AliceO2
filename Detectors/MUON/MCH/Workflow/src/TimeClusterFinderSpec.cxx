@@ -72,13 +72,14 @@ class TimeClusterFinderTask
 
     firstTForbit = *(ordered_orbits.begin());
     if (mDebug) {
-    std::cout<<"First TF orbit: "<<firstTForbit<<std::endl;
+      std::cout << "First TF orbit: " << firstTForbit << std::endl;
     }
 
     o2::mch::ROFTimeClusterFinder rofProcessor(rofs, firstTForbit, 0);
+
     if (mDebug) {
-    std::cout<<"\n\n=====================\nInput ROFs:\n";
-    rofProcessor.dumpInputROFs();
+      std::cout << "\n\n=====================\nInput ROFs:\n";
+      rofProcessor.dumpInputROFs();
     }
 
     auto tStart = std::chrono::high_resolution_clock::now();
@@ -87,8 +88,8 @@ class TimeClusterFinderTask
     mTimeProcess += tEnd - tStart;
 
     if (mDebug) {
-    std::cout<<"\n=====================\nOutput ROFs:\n";
-    rofProcessor.dumpOutputROFs();
+      std::cout << "\n=====================\nOutput ROFs:\n";
+      rofProcessor.dumpOutputROFs();
     }
 
     // send the output buffer via DPL
@@ -103,13 +104,10 @@ class TimeClusterFinderTask
   }
 
  private:
-  std::chrono::duration<double, std::milli> mTimeResetTimeClusterFinder{}; ///< timer
-  std::chrono::duration<double, std::milli> mTimeLoadDigits{};             ///< timer
-  std::chrono::duration<double, std::milli> mTimeProcess{};      ///< timer
-  std::chrono::duration<double, std::milli> mTimeStorePreClusters{};       ///< timer
+  std::chrono::duration<double, std::milli> mTimeProcess{}; ///< timer
 
-  int mTFcount{0};
-  int mDebug{0};
+  int mTFcount{0}; ///< number of processed time frames
+  int mDebug{0};   ///< verbosity flag
 };
 
 //_________________________________________________________________________________________________
