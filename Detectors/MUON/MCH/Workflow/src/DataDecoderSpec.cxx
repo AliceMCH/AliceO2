@@ -165,6 +165,32 @@ class DataDecoderTask
   }
 
   //_________________________________________________________________________________________________
+  void logStats()
+  {
+    static auto loggerStart = std::chrono::high_resolution_clock::now();
+    static auto loggerEnd = loggerStart;
+    static uint64_t nDigits = 0;
+    static uint64_t nTF = 0;
+
+    if (mLoggingInterval == 0) {
+      return;
+    }
+
+    auto& digits = mDecoder->getDigits();
+    nDigits += digits.size();
+    nTF += 1;
+
+    loggerEnd = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> loggerElapsed = loggerEnd - loggerStart;
+    if (loggerElapsed.count() > mLoggingInterval) {
+      LOG(INFO) << "Processed " << nDigits << " digits in " << nTF << " time frames";
+      nDigits = 0;
+      nTF = 0;
+      loggerStart = std::chrono::high_resolution_clock::now();
+    }
+  }
+
+  //_________________________________________________________________________________________________
   void run(framework::ProcessingContext& pc)
   {
     static int32_t deltaMax = 0;
@@ -252,6 +278,8 @@ class DataDecoderTask
     pc.outputs().adoptChunk(Output{header::gDataOriginMCH, "ORBITS", 0}, orbitsBuffer, orbitsSize, freefct, nullptr);
 
     mTFcount += 1;
+
+    logStats();
   }
 
  private:
@@ -263,6 +291,7 @@ class DataDecoderTask
   DataDecoder* mDecoder = {nullptr}; /// pointer to the data decoder instance
 
   uint32_t mTFcount{0};
+  int mLoggingInterval = {1000}; /// time interval between statistics logging messages
 
   std::chrono::duration<double, std::milli> mTimeDecoding{};  ///< timer
   std::chrono::duration<double, std::milli> mTimeROFFinder{}; ///< timer

@@ -21,6 +21,7 @@
 #include <gsl/span>
 #include <unordered_set>
 #include <unordered_map>
+#include <queue>
 #include <mutex>
 #include <condition_variable>
 #include <thread>
@@ -40,7 +41,8 @@ namespace raw
 enum DigitsMappingMode
 {
   eDigitsMappingStandard = 0,
-  eDigitsMappingFast1 = 1
+  eDigitsMappingFast1 = 1,
+  eDigitsMappingFast2 = 2
 };
 
 using RdhHandler = std::function<void(o2::header::RDHAny*)>;
@@ -56,24 +58,60 @@ struct OrbitInfoHash {
 void dumpOrbits(const std::unordered_set<OrbitInfo, OrbitInfoHash>& mOrbits);
 
 
-
-
-//_________________________________________________________________
-//
-// Data decoder
-//_________________________________________________________________
-struct Condition
+template<class T>
+class SafeQueue
 {
-  std::mutex mMutex;
-  std::condition_variable mCondition;
-  std::function<bool()> mPredicate;
-  void wait()
-  {
-    std::unique_lock<std::mutex> lock(mMutex);
-    mCondition.wait(lock, mPredicate);
-  }
-};
+public:
+  SafeQueue() = default;
 
+  void stop()
+  {
+    std::lock_guard<std::mutex> lock(mQueueMutex);
+    mStop = true;
+    mQueueCondition.notify_one();
+  }
+
+  void push(const T val)
+  {
+    std::lock_guard<std::mutex> lock(mQueueMutex);
+    mQueue.push(val);
+    mQueueCondition.notify_one();
+  }
+
+  bool get(T val)
+  {
+    std::unique_lock<std::mutex> lock(mQueueMutex);
+    mQueueCondition.wait(lock, [&]{ return (!mQueue.empty() || mStop); });
+
+    if (mStop) { return false; }
+
+    val = mQueue.front();
+    return true;
+  }
+
+  void pop(ssize_t& remaining)
+  {
+    std::lock_guard<std::mutex> lock(mQueueMutex);
+    mQueue.pop();
+    remaining = mQueue.size();
+  }
+
+  size_t size() {
+    std::lock_guard<std::mutex> lock(mQueueMutex);
+    return mQueue.size();
+  }
+
+  bool empty() {
+    std::lock_guard<std::mutex> lock(mQueueMutex);
+    return mQueue.empty();
+  }
+
+private:
+  std::mutex mQueueMutex;
+  std::condition_variable mQueueCondition;
+  std::queue<T> mQueue;
+  bool mStop{false};
+};
 
 //_________________________________________________________________
 //
@@ -154,54 +192,6 @@ class DataDecoder
 
   using RawDigitVector = std::vector<RawDigit>;
 
-  struct MapDS
-  {
-    MapDS()
-    {
-      std::fill(padIds, padIds + 64, -1);
-    }
-
-    int deId{-1};
-    int dsIddet{-1};
-    int padIds[64];
-  };
-  using MapSolar = std::array<MapDS, 40>;
-  using MapFee = std::array<MapSolar, 12>;
-
-  //_________________________________________________________________
-  //
-  // Page processor
-  //_________________________________________________________________
-
-  class PageProcessor
-  {
-  public:
-    using RawDigitVector = std::vector<RawDigit>;
-    using StoreDigitHandler = std::function<void(RawDigit&)>;
-
-    PageProcessor(Elec2DetMapper& elec2Det, FeeLink2SolarMapper& fee2Solar, std::vector<MapSolar>& mapSolar, DigitsMappingMode mappingMode, StoreDigitHandler storeDigit, bool debug):
-      mElec2Det(elec2Det), mFee2Solar(fee2Solar), mMapSolar(mapSolar), mMappingMode(mappingMode), mStoreDigit(storeDigit), mDebug(debug)
-    {
-    }
-
-    bool getPadMapping(const DsElecId& dsElecId, DualSampaChannelId channel, int& deId, int& dsIddet, int& padId);
-    bool addDigit(const DsElecId& dsElecId, DualSampaChannelId channel, const o2::mch::raw::SampaCluster& sc);
-    void decodePage(gsl::span<const std::byte> page);
-
-  private:
-    bool mDebug;
-    uint32_t mOrbit{0};
-    o2::mch::raw::PageDecoder mDecoder; ///< CRU page decoder
-
-    Elec2DetMapper& mElec2Det;       ///< front-end electronics mapping
-    FeeLink2SolarMapper& mFee2Solar; ///< CRU electronics mapping
-    std::vector<MapSolar>& mMapSolar;
-    DigitsMappingMode mMappingMode;
-
-    StoreDigitHandler mStoreDigit;
-  };
-
-
   DataDecoder(SampaChannelHandler channelHandler, RdhHandler rdhHandler,
               uint32_t sampaBcOffset,
               std::string mapCRUfile, std::string mapFECfile,
@@ -242,13 +232,70 @@ class DataDecoder
   std::string mMapFECfile;                 ///< optional text file with custom front-end electronics mapping
   std::string mMapCRUfile;                 ///< optional text file with custom CRU mapping
 
+  struct MapDS
+  {
+    MapDS()
+    {
+      std::fill(padIds, padIds + 64, -1);
+    }
+
+    int deId{-1};
+    int dsIddet{-1};
+    int padIds[64];
+  };
+  using MapSolar = std::array<MapDS, 40>;
+  using MapFee = std::array<MapSolar, 12>;
   std::vector<MapFee> mMapMCH{64};
   std::vector<MapSolar> mMapSolar{1024};
   DigitsMappingMode mMappingMode;
 
-  o2::mch::raw::PageDecoder mDecoder; ///< CRU page decoder
-  PageProcessor mPageProcessor;
+  struct Condition
+  {
+    std::mutex mMutex;
+    std::condition_variable mCondition;
+  };
 
+  struct PageProcessor
+  {
+    PageProcessor(Elec2DetMapper elec2Det, std::vector<MapSolar>& mapSolar, RawDigitVector& digits, std::mutex& digitsMutex, Condition& processEnd, bool debug):
+      mElec2Det(elec2Det), mMapSolar(mapSolar), mDigits(digits), mDigitsMutex(digitsMutex), mProcessEndCondition(processEnd), mDebug(debug)
+    {
+
+    }
+
+    void spawn()
+    {
+      mThread = std::thread(&PageProcessor::run, this);
+    }
+
+    void run();
+    void decodePage(gsl::span<const std::byte> page);
+    void appendPage(gsl::span<const std::byte> page)
+    {
+      mPageQueue.push(page);
+    }
+
+    using PageBuffer = gsl::span<const std::byte>;
+
+    bool mDebug;
+    o2::mch::raw::PageDecoder mDecoder; ///< CRU page decoder
+    SafeQueue<PageBuffer> mPageQueue;
+
+    Elec2DetMapper mElec2Det{nullptr};       ///< front-end electronics mapping
+    std::vector<MapSolar>& mMapSolar;
+
+    std::thread mThread;
+    std::mutex& mDigitsMutex;
+    RawDigitVector& mDigits;
+    Condition& mProcessEndCondition;
+  };
+  std::vector<PageProcessor> mDecoderThreadPool;
+  Condition mProcessEndCondition;
+  int mThreadsNum{2};
+
+  o2::mch::raw::PageDecoder mDecoder; ///< CRU page decoder
+
+  std::mutex mDigitsMutex;
   RawDigitVector mDigits;                               ///< vector of decoded digits
   std::unordered_set<OrbitInfo, OrbitInfoHash> mOrbits; ///< list of orbits in the processed buffer
 
