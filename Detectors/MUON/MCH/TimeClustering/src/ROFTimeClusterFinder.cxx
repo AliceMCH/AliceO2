@@ -39,7 +39,9 @@ void ROFTimeClusterFinder::initTimeBins()
   // initialize the time bins vector
   std::fill(mTimeBins.begin(), mTimeBins.end(), TimeBin());
 
-  if (mInputROFs.empty()) { return; }
+  if (mInputROFs.empty()) {
+    return;
+  }
 
   o2::InteractionRecord mFirstIR = mInputROFs.front().getBCData();
 
