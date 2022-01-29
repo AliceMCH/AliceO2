@@ -58,11 +58,27 @@ using RDH = o2::header::RDHAny;
 static const int NFEEID = 64;
 static const int NLINKS = 16;
 
+struct TimeFrameBuffer
+{
+  char* buf{ nullptr };
+  size_t frameSize{ 0 };
+
+  void reset()
+  {
+    if (buf) {
+      free(buf);
+    }
+    buf = nullptr;
+    frameSize = 0;
+  }
+};
+
 struct TimeFrame {
   char* buf{nullptr};
   size_t tfSize{0};
   size_t totalSize{0};
   size_t payloadSize{0};
+  uint32_t firstOrbit{0};
   std::vector<std::pair<size_t, size_t>> hbframes;
 
   void computePayloadSize()
@@ -160,6 +176,8 @@ using TFQueue = std::queue<TimeFrame>;
 
 TFQueue tfQueues[NFEEID][NLINKS];
 
+TimeFrameBuffer tfBuffers[NFEEID][NLINKS];
+
 class FileReaderTask
 {
  public:
@@ -254,10 +272,12 @@ class FileReaderTask
   //_________________________________________________________________________________________________
   void sendTF(framework::ProcessingContext& pc)
   {
+    //std::cout << "SendTF() called" << std::endl;
+
     /// send one RDH block via DPL
     RDH rdh;
-    char* buf{nullptr};
-    size_t frameSize{0};
+    //char* buf{nullptr};
+    //size_t frameSize{0};
 
     static int TFid = 0;
 
@@ -274,6 +294,7 @@ class FileReaderTask
         return;
       }
 
+      //printf("mTimeFrameMax: %d\n", mTimeFrameMax);
       if (mPrint && false) {
         printf("mFrameMax: %d\n", mFrameMax);
       }
@@ -306,7 +327,7 @@ class FileReaderTask
       auto pageSize = o2::raw::RDHUtils::getOffsetToNext(rdh);
       auto pageCounter = RDHUtils::getPageCounter(rdh);
 
-      if (mPrint) {
+      if (false || mPrint) {
         printf("%6d:  V %X  offset %4d  packet %3d  srcID %d  cruID %2d  dp %d  link %2d  orbit %u  bc %4d  trig 0x%08X  p %d  s %d",
                (int)0, (int)rdhVersion, (int)pageSize,
                (int)RDHUtils::getPacketCounter(rdh), (int)RDHUtils::getSourceID(rdh),
@@ -323,6 +344,7 @@ class FileReaderTask
       }
 
       TFQueue& tfQueue = tfQueues[feeID][linkID];
+      TimeFrameBuffer& tfBuffer = tfBuffers[feeID][linkID];
 
       // get the frame size from the RDH offsetToNext field
       if (mPrint && false) {
@@ -337,34 +359,34 @@ class FileReaderTask
       }
 
       // allocate or extend the output buffer
-      buf = (char*)realloc(buf, frameSize + pageSize);
-      if (buf == nullptr) {
+      tfBuffer.buf = (char*)realloc(tfBuffer.buf, tfBuffer.frameSize + pageSize);
+      if (tfBuffer.buf == nullptr) {
         std::cout << mFrameMax << " - failed to allocate buffer" << std::endl;
         pc.services().get<ControlService>().endOfStream();
         return;
       }
 
       // copy the RDH into the output buffer
-      memcpy(buf + frameSize, &rdh, rdhHeaderSize);
+      memcpy(tfBuffer.buf + tfBuffer.frameSize, &rdh, rdhHeaderSize);
 
       // read the frame payload into the output buffer
       if (mPrint) {
         std::cout << "Reading " << pageSize - rdhHeaderSize << " for payload from input file\n";
       }
-      mInputFile.read(buf + frameSize + rdhHeaderSize, pageSize - rdhHeaderSize);
+      mInputFile.read(tfBuffer.buf + tfBuffer.frameSize + rdhHeaderSize, pageSize - rdhHeaderSize);
 
       // stop if data cannot be read completely
       if (mInputFile.fail()) {
         if (mPrint) {
           std::cout << "end of file reached" << std::endl;
         }
-        free(buf);
+        tfBuffer.reset();
         pc.services().get<ControlService>().endOfStream();
         return; // probably reached eof
       }
 
       // increment the total buffer size
-      frameSize += pageSize;
+      tfBuffer.frameSize += pageSize;
 
       if ((triggerType & 0x800) != 0 && stopBit == 0 && pageCounter == 0) {
         // This is the start of a new TimeFrame, so we need to take some actions:
@@ -374,6 +396,7 @@ class FileReaderTask
         char* prevTFptr{nullptr};
         size_t prevTFsize{0};
 
+        //std::cout << "Starting new TF, first orbit is " << (uint32_t)RDHUtils::getHeartBeatOrbit(rdh) << std::endl;
         if (mPrint) {
           std::cout << "tfQueue.size(): " << tfQueue.size() << std::endl;
         }
@@ -403,40 +426,45 @@ class FileReaderTask
         }
 
         tfQueue.back().totalSize = prevTFsize;
+        tfQueue.back().firstOrbit = (uint32_t)RDHUtils::getHeartBeatOrbit(rdh);
       }
 
-      if (stopBit && tfQueue.size() > 0) {
+      if (stopBit) {
         // we reached the end of the current HBFrame, we need to append it to the TimeFrame
 
-        if (mPrint) {
-          std::cout << "Appending HBF to TF #" << tfQueue.size() << std::endl;
-          printHBF(buf, frameSize);
-        }
-        if (!appendHBF(tfQueue.back(), buf, frameSize, true)) {
-          std::cout << mFrameMax << " - failed to append HBframe" << std::endl;
-          pc.services().get<ControlService>().endOfStream();
-          return;
-        }
+        if (tfQueue.size() > 0) {
+          //std::cout << "Appending HBF " << (uint32_t)RDHUtils::getHeartBeatOrbit(rdh) << " to TF #" << tfQueue.size() << std::endl;
+          if (mPrint) {
+            std::cout << "Appending HBF " << (uint32_t)RDHUtils::getHeartBeatOrbit(rdh) << " to TF #" << tfQueue.size() << std::endl;
+            printHBF(tfBuffer.buf, tfBuffer.frameSize);
+          }
+          if (!appendHBF(tfQueue.back(), tfBuffer.buf, tfBuffer.frameSize, true)) {
+            std::cout << mFrameMax << " - failed to append HBframe" << std::endl;
+            pc.services().get<ControlService>().endOfStream();
+            return;
+          }
 
-        if (tfQueue.size() == 2) {
-          // we have two TimeFrames in the queue, we also append mOverlap HBFrames to the first one
-          if (tfQueue.back().hbframes.size() <= mOverlap) {
-            if (mPrint) {
-              std::cout << "Appending HBF to TF #1" << std::endl;
-              printHBF(buf, frameSize);
-            }
-            if (!appendHBF(tfQueue.front(), buf, frameSize, false)) {
-              std::cout << mFrameMax << " - failed to append HBframe" << std::endl;
-              pc.services().get<ControlService>().endOfStream();
-              return;
+          if (tfQueue.size() == 2) {
+            // we have two TimeFrames in the queue, we also append mOverlap HBFrames to the first one
+            if (tfQueue.back().hbframes.size() <= mOverlap) {
+              if (mPrint) {
+                std::cout << "Appending HBF to TF #1" << std::endl;
+                printHBF(tfBuffer.buf, tfBuffer.frameSize);
+              }
+              if (!appendHBF(tfQueue.front(), tfBuffer.buf, tfBuffer.frameSize, false)) {
+                std::cout << mFrameMax << " - failed to append HBframe" << std::endl;
+                pc.services().get<ControlService>().endOfStream();
+                return;
+              }
             }
           }
         }
 
         // free the HBFrame buffer
-        free(buf);
-        buf = nullptr;
-        frameSize = 0;
+        tfBuffer.reset();
+        //free(buf);
+        //buf = nullptr;
+        //frameSize = 0;
 
         if (tfQueue.size() == 2 && tfQueue.back().hbframes.size() >= mOverlap) {
           // we collected enough HBFrames after the last fully recorded TimeFrame, so we can send it
@@ -456,6 +484,8 @@ class FileReaderTask
               }
             }
 
+            //std::cout << "Sending TF " << tfQueue.front().firstOrbit << std::endl;
+
             auto freefct = [](void* data, void* /*hint*/) { free(data); };
             pc.outputs().adoptChunk(Output{"RDT", "RAWDATA"}, tfQueue.front().buf, tfQueue.front().totalSize, freefct, nullptr);
             TFid += 1;
@@ -473,6 +503,7 @@ class FileReaderTask
     if (mFullTF) {
       sendTF(pc);
       //pc.services().get<ControlService>().endOfStream();
+      sleep(1);
       return;
     }
 

@@ -648,36 +648,6 @@ void DataDecoder::decodePage(gsl::span<const std::byte> page)
 
 //_________________________________________________________________________________________________
 
-int32_t DataDecoder::getDigitTime(uint32_t orbitStart, uint32_t bcStart, uint32_t orbitDigit, uint32_t bcDigit)
-{
-  // We use the difference of orbits values to estimate the minimum and maximum allowed
-  // difference in bunch crossings
-  int64_t dOrbit = static_cast<int64_t>(orbitDigit) - static_cast<int64_t>(orbitStart);
-
-  // Digits might be sent out later than the orbit in which they were recorded.
-  // We account for this by allowing an extra -3 / +10 orbits when converting the
-  // difference from orbit numbers to bunch crossings.
-  int64_t dBcMin = (dOrbit - 50) * bcInOrbit;
-  int64_t dBcMax = (dOrbit + 3) * bcInOrbit;
-
-  // Difference in bunch crossing values
-  int64_t dBc = static_cast<int64_t>(bcDigit) - static_cast<int64_t>(bcStart);
-
-  if (dBc < dBcMin) {
-    // the difference is too small, so we assume that it needs to be
-    // incremented by one rollover factor
-    dBc += bcRollOver;
-  } else if (dBc > dBcMax) {
-    // the difference is too big, so we assume that it needs to be
-    // decremented by one rollover factor
-    dBc -= bcRollOver;
-  }
-
-  return static_cast<int32_t>(dBc);
-}
-
-//_________________________________________________________________________________________________
-
 bool DataDecoder::getTimeFrameStartRecord(const RawDigit& digit, uint32_t& orbitTF, uint32_t& bcTF)
 {
   static constexpr uint32_t bcInOrbit = o2::constants::lhc::LHCMaxBunches;
@@ -728,7 +698,37 @@ bool DataDecoder::getTimeFrameStartRecord(const RawDigit& digit, uint32_t& orbit
 
 //_________________________________________________________________________________________________
 
-void DataDecoder::computeDigitsTime()
+int32_t DataDecoder::getDigitTimeHBPackets(uint32_t orbitStart, uint32_t bcStart, uint32_t orbitDigit, uint32_t bcDigit)
+{
+  // We use the difference of orbits values to estimate the minimum and maximum allowed
+  // difference in bunch crossings
+  int64_t dOrbit = static_cast<int64_t>(orbitDigit) - static_cast<int64_t>(orbitStart);
+
+  // Digits might be sent out later than the orbit in which they were recorded.
+  // We account for this by allowing an extra -3 / +10 orbits when converting the
+  // difference from orbit numbers to bunch crossings.
+  int64_t dBcMin = (dOrbit - 50) * bcInOrbit;
+  int64_t dBcMax = (dOrbit + 3) * bcInOrbit;
+
+  // Difference in bunch crossing values
+  int64_t dBc = static_cast<int64_t>(bcDigit) - static_cast<int64_t>(bcStart);
+
+  if (dBc < dBcMin) {
+    // the difference is too small, so we assume that it needs to be
+    // incremented by one rollover factor
+    dBc += bcRollOver;
+  } else if (dBc > dBcMax) {
+    // the difference is too big, so we assume that it needs to be
+    // decremented by one rollover factor
+    dBc -= bcRollOver;
+  }
+
+  return static_cast<int32_t>(dBc);
+}
+
+//_________________________________________________________________________________________________
+
+void DataDecoder::computeDigitsTimeHBPackets()
 {
   static constexpr int32_t timeInvalid = DataDecoder::tfTimeInvalid;
   constexpr int BCINORBIT = o2::constants::lhc::LHCMaxBunches;
@@ -752,12 +752,86 @@ void DataDecoder::computeDigitsTime()
       int solar = info.solar;
       int ds = info.ds;
       int chip = info.chip;
-      tfTime = DataDecoder::getDigitTime(orbitTF, bcTF, orbitDigit, bcDigit);
+      tfTime = DataDecoder::getDigitTimeHBPackets(orbitTF, bcTF, orbitDigit, bcDigit);
     }
 
     setDigitTime(d, tfTime);
     info.tfTime = tfTime;
   }
+}
+
+//_________________________________________________________________________________________________
+
+int32_t DataDecoder::getDigitTimeBCRst(uint32_t orbitStart, uint32_t bcStart, uint32_t orbitDigit, uint32_t bcDigit)
+{
+  constexpr int64_t BCINORBIT = o2::constants::lhc::LHCMaxBunches;
+  // We use the difference of orbits values to estimate the minimum and maximum allowed
+  // difference in bunch crossings
+  int64_t dOrbitRDH = static_cast<int64_t>(orbitDigit) - static_cast<int64_t>(orbitStart);
+
+  // Difference in bunch crossing values
+  int64_t dBc = static_cast<int64_t>(bcDigit) - static_cast<int64_t>(bcStart);
+  int64_t dOrbitSampa = dBc / BCINORBIT;
+
+  //if (dOrbitRDH == 0) {
+  //  std::cout << fmt::format("  TF {}/{}  DIGIT {}/{}  dBc {}  dOrbitSampa {}",
+  //      orbitStart, bcStart, orbitDigit, bcDigit, dBc, dOrbitSampa) << std::endl;
+  //}
+
+  if (dOrbitSampa > (dOrbitRDH + 1)) {
+    // The orbit inferred from the SAMPA BC is larger than the one from the RDH
+    // We interpret this as due to SAMPA packets generated before the BC reset is applied at the beginning of the TF
+    dBc -= BCINORBIT * 128;
+  }
+
+  return static_cast<int32_t>(dBc);
+}
+
+//_________________________________________________________________________________________________
+
+void DataDecoder::computeDigitsTimeBCRst()
+{
+  static constexpr int32_t timeInvalid = DataDecoder::tfTimeInvalid;
+  constexpr int BCINORBIT = o2::constants::lhc::LHCMaxBunches;
+
+  auto setDigitTime = [&](Digit& d, int32_t tfTime) {
+    d.setTime(tfTime);
+  };
+
+  for (auto& digit : mDigits) {
+    auto& d = digit.digit;
+    auto& info = digit.info;
+
+    uint32_t orbitTF = mFirstOrbitInTF;
+    uint32_t bcTF = 0;
+    int32_t tfTime = timeInvalid;
+
+    auto orbitDigit = info.orbit;
+    auto bcDigit = info.getBXTime();
+
+    tfTime = DataDecoder::getDigitTimeBCRst(orbitTF, bcTF, orbitDigit, bcDigit);
+
+    tfTime -= mSampaTimeOffset;
+
+    if (tfTime < -2*BCINORBIT) {
+      int solar = info.solar;
+      int ds = info.ds;
+      int chip = info.chip;
+      std::cout << fmt::format("Out-of-time digit: S{} DS{} CHIP{}  TF {}/{}  DIGIT {}/{}  TIME {}",
+          solar, ds, chip, orbitTF, bcTF, orbitDigit, bcDigit, tfTime) << std::endl;
+    }
+
+    setDigitTime(d, tfTime);
+    info.tfTime = tfTime;
+  }
+}
+
+//_________________________________________________________________________________________________
+
+void DataDecoder::computeDigitsTime()
+{
+  computeDigitsTimeHBPackets();
+  //computeDigitsTimeBCRst();
 }
 
 //_________________________________________________________________________________________________

@@ -167,8 +167,12 @@ class DataDecoder
   /// Convert a Solar/Ds/Chip triplet into an unique chip index
   static uint64_t getChipId(uint32_t solar, uint32_t ds, uint32_t chip);
   /// Helper function for computing the digit time relative to the beginning of the TimeFrame
-  static int32_t getDigitTime(uint32_t orbitTF, uint32_t bcTF, uint32_t orbitDigit, uint32_t bcDigit);
+  static int32_t getDigitTimeHBPackets(uint32_t orbitTF, uint32_t bcTF, uint32_t orbitDigit, uint32_t bcDigit);
   /// Compute the time of all the digits that have been decoded in the current TimeFrame
+  void computeDigitsTimeHBPackets();
+  static int32_t getDigitTimeBCRst(uint32_t orbitTF, uint32_t bcTF, uint32_t orbitDigit, uint32_t bcDigit);
+  /// Compute the time of all the digits that have been decoded in the current TimeFrame
+  void computeDigitsTimeBCRst();
   void computeDigitsTime();
 
   /// Get the vector of digits that have been decoded in the current TimeFrame
