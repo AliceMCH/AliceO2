@@ -58,6 +58,11 @@ class DataDecoder
   static constexpr int32_t tfTimeMax{0x7FFFFFFF};
   static constexpr int32_t tfTimeInvalid{-tfTimeMax};
 
+  enum class TimeRecoMode : uint8_t {
+    HBPackets = 0,
+    BCReset = 1
+  };
+
   /// Structure storing the raw SAMPA information
   struct SampaInfo {
     union {
@@ -144,7 +149,7 @@ class DataDecoder
   DataDecoder(SampaChannelHandler channelHandler, RdhHandler rdhHandler,
               uint32_t sampaBcOffset,
               std::string mapCRUfile, std::string mapFECfile,
-              bool ds2manu, bool verbose, bool useDummyElecMap);
+              bool ds2manu, bool verbose, bool useDummyElecMap, TimeRecoMode timeRecoMode = TimeRecoMode::HBPackets);
 
   void reset();
 
@@ -213,6 +218,8 @@ class DataDecoder
   static constexpr uint32_t sReadoutChannelsNum = sReadoutChipsNum * 32;
   // table storing the last recorded TF time stamp in SAMPA BC counter units
   std::vector<TimeFrameStartRecord> mTimeFrameStartRecords;
+
+  TimeRecoMode mTimeRecoMode{ TimeRecoMode::HBPackets }; ///< method used to reconstruct the digits time
 
   // table storing the digits merging information for each readout channel in the MCH system
   std::vector<MergerChannelRecord> mMergerRecords; ///< merger records for all MCH readout channels

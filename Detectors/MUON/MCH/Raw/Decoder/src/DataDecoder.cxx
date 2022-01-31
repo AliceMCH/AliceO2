@@ -241,8 +241,8 @@ bool DataDecoder::TimeFrameStartRecord::check(int32_t orbit, uint32_t bc, int32_
 DataDecoder::DataDecoder(SampaChannelHandler channelHandler, RdhHandler rdhHandler,
                          uint32_t sampaBcOffset,
                          std::string mapCRUfile, std::string mapFECfile,
-                         bool ds2manu, bool verbose, bool useDummyElecMap)
-  : mChannelHandler(channelHandler), mRdhHandler(rdhHandler), mSampaTimeOffset(sampaBcOffset), mMapCRUfile(mapCRUfile), mMapFECfile(mapFECfile), mDs2manu(ds2manu), mDebug(verbose), mUseDummyElecMap(useDummyElecMap)
+                         bool ds2manu, bool verbose, bool useDummyElecMap, TimeRecoMode timeRecoMode)
+  : mChannelHandler(channelHandler), mRdhHandler(rdhHandler), mSampaTimeOffset(sampaBcOffset), mMapCRUfile(mapCRUfile), mMapFECfile(mapFECfile), mDs2manu(ds2manu), mDebug(verbose), mUseDummyElecMap(useDummyElecMap), mTimeRecoMode(timeRecoMode)
 {
   init();
 }
@@ -830,8 +830,17 @@ void DataDecoder::computeDigitsTimeBCRst()
 
 void DataDecoder::computeDigitsTime()
 {
-  computeDigitsTimeHBPackets();
-  //computeDigitsTimeBCRst();
+  switch (mTimeRecoMode) {
+  case TimeRecoMode::HBPackets:
+    computeDigitsTimeHBPackets();
+    break;
+  case TimeRecoMode::BCReset:
+    computeDigitsTimeBCRst();
+    break;
+  default:
+    LOGP(error, "Digit time reconstruction mode undefined");
+    break;
+  }
 }
 
 //_________________________________________________________________________________________________
