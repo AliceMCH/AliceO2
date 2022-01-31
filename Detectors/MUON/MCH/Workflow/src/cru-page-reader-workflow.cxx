@@ -58,10 +58,9 @@ using RDH = o2::header::RDHAny;
 static const int NFEEID = 64;
 static const int NLINKS = 16;
 
-struct TimeFrameBuffer
-{
-  char* buf{ nullptr };
-  size_t frameSize{ 0 };
+struct TimeFrameBuffer {
+  char* buf{nullptr};
+  size_t frameSize{0};
 
   void reset()
   {

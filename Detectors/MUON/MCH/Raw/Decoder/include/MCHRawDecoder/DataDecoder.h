@@ -219,7 +219,7 @@ class DataDecoder
   // table storing the last recorded TF time stamp in SAMPA BC counter units
   std::vector<TimeFrameStartRecord> mTimeFrameStartRecords;
 
-  TimeRecoMode mTimeRecoMode{ TimeRecoMode::HBPackets }; ///< method used to reconstruct the digits time
+  TimeRecoMode mTimeRecoMode{TimeRecoMode::HBPackets}; ///< method used to reconstruct the digits time
 
   // table storing the digits merging information for each readout channel in the MCH system
   std::vector<MergerChannelRecord> mMergerRecords; ///< merger records for all MCH readout channels

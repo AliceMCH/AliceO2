@@ -813,12 +813,13 @@ void DataDecoder::computeDigitsTimeBCRst()
 
     tfTime -= mSampaTimeOffset;
 
-    if (tfTime < -2*BCINORBIT) {
+    if (tfTime < -2 * BCINORBIT) {
       int solar = info.solar;
       int ds = info.ds;
       int chip = info.chip;
       std::cout << fmt::format("Out-of-time digit: S{} DS{} CHIP{}  TF {}/{}  DIGIT {}/{}  TIME {}",
-          solar, ds, chip, orbitTF, bcTF, orbitDigit, bcDigit, tfTime) << std::endl;
+                               solar, ds, chip, orbitTF, bcTF, orbitDigit, bcDigit, tfTime)
+                << std::endl;
     }
 
     setDigitTime(d, tfTime);
@@ -831,15 +832,15 @@ void DataDecoder::computeDigitsTimeBCRst()
 void DataDecoder::computeDigitsTime()
 {
   switch (mTimeRecoMode) {
-  case TimeRecoMode::HBPackets:
-    computeDigitsTimeHBPackets();
-    break;
-  case TimeRecoMode::BCReset:
-    computeDigitsTimeBCRst();
-    break;
-  default:
-    LOGP(error, "Digit time reconstruction mode undefined");
-    break;
+    case TimeRecoMode::HBPackets:
+      computeDigitsTimeHBPackets();
+      break;
+    case TimeRecoMode::BCReset:
+      computeDigitsTimeBCRst();
+      break;
+    default:
+      LOGP(error, "Digit time reconstruction mode undefined");
+      break;
   }
 }
 
