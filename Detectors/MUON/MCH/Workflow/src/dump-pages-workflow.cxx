@@ -63,7 +63,7 @@ class DumpPagesTask
   void init(framework::InitContext& ic)
   {
     /// Get the input file and other options from the context
-    LOG(INFO) << "initializing pager dumper";
+    LOG(info) << "initializing pager dumper";
 
     auto outputFileName = ic.options().get<std::string>("outfile");
     mOutputFile.open(outputFileName, std::ios::binary);
@@ -73,7 +73,7 @@ class DumpPagesTask
 
     auto stop = [this]() {
       /// close the input file
-      LOG(INFO) << "stop file reader";
+      LOG(info) << "stop file reader";
       this->mOutputFile.close();
     };
     ic.services().get<CallbackService>().set(CallbackService::Id::Stop, stop);
