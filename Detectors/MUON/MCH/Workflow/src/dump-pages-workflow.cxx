@@ -91,23 +91,23 @@ class DumpPagesTask
         continue;
       }
       size_t payloadSize = it.size();
-//
-//      auto rdhVersion = o2::raw::RDHUtils::getVersion(rdh);
-//      auto rdhHeaderSize = o2::raw::RDHUtils::getHeaderSize(rdh);
-//      if (mPrint) {
-//        std::cout << "header_version=" << (int)rdhVersion << std::endl;
-//      }
-//      if (rdhVersion < 4 || rdhVersion > 6 || rdhHeaderSize != 64) {
-//        return;
-//      }
+      //
+      //      auto rdhVersion = o2::raw::RDHUtils::getVersion(rdh);
+      //      auto rdhHeaderSize = o2::raw::RDHUtils::getHeaderSize(rdh);
+      //      if (mPrint) {
+      //        std::cout << "header_version=" << (int)rdhVersion << std::endl;
+      //      }
+      //      if (rdhVersion < 4 || rdhVersion > 6 || rdhHeaderSize != 64) {
+      //        return;
+      //      }
 
       mOutputFile.write(reinterpret_cast<const char*>(raw), sizeof(RDH) + payloadSize);
     }
   }
 
  private:
-  std::string mInputSpec{"TF:MCH/RAWDATA"};            /// selection string for the input data
-  std::ofstream mOutputFile{}; ///< input file
+  std::string mInputSpec{"TF:MCH/RAWDATA"}; /// selection string for the input data
+  std::ofstream mOutputFile{};              ///< input file
 };
 
 //_________________________________________________________________________________________________
