@@ -24,7 +24,7 @@ constexpr int BCINORBIT = o2::constants::lhc::LHCMaxBunches;
 uint20_t sampaBunchCrossingCounter(uint32_t orbit, uint16_t bc,
                                    uint32_t firstOrbit)
 {
-  auto offset = CoDecParam::Instance().sampaBcOffset;
+  auto offset = 0; //CoDecParam::Instance().sampaBcOffset;
   orbit -= firstOrbit;
   auto bunchCrossingCounter = (orbit * LHCMaxBunches + bc + offset) % ((1 << 20) - 1);
   impl::assertNofBits("bunchCrossingCounter", bunchCrossingCounter, 20);
@@ -34,7 +34,7 @@ uint20_t sampaBunchCrossingCounter(uint32_t orbit, uint16_t bc,
 std::tuple<uint32_t, uint16_t> orbitBC(uint20_t bunchCrossingCounter,
                                        uint32_t firstOrbit)
 {
-  auto offset = CoDecParam::Instance().sampaBcOffset;
+  auto offset = 0; //CoDecParam::Instance().sampaBcOffset;
   impl::assertNofBits("bunchCrossingCounter", bunchCrossingCounter, 20);
   uint32_t orbit = (bunchCrossingCounter - offset) / LHCMaxBunches + firstOrbit;
   int32_t bc = bunchCrossingCounter % LHCMaxBunches;

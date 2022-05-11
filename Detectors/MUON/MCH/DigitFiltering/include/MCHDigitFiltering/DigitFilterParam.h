@@ -27,6 +27,11 @@ struct DigitFilterParam : public o2::conf::ConfigurableParamHelper<DigitFilterPa
   bool sanityCheck = false; ///< whether or not to perform some sanity checks on the input digits
   uint32_t minADC = 1;      ///< digits with an ADC below this value are discarded
 
+  // default source for time calibrations (possible values are "local" and "ccdb")
+  std::string timeCalibSource = "local";
+  // default global sampa time calibration
+  int timeOffset = 0;
+
   O2ParamDef(DigitFilterParam, "MCHDigitFilter");
 };
 

@@ -42,11 +42,33 @@ class DigitFilteringTask
   {
     mSanityCheck = DigitFilterParam::Instance().sanityCheck;
     mMinADC = DigitFilterParam::Instance().minADC;
+    mTimeCalibSource = DigitFilterParam::Instance().timeCalibSource;
+    LOGP(info, "timeCalibSource {}\n", mTimeCalibSource);
+    if (mTimeCalibSource == "ccdb") {
+      LOGP(warning, "Fetch of time calibrations from CCDB not yet implemented");
+      mTimeCalib = 0;
+    } else {
+      LOGP(info, "Fetching time calibrations from config key {}\n", DigitFilterParam::Instance().timeOffset);
+      mTimeCalib = DigitFilterParam::Instance().timeOffset;
+    }
   }
 
   bool isGoodDigit(const Digit& digit) const
   {
     return digit.getADC() >= mMinADC;
+  }
+
+  void shiftDigitsTime(gsl::span<ROFRecord> rofs, gsl::span<Digit> digits)
+  {
+    for (auto i = 0; i < rofs.size(); i++) {
+      ROFRecord& rof = rofs[i];
+      rof.getBCData() += mTimeCalib;
+    }
+
+    for (auto i = 0; i < digits.size(); i++) {
+      Digit& d = digits[i];
+      d.setTime(d.getTime() + mTimeCalib);
+    }
   }
 
   void run(ProcessingContext& pc)
@@ -111,6 +133,10 @@ class DigitFilteringTask
          oDigits.size(), iDigits.size(),
          labelMsg);
 
+    if(mTimeCalib != 0) {
+      shiftDigitsTime(oRofs, oDigits);
+    }
+
     if (abort) {
       LOGP(error, "Sanity check failed");
     }
@@ -120,6 +146,8 @@ class DigitFilteringTask
   bool mSanityCheck;
   bool mUseMC;
   int mMinADC;
+  std::string mTimeCalibSource;
+  int32_t mTimeCalib{0};
 };
 
 framework::DataProcessorSpec
