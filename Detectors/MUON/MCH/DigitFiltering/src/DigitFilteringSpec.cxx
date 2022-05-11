@@ -133,7 +133,7 @@ class DigitFilteringTask
          oDigits.size(), iDigits.size(),
          labelMsg);
 
-    if(mTimeCalib != 0) {
+    if (mTimeCalib != 0) {
       shiftDigitsTime(oRofs, oDigits);
     }
 
