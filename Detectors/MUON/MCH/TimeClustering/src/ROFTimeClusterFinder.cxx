@@ -24,7 +24,7 @@ using namespace std;
 //_________________________________________________________________________________________________
 
 ROFTimeClusterFinder::ROFTimeClusterFinder(gsl::span<const o2::mch::ROFRecord> rofs, gsl::span<const o2::mch::Digit> digits, uint32_t timeClusterSize, uint32_t nBins, bool improvePeakSearch, bool debug)
-: mInputROFs(rofs), mDigits(digits), mTimeClusterSize(timeClusterSize), mNbinsInOneWindow(nBins), mImprovePeakSearch(improvePeakSearch), mDebug(debug)
+  : mInputROFs(rofs), mDigits(digits), mTimeClusterSize(timeClusterSize), mNbinsInOneWindow(nBins), mImprovePeakSearch(improvePeakSearch), mDebug(debug)
 {
   // bin width in bunch crossing units
   mBinWidth = mTimeClusterSize / mNbinsInOneWindow;
@@ -74,7 +74,7 @@ void ROFTimeClusterFinder::initTimeBins()
     if (mImprovePeakSearch) {
       nDigitsPS = 0;
       auto rofDigits = mDigits.subspan(rof.getFirstIdx(), rof.getNEntries());
-      for (auto& digit: rofDigits) {
+      for (auto& digit : rofDigits) {
         if (mIsGoodDigit(digit)) {
           nDigitsPS += 1;
         }
