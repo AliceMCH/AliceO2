@@ -320,7 +320,7 @@ class FileReaderTask
     }
 
     if (mPrint) {
-      std::cout << "Sending TF " << orbitMin << " (previous " << mLastTForbit << "  delta " << orbitMin-mLastTForbit << ")" << std::endl
+      std::cout << "Sending TF " << orbitMin << " (previous " << mLastTForbit << "  delta " << (orbitMin - mLastTForbit) << ")" << std::endl
                 << std::endl;
     }
     mLastTForbit = orbitMin;
