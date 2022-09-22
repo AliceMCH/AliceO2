@@ -125,7 +125,7 @@ void UserLogicElinkDecoder<CHARGESUM>::append(uint64_t data50, uint8_t error, bo
 #ifdef ULDEBUG
       debugHeader() << (*this) << " SYNC word found while decoding payload --> resetting\n"
 #endif
-      sendError(static_cast<int8_t>(mSampaHeader.chipAddress()), static_cast<uint32_t>(ErrorUnexpectedSyncPacket));
+        sendError(static_cast<int8_t>(mSampaHeader.chipAddress()), static_cast<uint32_t>(ErrorUnexpectedSyncPacket));
       reset();
     } else {
       clear();
