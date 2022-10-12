@@ -356,11 +356,11 @@ void MatchGlobalFwd::doMatching()
       continue;
     }
     LOG(debug) << "FIRST MCH ROF " << mchROFMatchFirst << "; interval: ["
-        << mMCHROFTimes[mchROFMatchFirst].getMin() << ","
-        << mMCHROFTimes[mchROFMatchFirst].getMax() << "]  size: " << mMCHTrackROFRec[mchROFMatchFirst].getNEntries();
+               << mMCHROFTimes[mchROFMatchFirst].getMin() << ","
+               << mMCHROFTimes[mchROFMatchFirst].getMax() << "]  size: " << mMCHTrackROFRec[mchROFMatchFirst].getNEntries();
     LOG(debug) << "LAST  MCH ROF " << mchROFMatchLast << "; interval: ["
-        << mMCHROFTimes[mchROFMatchLast].getMin() << ","
-        << mMCHROFTimes[mchROFMatchLast].getMax() << "]  size: " << mMCHTrackROFRec[mchROFMatchLast].getNEntries();
+               << mMCHROFTimes[mchROFMatchLast].getMin() << ","
+               << mMCHROFTimes[mchROFMatchLast].getMax() << "]  size: " << mMCHTrackROFRec[mchROFMatchLast].getNEntries();
 
     ROFMatch<saveAllMode>(MFTROFId, mchROFMatchFirst, mchROFMatchLast);
   }
