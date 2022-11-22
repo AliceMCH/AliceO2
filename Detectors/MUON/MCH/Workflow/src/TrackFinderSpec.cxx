@@ -180,7 +180,7 @@ class TrackFinderTask
     if (trackIR > clusterROFend) {
       LOG(warning) << "digit time incompatible with cluster ROF";
       LOG(warning) << fmt::format("[TrackFinder] TRACK {},{}  ROF {},{} -> {},{}",
-          trackIR.orbit, trackIR.bc, clusterROFstart.orbit, clusterROFstart.bc, clusterROFend.orbit, clusterROFend.bc);
+                                  trackIR.orbit, trackIR.bc, clusterROFstart.orbit, clusterROFstart.bc, clusterROFend.orbit, clusterROFend.bc);
       return {};
     }
 
