@@ -141,7 +141,7 @@ class TrackFinderTask
 
       // fill the ouput messages
       int trackOffset(mchTracks.size());
-      writeTracks(tracks, mchTracks, usedClusters, digitsIn, usedDigits);
+      writeTracks(tracks, mchTracks, usedClusters, clusterROF, digitsIn, usedDigits);
       trackROFs.emplace_back(clusterROF.getBCData(), trackOffset, mchTracks.size() - trackOffset,
                              clusterROF.getBCWidth());
     }
@@ -153,11 +153,75 @@ class TrackFinderTask
   }
 
  private:
+  std::optional<InteractionRecord> trackBC2IR(double trackBCinTF, const ROFRecord& clusterROF) const
+  {
+    // limits of the current ROF
+    const InteractionRecord& clusterROFstart = clusterROF.getBCData();
+    const InteractionRecord& clusterROFend = clusterROFstart + int64_t(clusterROF.getBCWidth());
+
+    std::optional<InteractionRecord> result;
+
+    // wrap-up one full orbit if the track time is negative
+    if (trackBCinTF < 0) {
+      trackBCinTF += o2::constants::lhc::LHCMaxBunches;
+    }
+
+    // get the bc-in-orbit value
+    int16_t trackBC = int16_t(int64_t(trackBCinTF) % o2::constants::lhc::LHCMaxBunches);
+
+    // build the track interaction record, using the orbit from the cluster ROF
+    InteractionRecord trackIR{trackBC, clusterROFstart.orbit};
+    // if the cluster ROF spans two orbits, the initial orbit assigned to the track IR
+    // might have to be increased by one
+    if (trackIR < clusterROFstart) {
+      trackIR.orbit += 1;
+    }
+    // if we are past the end of the cluster ROF, something must be wrong
+    if (trackIR > clusterROFend) {
+      LOG(warning) << "digit time incompatible with cluster ROF";
+      LOG(warning) << fmt::format("[TrackFinder] TRACK {},{}  ROF {},{} -> {},{}",
+          trackIR.orbit, trackIR.bc, clusterROFstart.orbit, clusterROFstart.bc, clusterROFend.orbit, clusterROFend.bc);
+      return {};
+    }
+
+    return trackIR;
+  }
+
+  //_________________________________________________________________________________________________
+  void setTrackTime(TrackMCH& track, const ROFRecord& clusterROF, const gsl::span<const Cluster> usedClusters, const gsl::span<const Digit> usedDigits) const
+  {
+    double trackBCinTF = 0;
+    int nDigits = 0;
+
+    // loop over digits and compute the average track time
+    for (const auto& cluster : usedClusters.subspan(track.getFirstClusterIdx(), track.getNClusters())) {
+      for (const auto& digit : usedDigits.subspan(cluster.firstDigit, cluster.nDigits)) {
+        nDigits += 1;
+        trackBCinTF += (double(digit.getTime()) - trackBCinTF) / nDigits;
+      }
+    }
+
+    // set the track IR from the computed average digits time
+    if (nDigits > 0) {
+      auto trackIR = trackBC2IR(trackBCinTF, clusterROF);
+      if (trackIR) {
+        track.setIR(trackIR.value());
+      } else {
+        // if the track IR cannot be computed, take the start of the cluster ROF
+        track.setIR(clusterROF.getBCData());
+      }
+    } else {
+      // if the digits are not available, take the start of the cluster ROF
+      LOG(warning) << "no digits found when computing the track mean time";
+      track.setIR(clusterROF.getBCData());
+    }
+  }
+
   //_________________________________________________________________________________________________
   void writeTracks(const std::list<Track>& tracks,
                    std::vector<TrackMCH, o2::pmr::polymorphic_allocator<TrackMCH>>& mchTracks,
                    std::vector<Cluster, o2::pmr::polymorphic_allocator<Cluster>>& usedClusters,
-                   const gsl::span<const Digit>& digitsIn,
+                   const ROFRecord& clusterROF, const gsl::span<const Digit>& digitsIn,
                    std::vector<Digit, o2::pmr::polymorphic_allocator<Digit>>* usedDigits) const
   {
     /// fill the output messages with tracks and attached clusters and digits if requested
@@ -197,6 +261,13 @@ class TrackFinderTask
           // make the cluster point to the associated digits in the usedDigits list
           cluster.firstDigit = digitLoc.first->second;
         }
+      }
+
+      // compute the track time
+      if (mDigits && usedDigits) {
+        setTrackTime(mchTracks.back(), clusterROF, usedClusters, *usedDigits);
+      } else {
+        mchTracks.back().setIR(clusterROF.getBCData());
       }
     }
   }

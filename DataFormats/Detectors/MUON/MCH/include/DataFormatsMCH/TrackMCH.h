@@ -21,6 +21,7 @@
 #include <iosfwd>
 
 #include "CommonDataFormat/RangeReference.h"
+#include "CommonDataFormat/InteractionRecord.h"
 
 namespace o2
 {
@@ -107,6 +108,11 @@ class TrackMCH
   /// set the number of the clusters attached to the track and the index of the first one
   void setClusterRef(int firstClusterIdx, int nClusters) { mClusRef.set(firstClusterIdx, nClusters); }
 
+  /// get the interaction record associated to this track
+  InteractionRecord getIR() const { return mIR; }
+  /// set the interaction record associated to this track
+  void setIR(const InteractionRecord& ir) { mIR = ir; }
+
  private:
   static constexpr int SNParams = 5;  ///< number of track parameters
   static constexpr int SCovSize = 15; ///< number of different elements in the symmetric covariance matrix
@@ -137,7 +143,9 @@ class TrackMCH
   double mParamAtMID[SNParams] = {0.}; ///< 5 parameters: X (cm), SlopeX, Y (cm), SlopeY, q/pYZ ((GeV/c)^-1)
   double mCovAtMID[SCovSize] = {0.};   ///< reduced covariance matrix of track parameters, formated as above
 
-  ClassDefNV(TrackMCH, 2);
+  InteractionRecord mIR{}; ///< associated interaction record
+
+  ClassDefNV(TrackMCH, 3);
 };
 
 std::ostream& operator<<(std::ostream& os, const TrackMCH& t);
