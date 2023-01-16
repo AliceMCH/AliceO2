@@ -57,6 +57,8 @@ class BadChannelCalibrationDevice : public o2::framework::Task
   std::shared_ptr<o2::base::GRPGeomRequest> mCCDBRequest;
   uint64_t mTimeStamp;
 
+  bool mHasEnoughStat = {false};
+
   int mLoggingInterval = {0}; /// time interval between statistics logging messages
 };
 
