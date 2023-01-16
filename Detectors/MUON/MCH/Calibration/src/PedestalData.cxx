@@ -114,7 +114,7 @@ void PedestalData::fill(gsl::span<const PedestalDigit> digits)
 
     if (mDebug) {
       LOGP(info, "solarId {}  dsId {}  ch {}  nsamples {}  entries{}  mean {}  variance {}",
-          (int)solarId, (int)dsId, (int)channel, d.nofSamples(), ped.mEntries, ped.mPedestal, ped.mVariance);
+           (int)solarId, (int)dsId, (int)channel, d.nofSamples(), ped.mEntries, ped.mPedestal, ped.mVariance);
     }
   }
 }
