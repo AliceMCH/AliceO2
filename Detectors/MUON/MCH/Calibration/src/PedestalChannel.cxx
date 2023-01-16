@@ -24,8 +24,8 @@ double PedestalChannel::getRms() const
 
 std::string PedestalChannel::asString() const
 {
-  return fmt::format("{} entries {:8d} mean {:7.2f} mVariance {:7.2f}",
-                     dsChannelId.asString(), mEntries, mPedestal, mVariance);
+  return fmt::format("{} entries {:8d} mean {:7.2f} mVariance {:7.2f} rms {:7.2f}",
+                     dsChannelId.asString(), mEntries, mPedestal, mVariance, getRms());
 }
 
 std::ostream& operator<<(std::ostream& os, const PedestalChannel& c)

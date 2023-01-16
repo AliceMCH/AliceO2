@@ -14,6 +14,7 @@
 
 #include "MCHCalibration/PedestalChannel.h"
 #include "MCHCalibration/PedestalDigit.h"
+#include "MCHRawElecMap/Mapper.h"
 #include "Rtypes.h"
 #include <array>
 #include <gsl/span>
@@ -57,7 +58,7 @@ class PedestalData
   const_iterator cbegin() const;
   const_iterator cend() const;
 
-  PedestalData() = default;
+  PedestalData();
   ~PedestalData() = default;
 
   void reset();
@@ -86,7 +87,13 @@ class PedestalData
   uint32_t size() const;
 
  private:
+  PedestalData::PedestalMatrix initPedestalMatrix(uint16_t solarId);
+
+  o2::mch::raw::Solar2FeeLinkMapper mSolar2FeeLinkMapper;
+  o2::mch::raw::Elec2DetMapper mElec2DetMapper;
+
   PedestalsMap mPedestals{}; ///< internal storage of all PedestalChannel values
+  uint32_t mSize{0};         ///< total number of valid channels in the pedestals map
 
   ClassDefNV(PedestalData, 1)
 };

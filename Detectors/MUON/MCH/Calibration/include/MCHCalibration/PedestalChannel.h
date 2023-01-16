@@ -24,10 +24,11 @@ namespace o2::mch::calibration
  * as well as the number of entries (digits) used to compute those values.
  */
 struct PedestalChannel {
-  int mEntries{0};         // number of entries used so far for the mean and variance
-  double mPedestal{0};     // mean
-  double mVariance{0};     // variance
-  DsChannelId dsChannelId; // identifier of the channel
+  int mEntries{0};         ///< number of entries used so far for the mean and variance
+  double mPedestal{0};     ///< mean
+  double mVariance{0};     ///< variance
+  DsChannelId dsChannelId; ///< identifier of the channel
+  bool mValid{false};      ///< true if the channel is associated to a detector pad
 
   /** return the RMS of the pedestal */
   double getRms() const;
