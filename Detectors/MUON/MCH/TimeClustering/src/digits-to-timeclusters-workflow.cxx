@@ -21,6 +21,7 @@
 #include "Framework/ControlService.h"
 #include "Framework/Task.h"
 #include "MCHTimeClustering/TimeClusterFinderSpec.h"
+#include "MCHTimeClustering/TimeClusterizerParam.h"
 
 using namespace o2;
 using namespace o2::framework;
@@ -29,6 +30,7 @@ void customize(std::vector<ConfigParamSpec>& workflowOptions)
 {
   workflowOptions.push_back(ConfigParamSpec{"input-digits-data-description", VariantType::String, "F-DIGITS", {"description string for the input digit data"}});
   workflowOptions.push_back(ConfigParamSpec{"input-digitrofs-data-description", VariantType::String, "F-DIGITROFS", {"description string for the input digit rofs data"}});
+  workflowOptions.push_back(ConfigParamSpec{"output-unfiltered-digitrofs-data-description", VariantType::String, "UTC-F-DIGITROFS", {"description string for the output digit rofs data (unfiltered)"}});
   workflowOptions.push_back(ConfigParamSpec{"output-digitrofs-data-description", VariantType::String, "TC-F-DIGITROFS", {"description string for the output digit rofs data"}});
   workflowOptions.push_back(ConfigParamSpec{
     "configKeyValues", VariantType::String, "", {"Semicolon separated key=value strings"}});
@@ -39,11 +41,14 @@ void customize(std::vector<ConfigParamSpec>& workflowOptions)
 WorkflowSpec defineDataProcessing(const ConfigContext& cc)
 {
   o2::conf::ConfigurableParam::updateFromString(cc.options().get<std::string>("configKeyValues"));
+  const auto& param = o2::mch::TimeClusterizerParam::Instance();
 
   return {
     o2::mch::getTimeClusterFinderSpec(
       "mch-time-clustering",
       cc.options().get<std::string>("input-digits-data-description"),
       cc.options().get<std::string>("input-digitrofs-data-description"),
+      param.enableUnfilteredOutput,
+      cc.options().get<std::string>("output-unfiltered-digitrofs-data-description"),
       cc.options().get<std::string>("output-digitrofs-data-description"))};
 }
