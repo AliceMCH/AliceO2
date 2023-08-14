@@ -137,8 +137,8 @@ class TimeClusterFinderTask
       auto& outRofsUnfiltered = pc.outputs().make<std::vector<ROFRecord>>(OutputRef{"urofs"});
       outRofsUnfiltered.reserve(pRofs.size());
       std::copy(begin(pRofs),
-          end(pRofs),
-          std::back_inserter(outRofsUnfiltered));
+                end(pRofs),
+                std::back_inserter(outRofsUnfiltered));
     }
 
     auto& outRofs = pc.outputs().make<std::vector<ROFRecord>>(OutputRef{"rofs"});
