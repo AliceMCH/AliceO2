@@ -45,6 +45,8 @@
 #include "MCHTimeClustering/ROFTimeClusterFinderV2.h"
 #include "MCHTimeClustering/TimeClusterizerParamV2.h"
 
+#include "MCHDigitFiltering/DigitFilter.h"
+
 namespace o2
 {
 namespace mch
@@ -128,8 +130,16 @@ class TimeClusterFinderTaskV2
                                                  mMergeROFs,
                                                  mDebug);
 
+    const auto& tinfo = pc.services().get<o2::framework::TimingInfo>();
+    auto firstTForbit = tinfo.firstTForbit;
     if (mDebug) {
       LOGP(warning, "{:=>60} ", fmt::format("{:6d} Input ROFS", rofs.size()));
+    }
+    if (!rofs.empty()) {
+      uint32_t firstOrbit = rofs.front().getBCData().orbit;
+      uint32_t lastOrbit = rofs.back().getBCData().orbit;
+      uint32_t delta = lastOrbit - firstOrbit;
+      std::cout << fmt::format("[TOTO] orbits {:10d} {:10d} {:10d} delta {:10d} ", firstTForbit, firstOrbit, lastOrbit, delta) << std::endl;
     }
 
     auto tStart = std::chrono::high_resolution_clock::now();
@@ -216,8 +226,25 @@ class TimeClusterFinderTaskV2
         //{376421564, 1702}
         //{376361141, 2781},
         //{376784078, 3156}
+
+        //{74406400, 475},
+        //{74442508, 1541},
+        //{74442523, 1608},
+        //{74442565, 1802},
+        //{74442586, 712},
+        //{74442635, 2260},
+        //{74478663, 36},
+        //{74479236, 935},
+        //{74514817, 1670},
+        //{74514951, 1609}
+        //{74442860, 1610},
+        //{74478601, 1169}
+        {74479380, 1122},
+        {74480393, 1644},
+        {74552579, 1807}
     };
     //int orbit = 376293180; //376285618; //376285608;
+    auto isGoodDigit = createDigitFilter(20, true, true);
     for (auto o : orbits) {
       int orbit = o.first;
       int bc = o.second;
@@ -227,16 +254,23 @@ class TimeClusterFinderTaskV2
         if (rof.getBCData().orbit != orbit) {
           continue;
         }
-        if (rof.getBCData().bc < (bc - 500)) {
+        if (rof.getBCData().orbit < firstTForbit) {
           continue;
         }
-        if (rof.getBCData().bc > (bc + 500)) {
-          continue;
-        }
+        std::cout << "[TOTO] " << fmt::format("{:>3}", id) << " "
+            << fmt::format("{:>10} {:>10} {:>4} {:>3}", firstTForbit, rof.getBCData().orbit, rof.getBCData().bc, rof.getBCWidth())
+            << (filter(rof) ? " + " : " - ") << std::endl;
+        //if (rof.getBCData().bc < (bc - 500)) {
+        //  continue;
+        //}
+        //if (rof.getBCData().bc > (bc + 500)) {
+        //  continue;
+        //}
         if (!rofsOutput.is_open()) {
           rofsOutput.open(fmt::format("rofs-{}.txt", orbit));
         }
-        for (auto& irof : rofs) {
+        for (int i = 0; i < rofs.size(); i++) {
+          auto& irof = rofs[i];
           if (irof.getBCData().orbit != orbit) {
             continue;
           }
@@ -246,12 +280,61 @@ class TimeClusterFinderTaskV2
           if (irof.getBCData().bc >= (rof.getBCData().bc + rof.getBCWidth())) {
             break;
           }
-          rofsOutput << fmt::format("{:>3}", id) << " " << fmt::format("{:>3}", rof.getBCWidth()) << (filter(rof) ? " + " : " - ")
-                << fmt::format("{:>10}", irof.getBCData().orbit) << " " << fmt::format("{:>4}", irof.getBCData().bc) << " " << fmt::format("{:>4} ", irof.getNEntries());
-          for (int i = 0; i < irof.getNEntries(); i++) {
-            rofsOutput << "*";
-            if (i > 100) break;
+          std::cout << "[TOTO]   " << fmt::format("{:>10} {:>4} {:>4}", irof.getBCData().orbit, irof.getBCData().bc, irof.getNEntries()) << std::endl;
+          std::array<bool, 10> hasChamber = {
+              false, false, false, false, false,
+              false, false, false, false, false
+          };
+          std::array<bool, 5> hasStation = {
+              false, false, false, false, false
+          };
+          for (int j = i - 2; j <= i + 2; j++) {
+            if (j < 0) continue;
+            if (j >= rofs.size()) continue;
+            auto& irof2 = rofs[i];
+            for (int d = irof2.getFirstIdx(); d <= irof2.getLastIdx(); d++) {
+              const auto& digit = digits[d];
+              if (!isGoodDigit(digit)) continue;
+              int deId = digit.getDetID();
+              int chId = (deId / 100) - 1;
+              if (chId < 0) continue;
+              if (chId >= 10) continue;
+              hasChamber[chId] = true;
+              int stId = chId / 2;
+              if (stId < 0) continue;
+              if (stId >= 5) continue;
+              hasStation[stId] = true;
+            }
           }
+          int nCh = 0;
+          for (auto ch : hasChamber) {
+            if (ch) nCh += 1;
+          }
+          int nSt = 0;
+          for (auto st : hasStation) {
+            if (st) nSt += 1;
+          }
+          int nGood = 0;
+          for (int d = irof.getFirstIdx(); d <= irof  .getLastIdx(); d++) {
+            const auto& digit = digits[d];
+            if (!isGoodDigit(digit)) continue;
+            nGood += 1;
+          }
+          rofsOutput << fmt::format("{:>3}", id) << " " << fmt::format("{:>3}", rof.getBCWidth()) << (filter(rof) ? " + " : " - ")
+                << fmt::format("{:>10}", irof.getBCData().orbit) << " " << fmt::format("{:>4}", irof.getBCData().bc) << " " << fmt::format("{:>4}/{:>4} ", irof.getNEntries(), nGood);
+          for (int i = 0; i < nGood; i++) {
+            rofsOutput << "*";
+            if (i > 100) {
+              break;
+            }
+          }
+          for (int i = nGood; i < irof.getNEntries(); i++) {
+            rofsOutput << "-";
+            if (i > 100) {
+              break;
+            }
+          }
+          rofsOutput << "| " << nCh << " / " << nSt;
           rofsOutput << std::endl;
         }
         rofsOutput << "------" << std::endl;
@@ -261,29 +344,86 @@ class TimeClusterFinderTaskV2
     }
     for (auto& rof : pRofs) {
       std::ofstream rofsOutput;
-      if (rof.getBCWidth() < 200) {
+      if (rof.getBCWidth() < 100) {
         continue;
       }
       int orbit = rof.getBCData().orbit;
       if (!rofsOutput.is_open()) {
         rofsOutput.open(fmt::format("rofs-{}-{}.txt", orbit, rof.getBCData().bc));
+        rofsOutput << firstTForbit << std::endl;
       }
-      for (auto& irof : rofs) {
-        if (irof.getBCData().orbit != orbit) {
+      for (int i = 0; i < rofs.size(); i++) {
+        auto& irof = rofs[i];
+        auto dBC = irof.getBCData().differenceInBC(rof.getBCData());
+        if (dBC < 0) {
           continue;
         }
-        if (irof.getBCData().bc < rof.getBCData().bc) {
-          continue;
-        }
-        if (irof.getBCData().bc >= (rof.getBCData().bc + rof.getBCWidth())) {
+        if (dBC >= rof.getBCWidth()) {
           break;
         }
-        rofsOutput << fmt::format("{:>3}", rof.getBCWidth()) << (filter(rof) ? " + " : " - ")
-                  << fmt::format("{:>10}", irof.getBCData().orbit) << " " << fmt::format("{:>4}", irof.getBCData().bc) << " " << fmt::format("{:>4} ", irof.getNEntries());
-        for (int i = 0; i < irof.getNEntries(); i++) {
-          rofsOutput << "*";
-          if (i > 100) break;
+        std::array<bool, 10> hasChamber = {
+            false, false, false, false, false,
+            false, false, false, false, false
+        };
+        std::array<bool, 5> hasStation = {
+            false, false, false, false, false
+        };
+        for (int j = i - 2; j <= i + 2; j++) {
+          if (j < 0) continue;
+          if (j >= rofs.size()) continue;
+          auto& irof2 = rofs[j];
+          for (int d = irof2.getFirstIdx(); d <= irof2.getLastIdx(); d++) {
+            const auto& digit = digits[d];
+            int deId = digit.getDetID();
+            int chId = (deId / 100) - 1;
+            if (chId < 0) continue;
+            if (chId >= 10) continue;
+            hasChamber[chId] = true;
+            int stId = chId / 2;
+            if (stId < 0) continue;
+            if (stId >= 5) continue;
+            hasStation[stId] = true;
+          }
         }
+        int nCh = 0;
+        for (auto ch : hasChamber) {
+          if (ch) nCh += 1;
+        }
+        int nSt = 0;
+        for (auto st : hasStation) {
+          if (st) nSt += 1;
+        }
+
+        int nGood = 0;
+        std::array<bool, 5> hasStation2 = {
+            false, false, false, false, false
+        };
+        for (int d = irof.getFirstIdx(); d <= irof  .getLastIdx(); d++) {
+          const auto& digit = digits[d];
+          int deId = digit.getDetID();
+          int chId = (deId / 100) - 1;
+          if (chId < 0) continue;
+          if (chId >= 10) continue;
+          int stId = chId / 2;
+          hasStation2[stId] = true;
+          if (!isGoodDigit(digit)) continue;
+          nGood += 1;
+        }
+        rofsOutput << fmt::format("{:>3}", rof.getBCWidth()) << (filter(rof) ? " + " : " - ")
+              << fmt::format("{:>10}", irof.getBCData().orbit) << " " << fmt::format("{:>4}", irof.getBCData().bc) << " " << fmt::format("{:>4}/{:>4} ", nGood, irof.getNEntries());
+        for (int i = 0; i < nGood; i++) {
+          rofsOutput << "*";
+          if (i > 100) {
+            break;
+          }
+        }
+        for (int i = nGood; i < irof.getNEntries(); i++) {
+          rofsOutput << "-";
+          if (i > 100) {
+            break;
+          }
+        }
+        rofsOutput << "| " << nCh << " / " << nSt;
         rofsOutput << std::endl;
       }
       rofsOutput.close();

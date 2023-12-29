@@ -115,6 +115,8 @@ class TimeClusterFinderTask
     auto rofs = pc.inputs().get<gsl::span<o2::mch::ROFRecord>>("rofs");
     auto digits = pc.inputs().get<gsl::span<o2::mch::Digit>>("digits");
 
+    const auto& tinfo = pc.services().get<o2::framework::TimingInfo>();
+    auto firstTForbit = tinfo.firstTForbit;
     o2::mch::ROFTimeClusterFinder rofProcessor(rofs, digits, mTimeClusterWidth, mNbinsInOneWindow, mPeakSearchSignalOnly, mDebug);
 
     if (mDebug) {
@@ -177,6 +179,7 @@ class TimeClusterFinderTask
     const float p1 = rofs.size() > 0 ? 100. * pRofs.size() / rofs.size() : 0;
     const float p2 = rofs.size() > 0 ? 100. * outRofs.size() / rofs.size() : 0;
 
+    if (mDebug) {
     LOGP(info,
          "TF {} Processed {} input ROFs, "
          "time-clusterized them into {} ROFs ({:3.0f}%) "
@@ -184,6 +187,7 @@ class TimeClusterFinderTask
          mTFcount, rofs.size(),
          pRofs.size(), p1,
          outRofs.size(), p2, extraMsg);
+    }
     mTFcount += 1;
   }
 

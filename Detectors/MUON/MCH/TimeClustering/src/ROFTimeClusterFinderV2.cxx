@@ -102,6 +102,13 @@ void ROFTimeClusterFinderV2::initTimeBins()
     }
 
     auto& timeBin = mTimeBins[binIdx];
+    timeBin.mHasChamber = {
+        false, false, false, false, false,
+        false, false, false, false, false
+    };
+    timeBin.mHasStation = {
+        false, false, false, false, false
+    };
 
     if (timeBin.mFirstIdx < 0) {
       timeBin.mFirstIdx = iRof;
@@ -112,9 +119,20 @@ void ROFTimeClusterFinderV2::initTimeBins()
     if (mImprovePeakSearch) {
       auto rofDigits = mDigits.subspan(rof.getFirstIdx(), rof.getNEntries());
       for (auto& digit : rofDigits) {
-        if (mIsGoodDigit(digit)) {
-          nDigitsPS += 1;
+        if (!mIsGoodDigit(digit)) {
+          continue;
         }
+
+        nDigitsPS += 1;
+        int deId = digit.getDetID();
+        int chId = (deId / 100) - 1;
+        if (chId < 0) continue;
+        if (chId >= 10) continue;
+        timeBin.mHasChamber[chId] = true;
+        int stId = chId / 2;
+        if (stId < 0) continue;
+        if (stId >= 5) continue;
+        timeBin.mHasStation[stId] = true;
       }
     } else {
       nDigitsPS = rof.getNEntries();
@@ -135,7 +153,7 @@ void ROFTimeClusterFinderV2::initTimeBins()
 
 //_________________________________________________________________________________________________
 
-static int targetOrbit = 376784078;
+static int targetOrbit = 74410449;
 
 int32_t ROFTimeClusterFinderV2::getNextPeak()
 {
@@ -155,44 +173,121 @@ int32_t ROFTimeClusterFinderV2::getNextPeak()
       continue;
     }
 
+    // check number of stations associated to the digits in the search window
+    std::array<bool, 10> hasChamber = mTimeBins[i].mHasChamber;
+    std::array<bool, 5> hasStation = mTimeBins[i].mHasStation;
+
     int peakOrbit = mInputROFs[peak.mFirstIdx].getBCData().orbit;
     if (peakOrbit == targetOrbit) {
       int peakBc = mInputROFs[peak.mFirstIdx].getBCData().bc;
-      std::cout << "[TOTO] peak seed " << i << "  " << peak.mNDigitsPS << "  bc " << peakBc << "  padding " << sPadding << std::endl;
+      std::cout << "[TOTO] ==== " << std::endl;
+      std::cout << "[TOTO] checking peak seed " << i << "  " << peak.mNDigitsPS << "  bc " << peakBc << "   stations [ ";
+      for (auto st : mTimeBins[i].mHasStation) {
+        if (st) std::cout<<"1 ";
+        else std::cout<<"0 ";
+      }
+      std::cout << "]" << std::endl;
     }
 
 
     bool found{true};
     // the peak must be strictly higher than previous bins
     for (int j = i - sPadding; j < i; j++) {
+      if (j < 0) { continue; }
+      //if (j <= mLastSavedTimeBin) { continue; }
+
       if (j > mLastSavedTimeBin && peakOrbit == targetOrbit) {
         int orbit = (mTimeBins[j].mFirstIdx < 0) ? -1 : mInputROFs[mTimeBins[j].mFirstIdx].getBCData().orbit;
         int bc = (mTimeBins[j].mFirstIdx < 0) ? -1 : mInputROFs[mTimeBins[j].mFirstIdx].getBCData().bc;
-        std::cout << "[TOTO] " << j << "   orbit " << orbit << "   bc " << bc << "   nDigits " << mTimeBins[j].mNDigitsPS << std::endl;
+        std::cout << "[TOTO] " << j << "   orbit " << orbit << "   bc " << bc << "   nDigits " << mTimeBins[j].mNDigitsPS << "   stations [ ";
+        for (auto st : mTimeBins[j].mHasStation) {
+          if (st) std::cout<<"1 ";
+          else std::cout<<"0 ";
+        }
+        std::cout << "]" << std::endl;
       }
       if (j > mLastSavedTimeBin && peak <= mTimeBins[j]) {
         found = false;
         break;
       }
+
+      for (size_t k = 0; k < hasChamber.size(); k++) {
+        if (mTimeBins[j].mHasChamber[k]) {
+          hasChamber[k] = true;
+        }
+      }
+
+      for (size_t k = 0; k < hasStation.size(); k++) {
+        if (mTimeBins[j].mHasStation[k]) {
+          hasStation[k] = true;
+          if (peakOrbit == targetOrbit) {
+            int orbit = (mTimeBins[j].mFirstIdx < 0) ? -1 : mInputROFs[mTimeBins[j].mFirstIdx].getBCData().orbit;
+            int bc = (mTimeBins[j].mFirstIdx < 0) ? -1 : mInputROFs[mTimeBins[j].mFirstIdx].getBCData().bc;
+            //std::cout << "[TOTO] " << j << "   orbit " << orbit << "   bc " << bc << "   adding station " << k << std::endl;
+          }
+        }
+      }
     }
     // the peak must be higher than or equal to next bins
     for (int j = i + 1; j <= i + sPadding; j++) {
+      if (j >= mNbinsInOneTF) { break; }
+
       if (j < mNbinsInOneTF && peakOrbit == targetOrbit) {
         int orbit = (mTimeBins[j].mFirstIdx < 0) ? -1 : mInputROFs[mTimeBins[j].mFirstIdx].getBCData().orbit;
         int bc = (mTimeBins[j].mFirstIdx < 0) ? -1 : mInputROFs[mTimeBins[j].mFirstIdx].getBCData().bc;
-        std::cout << "[TOTO] " << j << "   orbit " << orbit << "   bc " << bc << "   nDigits " << mTimeBins[j].mNDigitsPS << std::endl;
+        std::cout << "[TOTO] " << j << "   orbit " << orbit << "   bc " << bc << "   nDigits " << mTimeBins[j].mNDigitsPS << "   stations [ ";
+        for (auto st : mTimeBins[j].mHasStation) {
+          if (st) std::cout<<"1 ";
+          else std::cout<<"0 ";
+        }
+        std::cout << "]" << std::endl;
       }
       if (j < mNbinsInOneTF && peak < mTimeBins[j]) {
         found = false;
         break;
       }
-    }
-    if (peakOrbit == targetOrbit) {
-      std::cout << "[TOTO] peak found " << found << std::endl;
+
+      for (size_t k = 0; k < hasChamber.size(); k++) {
+        if (mTimeBins[j].mHasChamber[k]) {
+          hasChamber[k] = true;
+        }
+      }
+
+      for (size_t k = 0; k < hasStation.size(); k++) {
+        if (mTimeBins[j].mHasStation[k]) {
+          hasStation[k] = true;
+          if (peakOrbit == targetOrbit) {
+            int orbit = (mTimeBins[j].mFirstIdx < 0) ? -1 : mInputROFs[mTimeBins[j].mFirstIdx].getBCData().orbit;
+            int bc = (mTimeBins[j].mFirstIdx < 0) ? -1 : mInputROFs[mTimeBins[j].mFirstIdx].getBCData().bc;
+            //std::cout << "[TOTO] " << j << "   orbit " << orbit << "   bc " << bc << "   adding station " << k << std::endl;
+          }
+        }
+      }
     }
 
-    if (!found) {
+    int nStations = 0;
+    for (auto st : hasStation) {
+      if (st) {
+        nStations += 1;
+      }
+    }
+    if (peakOrbit == targetOrbit) {
+      int peakOrbit = mInputROFs[peak.mFirstIdx].getBCData().orbit;
+      int peakBc = mInputROFs[peak.mFirstIdx].getBCData().bc;
+      std::cout << "[TOTO] peak seed " << i << "   orbit " << peakOrbit << "   bc " << peakBc << "   nDigits " << mTimeBins[i].mNDigitsPS << "  found=" << found << "    nStations " << nStations << " [ ";
+      for (auto st : hasStation) {
+        if (st) std::cout<<"1 ";
+        else std::cout<<"0 ";
+      }
+      std::cout << "]" << std::endl;
+    }
+
+    if (!found || (nStations < 4)) {
       continue;
+    }
+    if (peakOrbit == targetOrbit) {
+      auto nDigits = mInputROFs[peak.mLastIdx].getLastIdx() - mInputROFs[peak.mFirstIdx].getFirstIdx() + 1;
+      std::cout << fmt::format("[TOTO] new peak found at bin {}, entries = {}/{}", i, peak.mNDigitsPS, nDigits) << std::endl;
     }
 
     if (mDebug) {
@@ -297,7 +392,7 @@ void ROFTimeClusterFinderV2::storeROF(int32_t firstBin, int32_t lastBin, int32_t
 
       const auto& rof = mInputROFs[timeBin.mFirstIdx];
       auto newWidth = rof.getBCData().differenceInBC(prevRof.getBCData()) + rof.getBCWidth();
-      if (prevRof.getBCData().orbit == targetOrbit) {
+      if ((mOutputROFs.size() > 0 && mOutputROFs.back().getBCData().orbit == targetOrbit) || prevRof.getBCData().orbit == targetOrbit) {
         std::cout << "[TOTO] trying to extend " << prevRof.getBCData().orbit << " / " << prevRof.getBCData().bc
             << " with rof " << rof.getBCData().orbit << " / " << rof.getBCData().bc << "    newWidth " << newWidth << std::endl;
       }
@@ -316,7 +411,7 @@ void ROFTimeClusterFinderV2::storeROF(int32_t firstBin, int32_t lastBin, int32_t
     }
     if (firstBinNew > firstBin) {
       prevRof = ROFRecord(prevRof.getBCData(), prevRof.getFirstIdx(), nDigits, bcWidth);
-      if (prevRof.getBCData().orbit == targetOrbit) {
+      if ((mOutputROFs.size() > 0 && mOutputROFs.back().getBCData().orbit == targetOrbit) || prevRof.getBCData().orbit == targetOrbit) {
         std::cout << "[TOTO] ROF " << prevRof.getBCData().orbit << " / " << prevRof.getBCData().bc
             << " extended to " << prevRof.getBCWidth() << std::endl;
       }
@@ -348,6 +443,9 @@ void ROFTimeClusterFinderV2::storeROF(int32_t firstBin, int32_t lastBin, int32_t
   if (rofFirstIdx < 0) {
     // the range is empty, no ROF to store
     mLastSavedTimeBin = lastBin;
+    if ((mOutputROFs.size() > 0 && mOutputROFs.back().getBCData().orbit == targetOrbit)) {
+      std::cout << "[TOTO] empty ROF " << std::endl;
+    }
     return;
   }
 
@@ -373,7 +471,7 @@ void ROFTimeClusterFinderV2::storeROF(int32_t firstBin, int32_t lastBin, int32_t
     auto bcDiff = irLast.differenceInBC(irFirst);
     auto bcWidth = bcDiff + lastRofInCluster.getBCWidth();
 
-    if (irFirst.orbit == targetOrbit) {
+    if ((mOutputROFs.size() > 0 && mOutputROFs.back().getBCData().orbit == targetOrbit) || irFirst.orbit == targetOrbit) {
       int peakBC = (peak < 0) ? -1 : mInputROFs[mTimeBins[peak].mFirstIdx].getBCData().bc;
       std::cout << "[TOTO] storing ROF from " << irFirst.orbit << " / " << irFirst.bc
           << " to " << irLast.orbit << " / " << irLast.bc << std::endl;
@@ -385,7 +483,7 @@ void ROFTimeClusterFinderV2::storeROF(int32_t firstBin, int32_t lastBin, int32_t
     // check the gap with respect to the previously saved ROF
     // if smaller than two ADC clock cycles, the current range is attached to the previous ROF
     bool doMerge = false;
-    if (irFirst.orbit == targetOrbit) {
+    if ((mOutputROFs.size() > 0 && mOutputROFs.back().getBCData().orbit == targetOrbit) || irFirst.orbit == targetOrbit) {
       auto& prevRof = mOutputROFs.back();
       std::cout << "[TOTO] checking " << irFirst.orbit << " / " << irFirst.bc << " and "
           << prevRof.getBCData().orbit << " / " << prevRof.getBCData().bc
@@ -396,7 +494,7 @@ void ROFTimeClusterFinderV2::storeROF(int32_t firstBin, int32_t lastBin, int32_t
       int32_t peakGap = (peak - mLastPeakEnd) * mBinWidth;
 
       auto& prevRof = mOutputROFs.back();
-      if (irFirst.orbit == targetOrbit) {
+      if ((mOutputROFs.size() > 0 && mOutputROFs.back().getBCData().orbit == targetOrbit) || irFirst.orbit == targetOrbit) {
         std::cout << "[TOTO] checking " << irFirst.orbit << " / " << irFirst.bc << " and "
             << prevRof.getBCData().orbit << " / " << prevRof.getBCData().bc
             << "    peak " << peak << "    mLastPeakEnd " << mLastPeakEnd << "    peakGap " << peakGap
@@ -415,7 +513,7 @@ void ROFTimeClusterFinderV2::storeROF(int32_t firstBin, int32_t lastBin, int32_t
 
       if (true) {
         auto& prevRof = mOutputROFs.back();
-        if (irFirst.orbit == targetOrbit) {
+        if ((mOutputROFs.size() > 0 && mOutputROFs.back().getBCData().orbit == targetOrbit) || irFirst.orbit == targetOrbit) {
           std::cout << "[TOTO] merging " << irFirst.orbit << " / " << irFirst.bc << " into "
               << prevRof.getBCData().orbit << " / " << prevRof.getBCData().bc
               << "    bcWidth " << bcWidth << " " << prevRof.getBCWidth()
@@ -427,7 +525,7 @@ void ROFTimeClusterFinderV2::storeROF(int32_t firstBin, int32_t lastBin, int32_t
         nDigits += prevRof.getNEntries();
         prevRof = ROFRecord(prevRof.getBCData(), prevRof.getFirstIdx(), nDigits, bcWidth);
         merged = true;
-        if (irFirst.orbit == targetOrbit) {
+        if ((mOutputROFs.size() > 0 && mOutputROFs.back().getBCData().orbit == targetOrbit) || irFirst.orbit == targetOrbit) {
           std::cout << "[TOTO] " << irFirst.orbit << " / " << irFirst.bc << " merged into "
               << prevRof.getBCData().orbit << " / " << prevRof.getBCData().bc << std::endl;
         }
@@ -438,7 +536,7 @@ void ROFTimeClusterFinderV2::storeROF(int32_t firstBin, int32_t lastBin, int32_t
       // create a ROF that includes all the digits in this time cluster
       mOutputROFs.emplace_back(irFirst, firstDigitIdx, nDigits, bcWidth);
       mRofHasPeak.emplace_back(hasPeak);
-      if (irFirst.orbit == targetOrbit) {
+      if ((mOutputROFs.size() > 0 && mOutputROFs.back().getBCData().orbit == targetOrbit) || irFirst.orbit == targetOrbit) {
         std::cout << "[TOTO] added ROF " << mOutputROFs.back().getBCData().orbit << " / " << mOutputROFs.back().getBCData().bc
             << "    bcWidth " << mOutputROFs.back().getBCWidth()
             << "    nDigits " << mOutputROFs.back().getNEntries()
@@ -497,8 +595,11 @@ void ROFTimeClusterFinderV2::process()
       if (lastBin >= peakStart) {
         lastBin = peakStart - 1;
       }
+      if ((mOutputROFs.size() > 0 && mOutputROFs.back().getBCData().orbit == targetOrbit) || peakOrbit == targetOrbit) {
+        std::cout << "[TOTO] storing dummy ROF, start " << firstBin << "  end " << lastBin << std::endl;
+      }
       storeROF(firstBin, lastBin, -1);
-      if (mOutputROFs.back().getBCData().orbit == targetOrbit) {
+      if ((mOutputROFs.size() > 0 && mOutputROFs.back().getBCData().orbit == targetOrbit) || peakOrbit == targetOrbit) {
         std::cout << "[TOTO] last stored ROF " << mOutputROFs.back().getBCData().orbit << " / " << mOutputROFs.back().getBCData().bc
             << "    bcWidth " << mOutputROFs.back().getBCWidth()
             << "    nDigits " << mOutputROFs.back().getNEntries()
@@ -506,15 +607,15 @@ void ROFTimeClusterFinderV2::process()
       }
     }
     bool print  = false;
-    if (peakOrbit == targetOrbit) {
+    if ((mOutputROFs.size() > 0 && mOutputROFs.back().getBCData().orbit == targetOrbit) || peakOrbit == targetOrbit) {
       print = true;
       int peakBc = mInputROFs[mTimeBins[peak].mFirstIdx].getBCData().bc;
-      //std::cout << "[TOTO] peak bc " << peakBc << std::endl;
+      std::cout << "[TOTO] storing collision ROF, peak " << peak << "  start " << peakStart << "  end " << peakEnd << "  bc " << peakBc << std::endl;
     }
     storeROF(peakStart, peakEnd, peak);
     mLastPeak = peak;
     mLastPeakEnd = peakEnd;
-    if (mOutputROFs.back().getBCData().orbit == targetOrbit) {
+    if ((mOutputROFs.size() > 0 && mOutputROFs.back().getBCData().orbit == targetOrbit) || peakOrbit == targetOrbit) {
       std::cout << "[TOTO] last stored ROF " << mOutputROFs.back().getBCData().orbit << " / " << mOutputROFs.back().getBCData().bc
           << "    bcWidth " << mOutputROFs.back().getBCWidth()
           << "    nDigits " << mOutputROFs.back().getNEntries()

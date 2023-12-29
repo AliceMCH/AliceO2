@@ -40,6 +40,7 @@
 #include "MCHBase/PreCluster.h"
 #include "MCHBase/SanityCheck.h"
 #include "MCHPreClustering/PreClusterFinder.h"
+#include "MCHMappingInterface/Segmentation.h"
 
 #include <iostream>
 #include <chrono>
@@ -210,11 +211,34 @@ class PreClusterFinderTask
     });
     mErrorMap.add(errorMap);
 
-    LOGP(info, "Processed {} digit rofs with {} digits and output {} precluster rofs with {} preclusters and {} digits",
+    /*LOGP(info, "Processed {} digit rofs with {} digits and output {} precluster rofs with {} preclusters and {} digits",
          digitROFs.size(),
          nDigitsInRofs,
          preClusterROFs.size(),
          mPreClusters.size(), mUsedDigits.size());
+    for (auto& preCluster: mPreClusters) {
+      double totADC = 0;
+      for (int i = preCluster.firstDigit; i <= preCluster.lastDigit(); i++) {
+        auto& d = mUsedDigits[i];
+        totADC += d.getADC();
+      }
+      if (totADC < 7000) continue;
+      for (int i = preCluster.firstDigit; i <= preCluster.lastDigit(); i++) {
+        auto& d = mUsedDigits[i];
+        auto detID = d.getDetID();
+        auto padID = d.getPadID();
+        if (padID < 0) {
+          continue;
+        }
+        const o2::mch::mapping::Segmentation& segment = o2::mch::mapping::segmentation(detID);
+        bool bend = segment.isBendingPad(padID);
+        float X = segment.padPositionX(padID);
+        float Y = segment.padPositionY(padID);
+        uint32_t time = d.getTime();
+        LOGP(info, "  [TOTO] DE {:4d}  PAD {:5d}  ADC {:6d}  TIME {:4d}\tC {}  PAD_XY {:+2.2f} , {:+2.2f}",
+                                 detID, padID, d.getADC(), time, (bend ? (int)0 : (int)1), X, Y);
+      }
+    }*/
   }
 
  private:

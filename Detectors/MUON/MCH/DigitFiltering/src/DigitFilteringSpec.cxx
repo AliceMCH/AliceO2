@@ -143,10 +143,10 @@ class DigitFilteringTask
 
     auto labelMsg = mUseMC ? fmt::format("| {} labels (out of {})", oLabels->getNElements(), iLabels->getNElements()) : "";
 
-    LOGP(info, "Kept after filtering : {} rofs (out of {}) | {} digits (out of {}) {}",
+    /*LOGP(info, "Kept after filtering : {} rofs (out of {}) | {} digits (out of {}) {}",
          oRofs.size(), iRofs.size(),
          oDigits.size(), iDigits.size(),
-         labelMsg);
+         labelMsg);*/
 
     if (mTimeCalib != 0) {
       shiftDigitsTime(oRofs, oDigits);

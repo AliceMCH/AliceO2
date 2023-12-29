@@ -254,6 +254,7 @@ class DataDecoderTask
 
     auto tStart = std::chrono::high_resolution_clock::now();
     mDecoder->reset();
+    mDecoder->setOrbitsInTF(256);
     for (auto&& input : pc.inputs()) {
       if (input.spec->binding == "readout") {
         decodeReadout(input);

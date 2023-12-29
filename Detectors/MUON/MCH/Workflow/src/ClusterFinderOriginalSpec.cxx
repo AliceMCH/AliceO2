@@ -137,8 +137,8 @@ class ClusterFinderOriginalTask
     });
     mErrorMap.add(errorMap);
 
-    LOGP(info, "Found {:4d} clusters from {:4d} preclusters in {:2d} ROFs",
-         clusters.size(), preClusters.size(), preClusterROFs.size());
+    //LOGP(info, "Found {:4d} clusters from {:4d} preclusters in {:2d} ROFs",
+    //     clusters.size(), preClusters.size(), preClusterROFs.size());
   }
 
  private:

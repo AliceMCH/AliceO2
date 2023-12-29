@@ -128,12 +128,12 @@ int32_t ROFTimeClusterFinder::getNextPeak()
   int32_t sPadding = mNbinsInOneWindow / 2;
 
   if (mDebug) {
-    std::cout << "Searching peak from " << mLastSavedTimeBin + 1 << std::endl;
+    std::cout << "Searching peak from " << mLastSavedTimeBin + 1 << "  mNbinsInOneTF " << mNbinsInOneTF << std::endl;
   }
 
   // loop over the bins and search for local maxima
   // a local maxima is defined as a bin tht is higher than all the surrounding 4 bins (2 below and 2 above)
-  for (int32_t i = mLastSavedTimeBin + sPadding + 1; i < mNbinsInOneTF; i++) {
+  for (int32_t i = mLastSavedTimeBin + 1; i < mNbinsInOneTF; i++) {
     auto& peak = mTimeBins[i];
     if (peak.empty()) {
       continue;
@@ -235,10 +235,10 @@ void ROFTimeClusterFinder::storeROF(int32_t firstBin, int32_t lastBin)
 
 void ROFTimeClusterFinder::process()
 {
-  //if (mDebug) {
+  if (mDebug) {
     std::cout << "\n\n==================\n[ROFTimeClusterFinder] processing new TF\n"
               << std::endl;
-  //}
+  }
 
   initTimeBins();
   mOutputROFs.clear();
