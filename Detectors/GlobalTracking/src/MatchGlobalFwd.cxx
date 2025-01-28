@@ -471,7 +471,7 @@ void MatchGlobalFwd::ROFMatch(int MFTROFId, int firstMCHROFId, int lastMCHROFId)
 
     // If enabled, use the muon track time to check if the track is correlated with the MFT ROF
     if (mUseTrackTime && (thisMFTBracket.isOutside(thisMCHTrack.tBracket))) {
-        continue;
+      continue;
     }
 
     o2::MCCompLabel matchLabel;
