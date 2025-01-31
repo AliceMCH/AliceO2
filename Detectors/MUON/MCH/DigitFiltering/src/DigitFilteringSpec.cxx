@@ -179,7 +179,7 @@ class DigitFilteringTask
   }
 
  private:
-  int mRunNumber{ 0 };
+  int mRunNumber{0};
   bool mRejectBackground{false};
   bool mSanityCheck{false};
   bool mUseMC{false};
