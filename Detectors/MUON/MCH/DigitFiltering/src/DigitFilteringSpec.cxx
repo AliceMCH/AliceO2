@@ -139,7 +139,7 @@ class DigitFilteringTask
           auto digit = digits[i];
 
           // modify the digit if needed
-          if(mDigitModifier) {
+          if (mDigitModifier) {
             mDigitModifier(digit);
           }
 

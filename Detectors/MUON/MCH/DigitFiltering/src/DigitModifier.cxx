@@ -32,8 +32,8 @@ void initST2PadsRemappingTable(std::unordered_map<int, std::unordered_map<int, i
 {
   // Remapping of ST2 DS boards near the rounded part
   {
-    std::array<int, 8> deToRemap{ 300, 301, 302, 303, 400, 401, 402, 403 };
-    std::array<int, 5> dsToRemap{ 99, 100, 101, 102, 103 };
+    std::array<int, 8> deToRemap{300, 301, 302, 303, 400, 401, 402, 403};
+    std::array<int, 5> dsToRemap{99, 100, 101, 102, 103};
 
     for (auto deId : deToRemap) {
 
@@ -70,22 +70,22 @@ void initST2PadsRemappingTable(std::unordered_map<int, std::unordered_map<int, i
           int padIdRemapped = -1;
 
           switch (padColumn) {
-          case 0:
-            // shift right by 3 columns
-            padIdRemapped = padId + 16 * 3;
-            break;
-          case 1:
-            // shift right by 1 column
-            padIdRemapped = padId + 16;
-            break;
-          case 2:
-            // shift left by 1 column
-            padIdRemapped = padId - 16;
-            break;
-          case 3:
-            // shift left by 3 columns
-            padIdRemapped = padId - 16 * 3;
-            break;
+            case 0:
+              // shift right by 3 columns
+              padIdRemapped = padId + 16 * 3;
+              break;
+            case 1:
+              // shift right by 1 column
+              padIdRemapped = padId + 16;
+              break;
+            case 2:
+              // shift left by 1 column
+              padIdRemapped = padId - 16;
+              break;
+            case 3:
+              // shift left by 3 columns
+              padIdRemapped = padId - 16 * 3;
+              break;
           }
 
           padsRemapping[deId][padId] = padIdRemapped;
