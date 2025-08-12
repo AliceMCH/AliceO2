@@ -95,7 +95,6 @@ BOOST_AUTO_TEST_CASE(TestIteratorOnCompletePedestalData)
     ++nmt;
   }
   BOOST_TEST(nmt == allDigits.size());
-
 }
 
 BOOST_AUTO_TEST_CASE(TestIteratorEquality)
