@@ -72,6 +72,10 @@ class TracksToRecords : public Aligner
   /// \brief use mft tracks and clusters provided by ROOT files accessed via TChain to build Mille records
   void processROFs(TChain* mfttrackChain, TChain* mftclusterChain);
 
+  /// \brief use mft tracks and clusters provided by ROOT files accessed via TChain to build Mille records
+  /// force the tracks to originate from the primary vertex
+  void processROFs(TChain* itsvertexChain, TChain* mfttrackChain, TChain* mftclusterChain);
+
   /// \brief print a summary status of what happened in processRecoTracks() or processROFs()
   void printProcessTrackSummary();
 

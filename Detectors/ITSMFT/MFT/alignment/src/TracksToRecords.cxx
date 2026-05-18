@@ -18,13 +18,176 @@
 #include "Framework/Logger.h"
 #include <Framework/InputRecord.h>
 #include "MFTBase/Geometry.h"
+#include <MFTTracking/Constants.h>
 #include "ForwardAlign/MillePedeRecord.h"
+
+#include "ReconstructionDataFormats/PrimaryVertex.h"
 
 #include "MFTAlignment/TracksToRecords.h"
 
 using namespace o2::mft;
 
 ClassImp(o2::mft::TracksToRecords);
+
+
+static void FwdtoMCH(const o2::track::TrackParCovFwd& fwdtrack, std::array<double, 5>& mchPar, std::array<double, 15>& mchCov)
+{
+  using SMatrix55Std = ROOT::Math::SMatrix<double, 5>;
+  using SMatrix55Sym = ROOT::Math::SMatrix<double, 5, 5, ROOT::Math::MatRepSym<double, 5>>;
+
+  // Convert Forward Track parameters and covariances matrix to the MCH track format.
+
+  // Parameter conversion
+  double alpha1, alpha3, alpha4, x2, x3, x4;
+
+  x2 = fwdtrack.getPhi();
+  x3 = fwdtrack.getTanl();
+  x4 = fwdtrack.getInvQPt();
+
+  auto sinx2 = TMath::Sin(x2);
+  auto cosx2 = TMath::Cos(x2);
+
+  alpha1 = cosx2 / x3;
+  alpha3 = sinx2 / x3;
+  alpha4 = x4 / TMath::Sqrt(x3 * x3 + sinx2 * sinx2);
+
+  auto K = TMath::Sqrt(x3 * x3 + sinx2 * sinx2);
+  auto K3 = K * K * K;
+
+  // Covariances matrix conversion
+  SMatrix55Std jacobian;
+  SMatrix55Sym covariances;
+
+  covariances(0, 0) = fwdtrack.getCovariances()(0, 0);
+  covariances(0, 1) = fwdtrack.getCovariances()(0, 1);
+  covariances(0, 2) = fwdtrack.getCovariances()(0, 2);
+  covariances(0, 3) = fwdtrack.getCovariances()(0, 3);
+  covariances(0, 4) = fwdtrack.getCovariances()(0, 4);
+
+  covariances(1, 1) = fwdtrack.getCovariances()(1, 1);
+  covariances(1, 2) = fwdtrack.getCovariances()(1, 2);
+  covariances(1, 3) = fwdtrack.getCovariances()(1, 3);
+  covariances(1, 4) = fwdtrack.getCovariances()(1, 4);
+
+  covariances(2, 2) = fwdtrack.getCovariances()(2, 2);
+  covariances(2, 3) = fwdtrack.getCovariances()(2, 3);
+  covariances(2, 4) = fwdtrack.getCovariances()(2, 4);
+
+  covariances(3, 3) = fwdtrack.getCovariances()(3, 3);
+  covariances(3, 4) = fwdtrack.getCovariances()(3, 4);
+
+  covariances(4, 4) = fwdtrack.getCovariances()(4, 4);
+
+  jacobian(0, 0) = 1;
+
+  jacobian(1, 2) = -sinx2 / x3;
+  jacobian(1, 3) = -cosx2 / (x3 * x3);
+
+  jacobian(2, 1) = 1;
+
+  jacobian(3, 2) = cosx2 / x3;
+  jacobian(3, 3) = -sinx2 / (x3 * x3);
+
+  jacobian(4, 2) = -x4 * sinx2 * cosx2 / K3;
+  jacobian(4, 3) = -x3 * x4 / K3;
+  jacobian(4, 4) = 1 / K;
+  // jacobian*covariances*jacobian^T
+  covariances = ROOT::Math::Similarity(jacobian, covariances);
+
+  //mchCov = {covariances(0, 0), covariances(1, 0), covariances(1, 1), covariances(2, 0), covariances(2, 1), covariances(2, 2), covariances(3, 0), covariances(3, 1), covariances(3, 2), covariances(3, 3), covariances(4, 0), covariances(4, 1), covariances(4, 2), covariances(4, 3), covariances(4, 4)};
+  mchCov = {
+      covariances(0, 0),
+      covariances(1, 0),
+      covariances(2, 0),
+      covariances(3, 0),
+      covariances(4, 0),
+      covariances(1, 1),
+      covariances(2, 1),
+      covariances(3, 1),
+      covariances(4, 1),
+      covariances(2, 2),
+      covariances(2, 3),
+      covariances(2, 4),
+      covariances(3, 3),
+      covariances(3, 4),
+      covariances(4, 4)};
+  mchPar = {fwdtrack.getX(), alpha1, fwdtrack.getY(), alpha3, alpha4};
+}
+
+static void MCHtoFwd(o2::track::TrackParCovFwd& fwdtrack, std::array<double, 5>& mchPar, std::array<double, 15>& mchCov)
+{
+  using SMatrix55Std = ROOT::Math::SMatrix<double, 5>;
+  using SMatrix55Sym = ROOT::Math::SMatrix<double, 5, 5, ROOT::Math::MatRepSym<double, 5>>;
+
+  // Convert a MCH Track parameters and covariances matrix to the
+  // Forward track format. Must be called after propagation though the absorber
+
+  // Parameter conversion
+  double alpha1, alpha3, alpha4, x2, x3, x4;
+
+  alpha1 = mchPar[1];
+  alpha3 = mchPar[3];
+  alpha4 = mchPar[4];
+
+  x2 = TMath::ATan2(-alpha3, -alpha1);
+  x3 = -1. / TMath::Sqrt(alpha3 * alpha3 + alpha1 * alpha1);
+  x4 = alpha4 * -x3 * TMath::Sqrt(1 + alpha3 * alpha3);
+
+  auto K = alpha1 * alpha1 + alpha3 * alpha3;
+  auto K32 = K * TMath::Sqrt(K);
+  auto L = TMath::Sqrt(alpha3 * alpha3 + 1);
+
+  // Covariances matrix conversion
+  SMatrix55Std jacobian;
+  SMatrix55Sym covariances;
+
+  covariances(0, 0) = mchCov[0]; //mchParam.getCovariances()(0, 0);
+  covariances(0, 1) = mchCov[1]; //mchParam.getCovariances()(0, 1);
+  covariances(0, 2) = mchCov[2]; //mchParam.getCovariances()(0, 2);
+  covariances(0, 3) = mchCov[3]; //mchParam.getCovariances()(0, 3);
+  covariances(0, 4) = mchCov[4]; //mchParam.getCovariances()(0, 4);
+
+  covariances(1, 1) = mchCov[5]; //mchParam.getCovariances()(1, 1);
+  covariances(1, 2) = mchCov[6]; //mchParam.getCovariances()(1, 2);
+  covariances(1, 3) = mchCov[7]; //mchParam.getCovariances()(1, 3);
+  covariances(1, 4) = mchCov[8]; //mchParam.getCovariances()(1, 4);
+
+  covariances(2, 2) = mchCov[9]; //mchParam.getCovariances()(2, 2);
+  covariances(2, 3) = mchCov[10]; //mchParam.getCovariances()(2, 3);
+  covariances(2, 4) = mchCov[11]; //mchParam.getCovariances()(2, 4);
+
+  covariances(3, 3) = mchCov[12]; //mchParam.getCovariances()(3, 3);
+  covariances(3, 4) = mchCov[13]; //mchParam.getCovariances()(3, 4);
+
+  covariances(4, 4) = mchCov[14]; //mchParam.getCovariances()(4, 4);
+
+  jacobian(0, 0) = 1;
+
+  jacobian(1, 2) = 1;
+
+  jacobian(2, 1) = -alpha3 / K;
+  jacobian(2, 3) = alpha1 / K;
+
+  jacobian(3, 1) = alpha1 / K32;
+  jacobian(3, 3) = alpha3 / K32;
+
+  jacobian(4, 1) = -alpha1 * alpha4 * L / K32;
+  jacobian(4, 3) = alpha3 * alpha4 * (1 / (TMath::Sqrt(K) * L) - L / K32);
+  jacobian(4, 4) = L / TMath::Sqrt(K);
+
+  // jacobian*covariances*jacobian^T
+  covariances = ROOT::Math::Similarity(jacobian, covariances);
+
+  // Set output
+  //fwdtrack.setX(mchParam.getNonBendingCoor());
+  //fwdtrack.setY(mchParam.getBendingCoor());
+  //fwdtrack.setZ(mchParam.getZ());
+  fwdtrack.setPhi(x2);
+  fwdtrack.setTanl(x3);
+  fwdtrack.setInvQPt(x4);
+  //fwdtrack.setCharge(mchParam.getCharge());
+  fwdtrack.setCovariances(covariances);
+}
 
 //__________________________________________________________________________
 TracksToRecords::TracksToRecords()
@@ -404,6 +567,258 @@ void TracksToRecords::processROFs(TChain* mfttrackChain, TChain* mftclusterChain
 }
 
 //__________________________________________________________________________
+void TracksToRecords::processROFs(TChain* itsvertexChain, TChain* mfttrackChain, TChain* mftclusterChain)
+{
+  //const float vertexZShift = 0.225;
+  const float vertexZShift = 0.25;
+
+  if (!mIsInitDone) {
+    LOGF(fatal, "TracksToRecords::processROFs() aborted because init was not done !");
+    return;
+  }
+
+  if (!mRecordWriter || !mRecordWriter->isInitOk()) {
+    LOGF(fatal, "TracksToRecords::processROFs() aborted because uninitialised mRecordWriter !");
+    return;
+  }
+
+  LOG(info) << "TracksToRecords::processROFs() with ITS vertex - start";
+
+  TTreeReader vertexChainReader(itsvertexChain);
+  TTreeReader mftTrackChainReader(mfttrackChain);
+  TTreeReader mftClusterChainReader(mftclusterChain);
+  std::vector<unsigned char>::iterator pattIterator;
+
+  TTreeReaderValue<std::vector<o2::dataformats::PrimaryVertex>> vertices =
+    {vertexChainReader, "PrimaryVertex"};
+
+  TTreeReaderValue<std::vector<o2::mft::TrackMFT>> mftTracks =
+    {mftTrackChainReader, "MFTTrack"};
+  TTreeReaderValue<std::vector<o2::itsmft::ROFRecord>> mftTracksROF =
+    {mftTrackChainReader, "MFTTracksROF"};
+  TTreeReaderValue<std::vector<int>> mftTrackClusIdx =
+    {mftTrackChainReader, "MFTTrackClusIdx"};
+
+  TTreeReaderValue<std::vector<o2::itsmft::CompClusterExt>> mftClusters =
+    {mftClusterChainReader, "MFTClusterComp"};
+  TTreeReaderValue<std::vector<o2::itsmft::ROFRecord>> mftClustersROF =
+    {mftClusterChainReader, "MFTClustersROF"};
+  TTreeReaderValue<std::vector<unsigned char>> mftClusterPatterns =
+    {mftClusterChainReader, "MFTClusterPatt"};
+
+  int nCounterAllTracks = 0;
+
+  size_t entry = 0;
+  auto nEntries = mftTrackChainReader.GetEntries(kTRUE);
+  size_t nMFTtracks = 0;
+  while (vertexChainReader.Next() && mftTrackChainReader.Next() && mftClusterChainReader.Next()) {
+
+    entry +=1;
+    if ((entry % 100) == 0) {
+      std::cout << std::format("Reading entry {} / {}", entry, nEntries) << std::endl;
+    }
+
+    mNumberOfTrackChainROFs += (*mftTracksROF).size();
+    mNumberOfClusterChainROFs += (*mftClustersROF).size();
+    assert(mNumberOfTrackChainROFs == mNumberOfClusterChainROFs);
+
+    pattIterator = (*mftClusterPatterns).begin();
+    mAlignPoint->convertCompactClusters(
+      *mftClusters, pattIterator, mMFTClustersLocal, mMFTClustersGlobal);
+
+    nMFTtracks += mftTracks->size();
+    if (mftTracks->size() > 0) {
+    //  std::cout << std::format("Entry #{} with {} MFT tracks (total = {})", entry-1, mftTracks->size(), nMFTtracks) << std::endl;
+    }
+
+    //std::cout << std::format("Number of ITS vertices: {}", (*vertices).size()) << std::endl;
+
+    //______________________________________________________
+    for (const auto& oneRof : *mftTracksROF) { // track ROF loop
+      const auto& rofStart = oneRof.getBCData();
+      auto rofEnd = rofStart + 198;
+
+      int vertexId = -1;
+      int vertexCount = -1;
+      int nVerticesInRof = 0;
+      //______________________________________________________
+      for (const auto& oneVertex : *vertices) { // vertex loop
+        vertexCount += 1;
+        if (oneVertex.getIRMin() < rofStart) {
+          continue;
+        }
+        if (oneVertex.getIRMax() > rofEnd) {
+          continue;
+        }
+        nVerticesInRof += 1;
+        vertexId = vertexCount;
+
+        if (false) {
+          std::cout << std::format("[TOTO] correlated vertex found with IR=({},{} -> {},{})  MFT IR=({},{} -> {},{})",
+              oneVertex.getIRMin().orbit, oneVertex.getIRMin().bc,
+              oneVertex.getIRMax().orbit, oneVertex.getIRMax().bc,
+              rofStart.orbit, rofStart.bc,
+              rofEnd.orbit, rofEnd.bc) << std::endl;
+        }
+      }
+      if (false && nVerticesInRof > 0) {
+        std::cout << std::format("[TOTO] number of vertices in MFT ROF: {}", nVerticesInRof) << std::endl;
+        std::cout << std::format("[TOTO] selected vertex ID: {}  ", vertexId) << std::endl;
+      }
+
+      // only select ROFs with a single ITS vertex
+      if (nVerticesInRof != 1) {
+        continue;
+      }
+
+      const auto& theVertex = (*vertices)[vertexId];
+
+      // discard vertices in the +/- 5cm region
+      auto pvx = theVertex.getX();
+      auto pvy = theVertex.getY();
+      auto pvz = theVertex.getZ();
+      if (std::fabs(pvz) < 5) {
+        continue;
+      }
+      //std::cout << std::format("[TOTO] vertex z={:0.3f} IR=({},{} -> {},{})  MFT IR=({},{} -> {},{})",
+      //    pvz,
+      //    theVertex.getIRMin().orbit, theVertex.getIRMin().bc,
+      //    theVertex.getIRMax().orbit, theVertex.getIRMax().bc,
+      //    rofStart.orbit, rofStart.bc,
+      //    rofEnd.orbit, rofEnd.bc) << std::endl;
+
+      pvz -= vertexZShift;;
+
+      std::array<double, 3> pv{ pvx, pvy, pvz };
+
+      int firstTrackIndex = oneRof.getFirstEntry();
+      int lastTrackIndex = oneRof.getFirstEntry() + oneRof.getNEntries() - 1;
+      for (int iTrack = firstTrackIndex; iTrack <= lastTrackIndex; iTrack++) {
+        auto oneTrack = (*mftTracks)[iTrack];
+
+        // Skip the track if not enough clusters
+        auto ncls = oneTrack.getNumberOfPoints();
+        if (ncls < mMinNumberClusterCut) {
+          //std::cout << "Track has " << ncls << " clusters -> skipped" << std::endl;
+          nCounterAllTracks++;
+          mCounterSkippedTracks++;
+          continue;
+        }
+
+        // Skip presumably quite low momentum track
+        if (!oneTrack.isLTF()) {
+          //std::cout << "Track is not LTF -> skipped" << std::endl;
+          nCounterAllTracks++;
+          mCounterSkippedTracks++;
+          continue;
+        }
+
+        // rotate & shift the track such that it goeas through the primary vertex
+        // the rotation occurs at the middle plane of the MFT
+        double zRefPlane = (o2::mft::constants::mft::LayerZCoordinate()[9] + o2::mft::constants::mft::LayerZCoordinate()[0]) / 2.f;
+
+        // extrapolate track to reference plane
+        oneTrack.propagateParamToZlinear(zRefPlane);
+
+        //std::cout << std::format("MFT track at vertex: z={:0.3f}  dx={:0.3f}  dy={:0.3f}", pvz, (oneTrack.getX() - pvx), (oneTrack.getY() - pvy)) << std::endl;
+
+        // compute new track slopes
+        double dz = zRefPlane - pvz;
+        double newSlopeX = (oneTrack.getX() - pvx) / dz;
+        double newSlopeY = (oneTrack.getY() - pvy) / dz;
+
+        // modify current track
+        std::array<double, 5> mchPar{ 0.0 };
+        std::array<double, 15> mchCov{ 0.0 };
+        FwdtoMCH(oneTrack, mchPar, mchCov);
+        mchPar[1] = newSlopeX;
+        mchPar[3] = newSlopeY;
+        MCHtoFwd(oneTrack, mchPar, mchCov);
+
+        // get the track parameters at the primary vertex
+        oneTrack.propagateParamToZlinear(pvz);
+        //std::cout << std::format("Vertex:              x={:0.3f} y={:0.3f} z={:0.3f}", pvx, pvy, pvz) << std::endl;
+        //std::cout << std::format("MFT track at vertex: x={:0.3f} y={:0.3f} z={:0.3f}",
+        //    oneTrack.getX(), oneTrack.getY(), oneTrack.getZ()) << std::endl;
+
+        auto offset = oneTrack.getExternalClusterIndexOffset();
+
+        mRecordWriter->getRecord()->Reset();
+
+        // Store the initial track parameters
+        mAlignPoint->resetTrackInitialParam();
+        mAlignPoint->recordTrackInitialParam(oneTrack);
+
+        bool isTrackUsed = true;
+
+        for (int icls = 0; icls < ncls; ++icls) { // cluster loop
+
+          mAlignPoint->resetAlignPoint();
+
+          // Store measured positions
+          auto clsEntry = (*mftTrackClusIdx)[offset + icls];
+          auto localCluster = mMFTClustersLocal[clsEntry];
+          auto globalCluster = mMFTClustersGlobal[clsEntry];
+          mAlignPoint->setMeasuredPosition(localCluster, globalCluster);
+          if (!mAlignPoint->isClusterOk()) {
+            LOGF(warning, "TracksToRecords::processROFs() - will not use track # %5d with at least a bad cluster", nCounterAllTracks);
+            //std::cout << "Track has at least one bad cluster -> skipped" << std::endl;
+            mCounterSkippedTracks++;
+            isTrackUsed = false;
+            break;
+          }
+
+          // Propagate track to the current z plane of this cluster
+          oneTrack.propagateParamToZlinear(mAlignPoint->getGlobalMeasuredPosition().Z());
+
+          // Store reco positions
+          mAlignPoint->setGlobalRecoPosition(oneTrack);
+
+          // compute residuals
+          mAlignPoint->setLocalResidual();
+          mAlignPoint->setGlobalResidual();
+
+          // Compute derivatives
+          mAlignPoint->computeLocalDerivatives();
+          mAlignPoint->computeGlobalDerivatives();
+
+          // Set local equations
+          bool success = true;
+          success &= setLocalEquationX();
+          success &= setLocalEquationY();
+          success &= setLocalEquationZ();
+          isTrackUsed &= success;
+          if (mWithControl && success) {
+            mPointControl.fill(mAlignPoint, mCounterUsedTracks);
+          }
+          if (!success) {
+            LOGF(error, "TracksToRecords::processROFs() - track %i h %d d %d l %d s %4d lMpos x %.2e y %.2e z %.2e gMpos x %.2e y %.2e z %.2e gRpos x %.2e y %.2e z %.2e",
+                mCounterUsedTracks, mAlignPoint->half(), mAlignPoint->disk(), mAlignPoint->layer(), mAlignPoint->getSensorId(),
+                mAlignPoint->getLocalMeasuredPosition().X(), mAlignPoint->getLocalMeasuredPosition().Y(), mAlignPoint->getLocalMeasuredPosition().Z(),
+                mAlignPoint->getGlobalMeasuredPosition().X(), mAlignPoint->getGlobalMeasuredPosition().Y(), mAlignPoint->getGlobalMeasuredPosition().Z(),
+                mAlignPoint->getGlobalRecoPosition().X(), mAlignPoint->getGlobalRecoPosition().Y(), mAlignPoint->getGlobalRecoPosition().Z());
+          }
+
+        } // end of loop on clusters
+
+        if (isTrackUsed) {
+          // copy track record
+          mRecordWriter->setRecordRun(mRunNumber);
+          mRecordWriter->setRecordWeight(mWeightRecord);
+          const bool doPrint = false;
+          mRecordWriter->fillRecordTree(doPrint); // save record data
+          mCounterUsedTracks++;
+        }
+        nCounterAllTracks++;
+      } // end of loop on tracks
+    } // end of loop on ROFs
+
+  } // end of loop on TChain reader
+
+  LOG(info) << "TracksToRecords::processROFs() - end";
+}
+
+//__________________________________________________________________________
 void TracksToRecords::printProcessTrackSummary()
 {
   LOGF(info, "TracksToRecords processRecoTracks() summary: ");
@@ -544,9 +959,9 @@ bool TracksToRecords::setLocalEquationX()
   // local derivatives
   // index [0 .. 3] for {dX0, dTx, dY0, dTz}
 
-  success &= setLocalDerivative(0, mAlignPoint->localDerivativeX().dX0());
+  success &= setLocalDerivative(0, 0.0 /*mAlignPoint->localDerivativeX().dX0()*/);
   success &= setLocalDerivative(1, mAlignPoint->localDerivativeX().dTx());
-  success &= setLocalDerivative(2, mAlignPoint->localDerivativeX().dY0());
+  success &= setLocalDerivative(2, 0.0 /*mAlignPoint->localDerivativeX().dY0()*/);
   success &= setLocalDerivative(3, mAlignPoint->localDerivativeX().dTy());
 
   // global derivatives
@@ -608,9 +1023,9 @@ bool TracksToRecords::setLocalEquationY()
   // local derivatives
   // index [0 .. 3] for {dX0, dTx, dY0, dTz}
 
-  success &= setLocalDerivative(0, mAlignPoint->localDerivativeY().dX0());
+  success &= setLocalDerivative(0, 0.0 /*mAlignPoint->localDerivativeY().dX0()*/);
   success &= setLocalDerivative(1, mAlignPoint->localDerivativeY().dTx());
-  success &= setLocalDerivative(2, mAlignPoint->localDerivativeY().dY0());
+  success &= setLocalDerivative(2, 0.0 /*mAlignPoint->localDerivativeY().dY0()*/);
   success &= setLocalDerivative(3, mAlignPoint->localDerivativeY().dTy());
 
   // global derivatives
@@ -672,9 +1087,9 @@ bool TracksToRecords::setLocalEquationZ()
   // local derivatives
   // index [0 .. 3] for {dX0, dTx, dY0, dTz}
 
-  success &= setLocalDerivative(0, mAlignPoint->localDerivativeZ().dX0());
+  success &= setLocalDerivative(0, 0.0 /*mAlignPoint->localDerivativeZ().dX0()*/);
   success &= setLocalDerivative(1, mAlignPoint->localDerivativeZ().dTx());
-  success &= setLocalDerivative(2, mAlignPoint->localDerivativeZ().dY0());
+  success &= setLocalDerivative(2, 0.0 /*mAlignPoint->localDerivativeZ().dY0()*/);
   success &= setLocalDerivative(3, mAlignPoint->localDerivativeZ().dTy());
 
   // global derivatives
